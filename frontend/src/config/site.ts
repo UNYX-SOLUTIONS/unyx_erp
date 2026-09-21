@@ -3,4 +3,5 @@ export const siteConfig = {
   description: 'Sistema de planificación de recursos empresariales',
   url: 'http://localhost:3000',
   apiUrl: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000',
+  version: 'v4.2',
 };

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/features/auth/stores/auth-store';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
+import { SplashScreen } from '@/components/SplashScreen';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -17,12 +18,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [isHydrated, accessToken, router]);
 
-  if (!isHydrated || !accessToken) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">Cargando...</p>
-      </div>
-    );
+  if (!isHydrated) {
+    return <SplashScreen />;
+  }
+
+  if (!accessToken) {
+    return null;
   }
 
   return (
