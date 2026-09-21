@@ -1,10 +1,10 @@
 import { rateLimit } from 'express-rate-limit';
+import { buildErrorBody } from '../utils/api-response';
 
-const RATE_LIMIT_MESSAGE = {
-  success: false,
-  message: 'Demasiadas solicitudes, intente más tarde',
-  code: 'RATE_LIMITED',
-};
+const RATE_LIMIT_MESSAGE = buildErrorBody(
+  'Demasiadas solicitudes, intente más tarde',
+  'RATE_LIMITED'
+);
 
 export function apiRateLimiter() {
   return rateLimit({

@@ -53,6 +53,17 @@ export function errorHandler(
     );
     return;
   }
+  const status =
+    (err as { status?: unknown }).status ?? (err as { statusCode?: unknown }).statusCode;
+  if (typeof status === 'number' && status >= 400 && status < 500) {
+    sendError(
+      res,
+      status,
+      err instanceof Error ? err.message : 'Error en la solicitud',
+      'REQUEST_ERROR'
+    );
+    return;
+  }
   logger.error(err);
   sendError(
     res,

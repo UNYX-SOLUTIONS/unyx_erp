@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { StatusCodes } from 'http-status-codes';
 import type { User } from '@prisma/client';
 import { prisma } from '../../config/database';
@@ -18,6 +19,23 @@ import type { AuthSessionMeta, AuthTokens, AuthResponse, MeResponse, SafeUser } 
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCK_DURATION_MS = 15 * 60 * 1000;
+const PERMISSION_CACHE_TTL_MS = 30 * 1000;
+const INVALID_CREDENTIALS_ERROR = new ApiError(
+  StatusCodes.UNAUTHORIZED,
+  'Credenciales inválidas',
+  'AUTH_INVALID_CREDENTIALS'
+);
+
+const permissionCache = new Map<string, { codes: Set<string>; expiresAt: number }>();
+
+let dummyPasswordHash: Promise<string> | null = null;
+
+function getDummyPasswordHash(): Promise<string> {
+  if (!dummyPasswordHash) {
+    dummyPasswordHash = hashPassword(crypto.randomBytes(16).toString('hex'));
+  }
+  return dummyPasswordHash;
+}
 
 function toSafeUser(user: User): SafeUser {
   return {
@@ -108,29 +126,26 @@ export async function register(input: RegisterInput, meta: AuthSessionMeta): Pro
 
 export async function login(input: LoginInput, meta: AuthSessionMeta): Promise<AuthResponse> {
   const user = await prisma.user.findFirst({
-    where: { OR: [{ email: input.identifier }, { username: input.identifier }] },
+    where: { OR: [{ email: input.identifier.toLowerCase() }, { username: input.identifier }] },
   });
   if (!user) {
-    throw new ApiError(
-      StatusCodes.UNAUTHORIZED,
-      'Credenciales inválidas',
-      'AUTH_INVALID_CREDENTIALS'
-    );
+    await comparePassword(input.password, await getDummyPasswordHash());
+    throw INVALID_CREDENTIALS_ERROR;
   }
   if (!user.isActive) {
-    throw new ApiError(StatusCodes.FORBIDDEN, 'Cuenta desactivada', 'AUTH_ACCOUNT_DISABLED');
+    await comparePassword(input.password, await getDummyPasswordHash());
+    throw INVALID_CREDENTIALS_ERROR;
   }
   if (user.lockedUntil && user.lockedUntil > new Date()) {
-    throw new ApiError(
-      StatusCodes.LOCKED,
-      'Cuenta bloqueada temporalmente, intente más tarde',
-      'AUTH_ACCOUNT_LOCKED'
-    );
+    await comparePassword(input.password, await getDummyPasswordHash());
+    throw INVALID_CREDENTIALS_ERROR;
   }
 
   const isValid = await comparePassword(input.password, user.passwordHash);
   if (!isValid) {
-    const failedAttempts = user.failedAttempts + 1;
+    const baseAttempts =
+      user.lockedUntil && user.lockedUntil <= new Date() ? 0 : user.failedAttempts;
+    const failedAttempts = baseAttempts + 1;
     await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -139,19 +154,15 @@ export async function login(input: LoginInput, meta: AuthSessionMeta): Promise<A
           failedAttempts >= MAX_FAILED_ATTEMPTS ? new Date(Date.now() + LOCK_DURATION_MS) : null,
       },
     });
-    throw new ApiError(
-      StatusCodes.UNAUTHORIZED,
-      'Credenciales inválidas',
-      'AUTH_INVALID_CREDENTIALS'
-    );
+    throw INVALID_CREDENTIALS_ERROR;
   }
 
-  await prisma.user.update({
+  const refreshedUser = await prisma.user.update({
     where: { id: user.id },
     data: { failedAttempts: 0, lockedUntil: null, lastLoginAt: new Date() },
   });
-  const tokens = await issueTokens(user, meta);
-  return { user: toSafeUser(user), tokens };
+  const tokens = await issueTokens(refreshedUser, meta);
+  return { user: toSafeUser(refreshedUser), tokens };
 }
 
 export async function refresh(input: RefreshInput, meta: AuthSessionMeta): Promise<AuthResponse> {
@@ -182,7 +193,17 @@ export async function refresh(input: RefreshInput, meta: AuthSessionMeta): Promi
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Usuario no disponible', 'AUTH_USER_UNAVAILABLE');
   }
 
-  await prisma.session.update({ where: { id: session.id }, data: { revokedAt: new Date() } });
+  const { count } = await prisma.session.updateMany({
+    where: { id: session.id, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+  if (count !== 1) {
+    throw new ApiError(
+      StatusCodes.UNAUTHORIZED,
+      'Sesión expirada o revocada',
+      'AUTH_SESSION_INVALID'
+    );
+  }
   const tokens = await issueTokens(user, meta);
   return { user: toSafeUser(user), tokens };
 }
@@ -198,32 +219,21 @@ export async function getMe(userId: string): Promise<MeResponse> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: {
-      roles: {
-        include: {
-          role: {
-            include: {
-              permissions: {
-                include: { permission: { select: { code: true } } },
-              },
-            },
-          },
-        },
-      },
       company: { select: { id: true, name: true, currency: true, timezone: true } },
     },
   });
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Usuario no encontrado', 'USER_NOT_FOUND');
   }
-  const permissions = Array.from(
-    new Set(
-      user.roles.flatMap((userRole) => userRole.role.permissions.map((rp) => rp.permission.code))
-    )
-  );
+  const permissions = Array.from(await getUserPermissionCodes(user.id));
   return { user: toSafeUser(user), company: user.company, permissions };
 }
 
 export async function getUserPermissionCodes(userId: string): Promise<Set<string>> {
+  const cached = permissionCache.get(userId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.codes;
+  }
   const links = await prisma.userRole.findMany({
     where: { userId },
     select: {
@@ -236,5 +246,9 @@ export async function getUserPermissionCodes(userId: string): Promise<Set<string
       },
     },
   });
-  return new Set(links.flatMap((link) => link.role.permissions.map((rp) => rp.permission.code)));
+  const codes = new Set(
+    links.flatMap((link) => link.role.permissions.map((rp) => rp.permission.code))
+  );
+  permissionCache.set(userId, { codes, expiresAt: Date.now() + PERMISSION_CACHE_TTL_MS });
+  return codes;
 }

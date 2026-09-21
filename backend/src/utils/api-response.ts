@@ -11,6 +11,10 @@ export function sendSuccess<T>(
   res.status(statusCode).json({ success: true, data, meta });
 }
 
+export function buildErrorBody(message: string, code?: string, details?: unknown) {
+  return { success: false, message, code, details };
+}
+
 export function sendError(
   res: Response,
   statusCode: number,
@@ -18,5 +22,5 @@ export function sendError(
   code?: string,
   details?: unknown
 ): void {
-  res.status(statusCode).json({ success: false, message, code, details });
+  res.status(statusCode).json(buildErrorBody(message, code, details));
 }

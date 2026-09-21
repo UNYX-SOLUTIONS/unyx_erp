@@ -13,7 +13,7 @@ import { router } from './routes';
 
 export const app = express();
 
-app.set('trust proxy', 1);
+app.set('trust proxy', env.TRUST_PROXY ? 1 : false);
 
 app.use(helmet());
 app.use(
@@ -27,7 +27,7 @@ app.use(apiRateLimiter());
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 app.use(compression());
-app.use(pinoHttp({ logger }));
+app.use(pinoHttp({ logger, redact: ['req.headers.authorization', 'req.headers.cookie'] }));
 
 app.use('/api/v1', router);
 

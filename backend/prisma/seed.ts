@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import { seedCompanyRoles } from '../src/modules/auth/role-templates';
 
 const prisma = new PrismaClient();
@@ -35,7 +35,6 @@ const READ_ONLY_MODULES = ['reports', 'audit'] as const;
 const DEMO_COMPANY_TAX_ID = '0000000000001';
 const DEMO_ADMIN_EMAIL = 'admin@unyx.erp';
 const DEMO_ADMIN_USERNAME = 'admin';
-const DEMO_ADMIN_PASSWORD = 'Admin123!';
 
 async function main() {
   for (const module of PERMISSION_MODULES) {
@@ -49,6 +48,15 @@ async function main() {
       });
     }
   }
+
+  const permissionCount = await prisma.permission.count();
+
+  if (process.env.NODE_ENV === 'production') {
+    console.log(`Seed completado: ${permissionCount} permisos (datos demo omitidos en producción)`);
+    return;
+  }
+
+  const demoAdminPassword = process.env.SEED_ADMIN_PASSWORD ?? 'Admin123!';
 
   const demoCompany = await prisma.company.upsert({
     where: { taxId: DEMO_COMPANY_TAX_ID },
@@ -71,7 +79,7 @@ async function main() {
       companyId: demoCompany.id,
       email: DEMO_ADMIN_EMAIL,
       username: DEMO_ADMIN_USERNAME,
-      passwordHash: await bcrypt.hash(DEMO_ADMIN_PASSWORD, 12),
+      passwordHash: await bcrypt.hash(demoAdminPassword, 12),
       firstName: 'Admin',
       lastName: 'Unyx',
       isSuperAdmin: true,
@@ -89,9 +97,8 @@ async function main() {
     });
   }
 
-  const permissionCount = await prisma.permission.count();
   console.log(
-    `Seed completado: ${permissionCount} permisos, ${roles.length} roles, admin ${DEMO_ADMIN_EMAIL} / ${DEMO_ADMIN_PASSWORD}`
+    `Seed completado: ${permissionCount} permisos, ${roles.length} roles, admin ${DEMO_ADMIN_EMAIL}`
   );
 }
 

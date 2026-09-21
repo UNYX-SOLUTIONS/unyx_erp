@@ -21,7 +21,7 @@ export function verifyAccessToken(token: string): AuthUser {
 }
 
 export function signRefreshToken(userId: string): string {
-  return jwt.sign({}, env.JWT_REFRESH_SECRET, {
+  return jwt.sign({ jti: crypto.randomUUID() }, env.JWT_REFRESH_SECRET, {
     subject: userId,
     expiresIn: env.JWT_REFRESH_EXPIRES as SignOptions['expiresIn'],
   });
