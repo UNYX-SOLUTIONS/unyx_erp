@@ -7,10 +7,6 @@
     "rootDir": "src",
     "sourceMap": true,
     "noUncheckedIndexedAccess": true,
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"]
-    },
     "types": ["node"]
   },
   "include": ["src"],
