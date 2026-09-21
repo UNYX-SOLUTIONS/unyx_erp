@@ -1,0 +1,18 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: unyx-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: unyx
+      POSTGRES_PASSWORD: unyx_pass
+      POSTGRES_DB: unyx_erp
+    ports:
+      - "5435:5432"
+    volumes:
+      - unyx_pgdata:/var/lib/postgresql/data
+
+volumes:
+  unyx_pgdata:

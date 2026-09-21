@@ -1,0 +1,33 @@
+{
+  "name": "unyx-erp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Unyx ERP - Sistema de planificación de recursos empresariales",
+  "packageManager": "pnpm@9.1.0",
+  "engines": {
+    "node": ">=20.11.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev:backend": "pnpm --filter backend dev",
+    "build": "pnpm -r build",
+    "build:frontend": "pnpm --filter frontend build",
+    "build:backend": "pnpm --filter backend build",
+    "start": "pnpm -r start",
+    "lint": "pnpm -r lint",
+    "type-check": "pnpm -r type-check",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
+    "db:generate": "pnpm --filter backend prisma:generate",
+    "db:migrate": "pnpm --filter backend prisma:migrate",
+    "db:seed": "pnpm --filter backend prisma:seed",
+    "db:studio": "pnpm --filter backend prisma:studio",
+    "clean": "rimraf node_modules backend/node_modules frontend/node_modules backend/dist frontend/.next"
+  },
+  "devDependencies": {
+    "prettier": "3.2.5",
+    "rimraf": "5.0.7",
+    "typescript": "5.4.5"
+  }
+}
