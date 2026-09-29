@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { SplashScreen } from '@/components/SplashScreen';
 import { useAuthStore } from '@/features/auth/stores/auth-store';
 
-const SPLASH_MIN_DURATION_MS = 1800;
+const SPLASH_MIN_DURATION_MS = 2600;
 
 export default function SplashPage() {
   const router = useRouter();
