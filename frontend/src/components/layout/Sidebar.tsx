@@ -1,74 +1,56 @@
 'use client';
 
-import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { NAVIGATION } from '@/config/navigation';
-import { usePermission } from '@/hooks/usePermission';
+import { FOOTER_NAV, NAV_SECTIONS } from '@/config/navigation';
 import { useUiStore } from '@/stores/ui-store';
-import { Button } from '@/components/ui/button';
+import { usePermission } from '@/hooks/usePermission';
 import { CompanySwitcher } from './CompanySwitcher';
+import { NavItem } from './NavItem';
+import { NavSection } from './NavSection';
 
 export function Sidebar() {
   const pathname = usePathname();
   const sidebarOpen = useUiStore((state) => state.sidebarOpen);
   const { can } = usePermission();
 
-  const visibleItems = NAVIGATION.filter((item) => !item.permission || can(item.permission));
+  const footerItems = FOOTER_NAV.filter((item) => !item.permission || can(item.permission));
 
   return (
     <aside
       className={cn(
-        'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r bg-background transition-transform duration-200 lg:static lg:translate-x-0',
+        'fixed inset-y-0 left-0 z-40 flex w-[260px] flex-col border-r border-gray-200 bg-white transition-transform duration-200 lg:static lg:translate-x-0',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       )}
     >
-      <div className="flex h-16 items-center gap-2 border-b px-4">
-        <Image src="/logo.svg" alt="Unyx ERP" width={120} height={30} />
+      <div className="flex h-16 items-center gap-2.5 border-b border-gray-200 px-4">
+        <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-black">
+          <Image src="/logo-mark.svg" alt="Unyx ERP" width={22} height={22} />
+        </div>
+        <span className="text-base font-bold tracking-tight text-gray-900">UNYX</span>
+        <span className="rounded border border-gray-200 bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+          ERP
+        </span>
       </div>
+
       <CompanySwitcher />
-      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-        {visibleItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-          return (
-            <div key={item.href}>
-              <Button
-                asChild
-                variant={isActive ? 'secondary' : 'ghost'}
-                className="w-full justify-start gap-2"
-              >
-                <Link href={item.href}>
-                  <item.icon className="h-4 w-4" />
-                  {item.title}
-                  {item.children && <ChevronDown className="ml-auto h-4 w-4" />}
-                </Link>
-              </Button>
-              {item.children && isActive && (
-                <div className="ml-4 mt-1 space-y-1 border-l pl-2">
-                  {item.children
-                    .filter((child) => !child.permission || can(child.permission))
-                    .map((child) => (
-                      <Button
-                        key={child.href}
-                        asChild
-                        variant={pathname === child.href ? 'secondary' : 'ghost'}
-                        size="sm"
-                        className="w-full justify-start gap-2"
-                      >
-                        <Link href={child.href}>
-                          <child.icon className="h-4 w-4" />
-                          {child.title}
-                        </Link>
-                      </Button>
-                    ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
+
+      <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 pb-4">
+        {NAV_SECTIONS.map((section) => (
+          <NavSection key={section.title} section={section} pathname={pathname} />
+        ))}
       </nav>
+
+      <div className="border-t border-gray-200 p-2">
+        {footerItems.map((item) => (
+          <NavItem
+            key={item.href}
+            item={item}
+            isActive={pathname.startsWith(item.href)}
+          />
+        ))}
+      </div>
     </aside>
   );
 }

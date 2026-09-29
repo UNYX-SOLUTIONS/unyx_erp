@@ -1,12 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { Loader2, LogOut, User } from 'lucide-react';
+import { ChevronDown, Loader2, LogOut, User } from 'lucide-react';
 import { useCurrentUser } from '@/features/auth/hooks/useCurrentUser';
 import { useLogout } from '@/features/auth/hooks/useLogout';
 import { initials } from '@/lib/formatters';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,11 +25,23 @@ export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-          <Avatar className="h-9 w-9">
-            <AvatarFallback>{initials(user.firstName, user.lastName)}</AvatarFallback>
-          </Avatar>
-        </Button>
+        <button
+          type="button"
+          className="flex items-center gap-2.5 rounded-md px-1.5 py-1 transition-colors hover:bg-gray-50 focus:outline-none"
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
+            {initials(user.firstName, user.lastName)}
+          </span>
+          <span className="hidden flex-col items-start leading-tight lg:flex">
+            <span className="text-sm font-medium text-gray-900">
+              {user.firstName} {user.lastName}
+            </span>
+            <span className="text-[11px] text-gray-400">
+              {user.isSuperAdmin ? 'Administrador' : 'Usuario'}
+            </span>
+          </span>
+          <ChevronDown className="hidden h-3.5 w-3.5 text-gray-400 lg:block" />
+        </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="font-normal">
