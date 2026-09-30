@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -11,8 +12,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
-import { PRODUCTS } from '../../data/mock';
+import { Skeleton } from '@/components/ui/skeleton';
+import { formatLastUpdate } from '@/lib/formatters';
+import { useProduct } from '../../hooks/useProduct';
 import { useProductDetail } from '../../hooks/useProductDetail';
+import { useUpdateProduct } from '../../hooks/useUpdateProduct';
 import { useProductDetailStore } from '../../stores/product-detail-store';
 import { GeneralTab } from './tabs/GeneralTab';
 import { SpecificationsTab } from './tabs/SpecificationsTab';
@@ -29,20 +33,12 @@ export function ProductDetailSheet() {
   const [activeTab, setActiveTab] = useState<DetailTab>('general');
   const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
 
-  const product = useMemo(
-    () => PRODUCTS.find((item) => item.id === productId) ?? null,
-    [productId]
-  );
+  const { data, isLoading } = useProduct(isOpen ? productId : null);
+  const product = data?.data ?? null;
+  const updateProduct = useUpdateProduct(productId ?? '');
 
-  const {
-    generalForm,
-    variantsForm,
-    variantsArray,
-    isDirty,
-    submitGeneral,
-    submitVariants,
-    resetAll,
-  } = useProductDetail(product);
+  const { generalForm, variantsForm, variantsArray, isDirty, resetAll } =
+    useProductDetail(product);
 
   useEffect(() => {
     if (isOpen) {
@@ -71,12 +67,41 @@ export function ProductDetailSheet() {
     close();
   };
 
-  const handleSave = () => {
-    if (activeTab === 'variants') {
-      submitVariants();
+  const handleSaveGeneral = generalForm.handleSubmit((values) => {
+    if (!productId) {
       return;
     }
-    submitGeneral();
+    updateProduct.mutate(
+      {
+        name: values.name,
+        sku: values.sku,
+        line: values.line,
+        category: values.category,
+        subcategory: values.subcategory,
+        commercialDescription: values.commercialDescription,
+        keywords: values.keywords,
+        isActive: values.isActive,
+      },
+      {
+        onSuccess: () => {
+          close();
+        },
+      }
+    );
+  });
+
+  const handleSaveVariants = variantsForm.handleSubmit((values) => {
+    console.log('Guardar detalle (Variantes y precios, modo local)', values);
+    toast.success('Cambios guardados (variantes en modo local)');
+    variantsForm.reset(values);
+  });
+
+  const handleSave = () => {
+    if (activeTab === 'variants') {
+      void handleSaveVariants();
+      return;
+    }
+    void handleSaveGeneral();
   };
 
   return (
@@ -95,7 +120,13 @@ export function ProductDetailSheet() {
           aria-describedby={undefined}
           className="w-full gap-0 p-0 sm:max-w-3xl"
         >
-          {product && (
+          {isLoading && !product ? (
+            <div className="flex-1 space-y-4 px-6 py-6">
+              <Skeleton className="h-7 w-1/3" />
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-48 w-full" />
+            </div>
+          ) : product ? (
             <>
               <ProductDetailHeader product={product} onClose={requestClose} />
               <ProductDetailTabs
@@ -112,12 +143,15 @@ export function ProductDetailSheet() {
                 {activeTab === 'warranty' && <WarrantyTab />}
               </div>
               <ProductDetailFooter
-                lastUpdate={product.lastUpdate}
+                lastUpdate={{ label: formatLastUpdate(product.updatedAt) }}
                 canSave={activeTabIsDirty}
+                isSaving={updateProduct.isPending}
                 onCancel={requestClose}
                 onSave={handleSave}
               />
             </>
+          ) : (
+            <div className="flex-1 p-6 text-sm text-gray-500">No se encontró el producto.</div>
           )}
         </SheetContent>
       </Sheet>
@@ -138,10 +172,7 @@ export function ProductDetailSheet() {
             >
               Seguir editando
             </Button>
-            <Button
-              onClick={handleDiscard}
-              className="bg-red-600 text-white hover:bg-red-700"
-            >
+            <Button onClick={handleDiscard} className="bg-red-600 text-white hover:bg-red-700">
               Descartar cambios
             </Button>
           </DialogFooter>

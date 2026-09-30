@@ -60,12 +60,14 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-              <p className="text-sm text-muted-foreground">Precio de venta</p>
-              <p className="font-semibold">{formatCurrency(data.data.salePrice)}</p>
+              <p className="text-sm text-muted-foreground">Precio</p>
+              <p className="font-semibold">
+                {data.data.price !== null ? formatCurrency(data.data.price) : 'Sin precio'}
+              </p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Precio de costo</p>
-              <p className="font-semibold">{formatCurrency(data.data.costPrice)}</p>
+              <p className="text-sm text-muted-foreground">Línea</p>
+              <p className="font-semibold">{data.data.line ?? '—'}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Creado</p>

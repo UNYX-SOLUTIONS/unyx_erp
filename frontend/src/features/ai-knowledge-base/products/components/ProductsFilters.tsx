@@ -3,45 +3,48 @@
 import { DataTableToolbar } from '@/components/data-table/DataTableToolbar';
 import { FilterSelect } from '@/components/filters/FilterSelect';
 import { SearchInput } from '@/components/filters/SearchInput';
-import type { ProductLine, ProductStatus, ProductSyncStatus } from '../types/product.types';
 
-export type ProductValidationFilter = ProductStatus | 'all';
-export type ProductSyncFilter = ProductSyncStatus | 'all';
-export type ProductLineFilter = ProductLine | 'all';
+export const PRODUCT_LINES = [
+  'Sillas Tapizadas',
+  'Sillas de Plastico',
+  'Bases y mesas',
+  'Taburetes',
+  'Sillas de Oficina',
+  'Sillines',
+  'Mesas Auxiliares',
+  'Sillas de Espera',
+  'Sillas Ejecutivas',
+  'Sillas Operativas',
+  'Sillas Lounge',
+];
 
 const VALIDATION_OPTIONS = [
   { label: 'Todos los estados', value: 'all' },
-  { label: 'Aprobado', value: 'approved' },
-  { label: 'Pendiente', value: 'pending' },
-  { label: 'Requiere corrección', value: 'needsCorrection' },
-  { label: 'Sin precio', value: 'noPrice' },
+  { label: 'Aprobado', value: 'APROBADO' },
+  { label: 'Pendiente', value: 'PENDIENTE' },
+  { label: 'Requiere corrección', value: 'REQUIERE_CORRECCION' },
 ];
 
 const SYNC_OPTIONS = [
   { label: 'Todos', value: 'all' },
-  { label: 'Sincronizado', value: 'synced' },
-  { label: 'Sin sincronizar', value: 'notSynced' },
+  { label: 'Sincronizado', value: 'SINCRONIZADO' },
+  { label: 'Sin sincronizar', value: 'SIN_SINCRONIZAR' },
 ];
 
 const LINE_OPTIONS = [
   { label: 'Todas las líneas', value: 'all' },
-  { label: 'Sillines', value: 'Sillines' },
-  { label: 'Mesas Auxiliares', value: 'Mesas Auxiliares' },
-  { label: 'Sillas de Espera', value: 'Sillas de Espera' },
-  { label: 'Sillas Ejecutivas', value: 'Sillas Ejecutivas' },
-  { label: 'Sillas Operativas', value: 'Sillas Operativas' },
-  { label: 'Sillas Lounge', value: 'Sillas Lounge' },
+  ...PRODUCT_LINES.map((line) => ({ label: line, value: line })),
 ];
 
 interface ProductsFiltersProps {
   search: string;
   onSearchChange: (value: string) => void;
-  validation: ProductValidationFilter;
-  onValidationChange: (value: ProductValidationFilter) => void;
-  sync: ProductSyncFilter;
-  onSyncChange: (value: ProductSyncFilter) => void;
-  line: ProductLineFilter;
-  onLineChange: (value: ProductLineFilter) => void;
+  validation: string;
+  onValidationChange: (value: string) => void;
+  sync: string;
+  onSyncChange: (value: string) => void;
+  line: string;
+  onLineChange: (value: string) => void;
 }
 
 export function ProductsFilters({
@@ -66,22 +69,22 @@ export function ProductsFilters({
         label="Validación"
         options={VALIDATION_OPTIONS}
         value={validation}
-        onChange={(value) => onValidationChange(value as ProductValidationFilter)}
+        onChange={onValidationChange}
         className="w-48"
       />
       <FilterSelect
         label="Sincronización"
         options={SYNC_OPTIONS}
         value={sync}
-        onChange={(value) => onSyncChange(value as ProductSyncFilter)}
-        className="w-40"
+        onChange={onSyncChange}
+        className="w-44"
       />
       <FilterSelect
         label="Línea"
         options={LINE_OPTIONS}
         value={line}
-        onChange={(value) => onLineChange(value as ProductLineFilter)}
-        className="w-48"
+        onChange={onLineChange}
+        className="w-52"
       />
     </DataTableToolbar>
   );

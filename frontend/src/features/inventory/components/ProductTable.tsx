@@ -8,7 +8,7 @@ import { DataTableColumnHeader } from '@/components/data-table/DataTableColumnHe
 import { DataTableEmptyState } from '@/components/data-table/DataTableEmptyState';
 import { DataTablePagination } from '@/components/data-table/DataTablePagination';
 import { Badge } from '@/components/ui/badge';
-import { formatCurrency, formatDate } from '@/lib/formatters';
+import { formatCurrency } from '@/lib/formatters';
 import { useProducts } from '../hooks/useProducts';
 import type { Product } from '../types/product-types';
 
@@ -28,9 +28,19 @@ export function ProductTable() {
         cell: ({ row }) => <span className="font-mono text-sm">{row.original.sku}</span>,
       },
       {
-        accessorKey: 'salePrice',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Precio venta" />,
-        cell: ({ row }) => formatCurrency(row.original.salePrice),
+        accessorKey: 'line',
+        header: 'Línea',
+        cell: ({ row }) => row.original.line ?? '—',
+      },
+      {
+        accessorKey: 'price',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Precio" />,
+        cell: ({ row }) =>
+          row.original.price !== null ? (
+            formatCurrency(row.original.price)
+          ) : (
+            <span className="text-muted-foreground">Sin precio</span>
+          ),
       },
       {
         accessorKey: 'isActive',
@@ -41,11 +51,6 @@ export function ProductTable() {
           ) : (
             <Badge variant="secondary">Inactivo</Badge>
           ),
-      },
-      {
-        accessorKey: 'createdAt',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Creado" />,
-        cell: ({ row }) => formatDate(row.original.createdAt),
       },
     ],
     []

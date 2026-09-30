@@ -1,12 +1,13 @@
 'use client';
 
-import { Clock, Save } from 'lucide-react';
+import { Clock, Loader2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ProductLastUpdate } from '../../types/product.types';
 
 interface ProductDetailFooterProps {
   lastUpdate: ProductLastUpdate;
   canSave: boolean;
+  isSaving?: boolean;
   onCancel: () => void;
   onSave: () => void;
 }
@@ -14,6 +15,7 @@ interface ProductDetailFooterProps {
 export function ProductDetailFooter({
   lastUpdate,
   canSave,
+  isSaving = false,
   onCancel,
   onSave,
 }: ProductDetailFooterProps) {
@@ -22,7 +24,9 @@ export function ProductDetailFooter({
       <div className="flex items-center gap-2 text-xs text-gray-500">
         <Clock className="h-3.5 w-3.5" />
         <span>
-          Último cambio por {lastUpdate.author} ({lastUpdate.label})
+          {lastUpdate.author
+            ? `Último cambio por ${lastUpdate.author} (${lastUpdate.label})`
+            : `Último cambio: ${lastUpdate.label}`}
         </span>
       </div>
       <div className="flex items-center gap-3">
@@ -35,10 +39,10 @@ export function ProductDetailFooter({
         </Button>
         <Button
           onClick={onSave}
-          disabled={!canSave}
+          disabled={!canSave || isSaving}
           className="gap-1.5 bg-blue-600 text-white hover:bg-blue-700"
         >
-          <Save className="h-4 w-4" />
+          {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           Guardar cambios
         </Button>
       </div>

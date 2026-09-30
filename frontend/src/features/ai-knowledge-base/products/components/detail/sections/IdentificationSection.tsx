@@ -15,9 +15,12 @@ import { SectionCard } from '../SectionCard';
 import type { GeneralFormValues } from '../../../schemas/product-schema';
 
 const LINE_OPTIONS = [
-  'Sillas',
+  'Sillas Tapizadas',
+  'Sillas de Plastico',
+  'Bases y mesas',
+  'Taburetes',
+  'Sillas de Oficina',
   'Sillines',
-  'Mesas',
   'Mesas Auxiliares',
   'Sillas de Espera',
   'Sillas Ejecutivas',
@@ -85,20 +88,26 @@ export function IdentificationSection({ form }: { form: UseFormReturn<GeneralFor
           <Controller
             control={control}
             name="line"
-            render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger className="h-10 border-gray-200">
-                  <SelectValue placeholder="Selecciona una línea" />
-                </SelectTrigger>
-                <SelectContent>
-                  {LINE_OPTIONS.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            render={({ field }) => {
+              const options =
+                field.value && !LINE_OPTIONS.includes(field.value)
+                  ? [field.value, ...LINE_OPTIONS]
+                  : LINE_OPTIONS;
+              return (
+                <Select value={field.value || undefined} onValueChange={field.onChange}>
+                  <SelectTrigger className="h-10 border-gray-200">
+                    <SelectValue placeholder="Selecciona una línea" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {options.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              );
+            }}
           />
         </FormField>
 

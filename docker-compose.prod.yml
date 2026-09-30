@@ -1,18 +1,15 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: unyx-postgres
-    restart: unless-stopped
+    restart: always
     environment:
-      POSTGRES_USER: unyx
-      POSTGRES_PASSWORD: unyx_pass
-      POSTGRES_DB: unyx_erp
-    ports:
-      - "5435:5432"
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - unyx_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U unyx -d unyx_erp"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -20,20 +17,17 @@ services:
   backend:
     build:
       context: ./backend
-    container_name: unyx-erp-backend
-    restart: unless-stopped
+    restart: always
     environment:
       NODE_ENV: production
       PORT: 4000
-      DATABASE_URL: postgresql://unyx:unyx_pass@postgres:5432/unyx_erp?schema=public
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-unyx_access_secret_change_me}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-unyx_refresh_secret_change_me}
-      JWT_ACCESS_EXPIRES: 15m
-      JWT_REFRESH_EXPIRES: 7d
-      CORS_ORIGIN: http://localhost:3000
-      TRUST_PROXY: "false"
-    ports:
-      - "4001:4000"
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_ACCESS_EXPIRES: ${JWT_ACCESS_EXPIRES:-15m}
+      JWT_REFRESH_EXPIRES: ${JWT_REFRESH_EXPIRES:-7d}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      TRUST_PROXY: "true"
     depends_on:
       postgres:
         condition: service_healthy
@@ -48,12 +42,11 @@ services:
     build:
       context: ./frontend
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:4001
+        NEXT_PUBLIC_API_URL: ""
         API_PROXY_URL: http://backend:4000
-    container_name: unyx-erp-frontend
-    restart: unless-stopped
+    restart: always
     ports:
-      - "3000:3000"
+      - "80:3000"
     depends_on:
       backend:
         condition: service_healthy
