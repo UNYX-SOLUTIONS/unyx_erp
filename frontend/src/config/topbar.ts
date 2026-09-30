@@ -15,11 +15,11 @@ export interface TopbarPageConfig {
 }
 
 export const TOPBAR_PAGE_CONFIG: Record<string, TopbarPageConfig> = {
-  '/dashboard/ai/knowledge-base': {
+  '/ai/knowledge-base/summary': {
     breadcrumb: [
       { label: 'KB-01' },
       { label: 'Modelo IA' },
-      { label: 'Base de conocimiento' },
+      { label: 'Resumen' },
     ],
     badge: 'Base operativa',
     badgeTone: 'green',
@@ -29,7 +29,7 @@ export const TOPBAR_PAGE_CONFIG: Record<string, TopbarPageConfig> = {
   '/ai/knowledge-base/products': {
     breadcrumb: [
       { label: 'Inicio', href: '/operations/dashboard' },
-      { label: 'Base de conocimiento', href: '/dashboard/ai/knowledge-base' },
+      { label: 'Base de conocimiento', href: '/ai/knowledge-base/summary' },
       { label: 'Productos' },
     ],
     badge: 'KB-02 · Módulo IA',

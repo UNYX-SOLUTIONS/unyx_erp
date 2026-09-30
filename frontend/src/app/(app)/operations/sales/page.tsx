@@ -17,7 +17,7 @@ export default function SalesPage() {
           <p className="text-muted-foreground">Gestiona tus ventas y pagos</p>
         </div>
         <Button asChild>
-          <Link href="/dashboard/sales/new">
+          <Link href="/operations/sales/new">
             <Plus className="mr-2 h-4 w-4" />
             Nueva venta
           </Link>

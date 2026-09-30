@@ -12,11 +12,11 @@ interface Crumb {
 }
 
 const SETTINGS_LABELS: Record<string, string> = {
-  '/dashboard/settings/profile': 'Mi perfil',
-  '/dashboard/settings/company': 'Empresa',
-  '/dashboard/settings/users': 'Usuarios',
-  '/dashboard/settings/roles': 'Roles',
-  '/dashboard/settings/billing': 'Facturación',
+  '/operations/settings/profile': 'Mi perfil',
+  '/operations/settings/company': 'Empresa',
+  '/operations/settings/users': 'Usuarios',
+  '/operations/settings/roles': 'Roles',
+  '/operations/settings/billing': 'Facturación',
 };
 
 function getCrumbs(pathname: string): Crumb[] {
@@ -25,7 +25,7 @@ function getCrumbs(pathname: string): Crumb[] {
   }
   const settingsLabel = SETTINGS_LABELS[pathname];
   if (settingsLabel) {
-    return [{ title: 'Configuración', href: '/dashboard/settings/profile' }, { title: settingsLabel }];
+    return [{ title: 'Configuración', href: '/operations/settings/profile' }, { title: settingsLabel }];
   }
   let best: { title: string; href: string } | null = null;
   for (const section of NAV_SECTIONS) {

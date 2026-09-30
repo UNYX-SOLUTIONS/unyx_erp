@@ -54,7 +54,7 @@ export function UserMenu() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/dashboard/settings/profile">
+          <Link href="/operations/settings/profile">
             <User className="mr-2 h-4 w-4" />
             Mi perfil
           </Link>

@@ -83,10 +83,10 @@ export const NAV_SECTIONS: NavSection[] = [
           { title: 'Catálogos', href: '/ai/knowledge-base/catalogs', icon: Library },
           {
             title: 'Garantías',
-            href: '/dashboard/ai/knowledge-base/warranties',
+            href: '/ai/knowledge-base/warranties',
             icon: ShieldCheck,
           },
-          { title: 'Configuración IA', href: '/dashboard/ai/settings', icon: Settings2 },
+          { title: 'Configuración IA', href: '/ai/settings', icon: Settings2 },
         ],
       },
     ],
@@ -94,5 +94,5 @@ export const NAV_SECTIONS: NavSection[] = [
 ];
 
 export const FOOTER_NAV: NavItem[] = [
-  { title: 'Configuración', href: '/dashboard/settings/profile', icon: Settings },
+  { title: 'Configuración', href: '/operations/settings/profile', icon: Settings },
 ];
