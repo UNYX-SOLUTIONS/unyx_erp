@@ -34,7 +34,7 @@ export default function KnowledgeProductsPage() {
             {pendingProducts} pendientes de revisión
           </span>
           <Button asChild className="gap-1.5 bg-blue-600 text-white hover:bg-blue-700">
-            <Link href="/dashboard/inventory/new">
+            <Link href="/operations/warehouse/inventory/new">
               <Plus className="h-4 w-4" />
               Nuevo producto
             </Link>

@@ -34,7 +34,7 @@ export function ActivityPanel({ className }: { className?: string }) {
             </p>
           </div>
           <Link
-            href="/dashboard/ai/knowledge-base/summary"
+            href="/ai/knowledge-base/summary"
             className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
           >
             Ver todo
@@ -68,7 +68,7 @@ export function ActivityPanel({ className }: { className?: string }) {
 
         <footer className="flex items-center justify-between border-t border-gray-100 px-5 py-3">
           <Link
-            href="/dashboard/ai/knowledge-base/summary"
+            href="/ai/knowledge-base/summary"
             className="text-xs font-medium text-blue-600 hover:text-blue-700"
           >
             Historial de actividad

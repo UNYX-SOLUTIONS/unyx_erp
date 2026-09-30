@@ -11,7 +11,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     if (isHydrated && accessToken) {
-      router.replace('/dashboard');
+      router.replace('/operations/dashboard');
     }
   }, [isHydrated, accessToken, router]);
 

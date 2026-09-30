@@ -24,7 +24,7 @@ export function PreparationTable({ className }: { className?: string }) {
             </span>
           </div>
           <Link
-            href="/dashboard/orders"
+            href="/operations/orders"
             className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
           >
             Ver todos los pedidos

@@ -38,7 +38,7 @@ export function KnowledgeHero({ className }: { className?: string }) {
             {KNOWLEDGE_SCORE.approvedRecords} registros aprobados para uso de la IA
           </span>
           <Link
-            href="/dashboard/ai/knowledge-base/summary"
+            href="/ai/knowledge-base/summary"
             className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700"
           >
             Ver auditoría completa

@@ -20,7 +20,7 @@ const SETTINGS_LABELS: Record<string, string> = {
 };
 
 function getCrumbs(pathname: string): Crumb[] {
-  if (pathname === '/dashboard') {
+  if (pathname === '/operations/dashboard') {
     return [{ title: 'Dashboard operativo' }];
   }
   const settingsLabel = SETTINGS_LABELS[pathname];
@@ -55,7 +55,7 @@ export function Breadcrumbs() {
 
   return (
     <nav aria-label="Breadcrumb" className="hidden items-center gap-1.5 text-sm sm:flex">
-      <Link href="/dashboard" className="text-gray-400 transition-colors hover:text-gray-600">
+      <Link href="/operations/dashboard" className="text-gray-400 transition-colors hover:text-gray-600">
         Inicio
       </Link>
       {crumbs.map((crumb, index) => (

@@ -24,7 +24,7 @@ export function InventoryAlerts({ className }: { className?: string }) {
             </span>
           </div>
           <Link
-            href="/dashboard/inventory"
+            href="/operations/warehouse/inventory"
             className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
           >
             Ver inventario

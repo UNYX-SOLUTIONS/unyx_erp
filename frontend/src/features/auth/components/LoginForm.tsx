@@ -36,7 +36,7 @@ export function LoginForm() {
     login.mutate(values, {
       onSuccess: () => {
         toast.success('Bienvenido');
-        router.push('/dashboard');
+        router.push('/operations/dashboard');
       },
       onError: (error) =>
         setGeneralError(getApiErrorMessage(error, 'Correo o contraseña incorrectos.')),

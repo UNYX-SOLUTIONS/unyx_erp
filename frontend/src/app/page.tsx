@@ -19,7 +19,7 @@ export default function SplashPage() {
       return;
     }
     redirected.current = true;
-    const target = accessToken ? '/dashboard' : '/login';
+    const target = accessToken ? '/operations/dashboard' : '/login';
     const elapsed = Date.now() - startedAt;
     const remaining = Math.max(0, SPLASH_MIN_DURATION_MS - elapsed);
     const timer = setTimeout(() => router.replace(target), remaining);

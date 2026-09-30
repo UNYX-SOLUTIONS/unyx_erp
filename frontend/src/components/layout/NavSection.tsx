@@ -13,8 +13,8 @@ interface NavSectionProps {
 }
 
 function isItemActive(pathname: string, href: string): boolean {
-  if (href === '/dashboard') {
-    return pathname === '/dashboard';
+  if (href === '/operations/dashboard') {
+    return pathname === '/operations/dashboard';
   }
   return pathname === href || pathname.startsWith(`${href}/`);
 }

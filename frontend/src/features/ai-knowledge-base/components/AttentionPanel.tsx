@@ -38,7 +38,7 @@ export function AttentionPanel({ className }: { className?: string }) {
         <footer className="flex items-center justify-between border-t border-gray-100 px-5 py-3">
           <span className="text-xs text-gray-500">Prioridad operativa alta</span>
           <Link
-            href="/dashboard/ai/knowledge-base/products"
+            href="/ai/knowledge-base/products"
             className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
           >
             Ver pendientes ({ATTENTION_ITEMS.length})

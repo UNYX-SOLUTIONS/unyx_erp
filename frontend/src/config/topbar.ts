@@ -26,9 +26,9 @@ export const TOPBAR_PAGE_CONFIG: Record<string, TopbarPageConfig> = {
     action: 'sync-knowledge',
     actionMeta: 'Última sincronización: 21 Sep 2026, 16:32',
   },
-  '/dashboard/ai/knowledge-base/products': {
+  '/ai/knowledge-base/products': {
     breadcrumb: [
-      { label: 'Inicio', href: '/dashboard' },
+      { label: 'Inicio', href: '/operations/dashboard' },
       { label: 'Base de conocimiento', href: '/dashboard/ai/knowledge-base' },
       { label: 'Productos' },
     ],

@@ -17,7 +17,7 @@ export default function InventoryPage() {
           <p className="text-muted-foreground">Gestiona tu catálogo de productos</p>
         </div>
         <Button asChild>
-          <Link href="/dashboard/inventory/new">
+          <Link href="/operations/warehouse/inventory/new">
             <Plus className="mr-2 h-4 w-4" />
             Nuevo producto
           </Link>

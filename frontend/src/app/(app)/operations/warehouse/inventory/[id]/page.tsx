@@ -15,7 +15,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button asChild variant="outline" size="icon">
-          <Link href="/dashboard/inventory">
+          <Link href="/operations/warehouse/inventory">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
