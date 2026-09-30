@@ -5,6 +5,7 @@ const VALIDATION_TO_STATUS: Record<ProductDto['validation'], ProductStatus> = {
   APROBADO: 'approved',
   PENDIENTE: 'pending',
   REQUIERE_CORRECCION: 'needsCorrection',
+  SIN_PRECIO: 'noPrice',
 };
 
 export function mapProductDtoToUi(dto: ProductDto): Product {
@@ -15,10 +16,10 @@ export function mapProductDtoToUi(dto: ProductDto): Product {
     line: dto.line ?? dto.category ?? '',
     variants: {
       count: dto.variantCount,
-      ...(dto.variantLabel ? { label: dto.variantLabel } : {}),
+      ...(dto.primaryColor ? { label: dto.primaryColor } : {}),
     },
     price: dto.price,
-    priceFrom: false,
+    priceFrom: dto.priceFrom,
     status: VALIDATION_TO_STATUS[dto.validation],
     syncStatus: dto.syncStatus === 'SINCRONIZADO' ? 'synced' : 'notSynced',
     lastUpdate: { label: formatLastUpdate(dto.updatedAt) },

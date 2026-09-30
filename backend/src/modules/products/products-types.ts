@@ -1,10 +1,18 @@
-import type { KbSyncStatus, KbValidationStatus } from '@prisma/client';
+import type { KbSyncStatus, KbValidationStatus, Prisma } from '@prisma/client';
 import type { z } from 'zod';
-import type { createProductSchema, listProductsQuerySchema, updateProductSchema } from './products-schema';
+import type {
+  createProductSchema,
+  createVariantSchema,
+  listProductsQuerySchema,
+  updateProductSchema,
+  updateVariantSchema,
+} from './products-schema';
 import type { PaginationMeta } from '../../utils/pagination';
 
 export type CreateProductInput = z.infer<typeof createProductSchema>;
 export type UpdateProductInput = z.infer<typeof updateProductSchema>;
+export type CreateVariantInput = z.infer<typeof createVariantSchema>;
+export type UpdateVariantInput = z.infer<typeof updateVariantSchema>;
 export type ListProductsQuery = z.infer<typeof listProductsQuerySchema>;
 
 export interface ProductListFilters {
@@ -14,6 +22,24 @@ export interface ProductListFilters {
   validation?: KbValidationStatus;
   syncStatus?: KbSyncStatus;
   line?: string;
+}
+
+export interface VariantDto {
+  id: string;
+  productId: string;
+  sku: string;
+  name: string;
+  color: string | null;
+  colorHex: string | null;
+  price: number | null;
+  stock: number;
+  imageUrl: string | null;
+  description: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  especificaciones: Prisma.JsonValue | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ProductDto {
@@ -26,17 +52,21 @@ export interface ProductDto {
   description: string | null;
   commercialDescription: string | null;
   keywords: string[];
-  color: string | null;
-  price: number | null;
+  thumbnailUrl: string | null;
+  sourceUrl: string | null;
   validation: KbValidationStatus;
   syncStatus: KbSyncStatus;
   isActive: boolean;
-  thumbnailUrl: string | null;
-  sourceUrl: string | null;
   variantCount: number;
-  variantLabel: string | null;
+  price: number | null;
+  priceFrom: boolean;
+  primaryColor: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ProductDetailDto extends ProductDto {
+  variants: VariantDto[];
 }
 
 export interface ProductListResult {

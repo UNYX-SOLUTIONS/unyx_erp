@@ -14,9 +14,12 @@ import {
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatLastUpdate } from '@/lib/formatters';
+import { useAddVariant } from '../../hooks/useAddVariant';
+import { useDeleteVariant } from '../../hooks/useDeleteVariant';
 import { useProduct } from '../../hooks/useProduct';
 import { useProductDetail } from '../../hooks/useProductDetail';
 import { useUpdateProduct } from '../../hooks/useUpdateProduct';
+import { useUpdateVariant } from '../../hooks/useUpdateVariant';
 import { useProductDetailStore } from '../../stores/product-detail-store';
 import { GeneralTab } from './tabs/GeneralTab';
 import { SpecificationsTab } from './tabs/SpecificationsTab';
@@ -35,7 +38,11 @@ export function ProductDetailSheet() {
 
   const { data, isLoading } = useProduct(isOpen ? productId : null);
   const product = data?.data ?? null;
+
   const updateProduct = useUpdateProduct(productId ?? '');
+  const addVariantMutation = useAddVariant(productId ?? '');
+  const updateVariantMutation = useUpdateVariant(productId ?? '');
+  const deleteVariantMutation = useDeleteVariant(productId ?? '');
 
   const { generalForm, variantsForm, variantsArray, isDirty, resetAll } =
     useProductDetail(product);
@@ -52,6 +59,9 @@ export function ProductDetailSheet() {
       : activeTab === 'variants'
         ? variantsForm.formState.isDirty
         : false;
+
+  const isSaving =
+    activeTab === 'variants' ? updateVariantMutation.isPending : updateProduct.isPending;
 
   const requestClose = () => {
     if (isDirty) {
@@ -90,10 +100,29 @@ export function ProductDetailSheet() {
     );
   });
 
-  const handleSaveVariants = variantsForm.handleSubmit((values) => {
-    console.log('Guardar detalle (Variantes y precios, modo local)', values);
-    toast.success('Cambios guardados (variantes en modo local)');
-    variantsForm.reset(values);
+  const handleSaveVariants = variantsForm.handleSubmit(async (values) => {
+    if (!productId) {
+      return;
+    }
+    const results = await Promise.allSettled(
+      values.variants.map((variant) =>
+        updateVariantMutation.mutateAsync({
+          variantId: variant.id,
+          payload: {
+            name: variant.name,
+            sku: variant.sku,
+            color: variant.colorLabel || undefined,
+            colorHex: variant.color || undefined,
+            price: variant.price,
+            description: variant.description || undefined,
+          },
+        })
+      )
+    );
+    const hasFailures = results.some((result) => result.status === 'rejected');
+    if (!hasFailures) {
+      toast.success('Cambios guardados');
+    }
   });
 
   const handleSave = () => {
@@ -137,7 +166,14 @@ export function ProductDetailSheet() {
               <div className="flex-1 overflow-y-auto bg-white px-6 py-6">
                 {activeTab === 'general' && <GeneralTab form={generalForm} />}
                 {activeTab === 'variants' && (
-                  <VariantsTab form={variantsForm} variantsArray={variantsArray} />
+                  <VariantsTab
+                    product={product}
+                    form={variantsForm}
+                    variantsArray={variantsArray}
+                    addVariant={addVariantMutation}
+                    updateVariant={updateVariantMutation}
+                    deleteVariant={deleteVariantMutation}
+                  />
                 )}
                 {activeTab === 'specifications' && <SpecificationsTab />}
                 {activeTab === 'warranty' && <WarrantyTab />}
@@ -145,7 +181,7 @@ export function ProductDetailSheet() {
               <ProductDetailFooter
                 lastUpdate={{ label: formatLastUpdate(product.updatedAt) }}
                 canSave={activeTabIsDirty}
-                isSaving={updateProduct.isPending}
+                isSaving={isSaving}
                 onCancel={requestClose}
                 onSave={handleSave}
               />

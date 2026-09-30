@@ -26,6 +26,7 @@ services:
       NODE_ENV: production
       PORT: 4000
       DATABASE_URL: postgresql://unyx:unyx_pass@postgres:5432/unyx_erp?schema=public
+      DATABASE_URL_ALTOSA: postgresql://unyx:unyx_pass@postgres:5432/unyx_erp?schema=public
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-unyx_access_secret_change_me}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-unyx_refresh_secret_change_me}
       JWT_ACCESS_EXPIRES: 15m

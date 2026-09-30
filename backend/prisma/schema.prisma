@@ -832,6 +832,7 @@ enum KbValidationStatus {
   APROBADO
   PENDIENTE
   REQUIERE_CORRECCION
+  SIN_PRECIO
 }
 
 enum KbSyncStatus {
@@ -850,15 +851,11 @@ model KbProduct {
   description           String?
   commercialDescription String?
   keywords              String[]
-  color                 String?
-  price                 Decimal?           @db.Decimal(12, 2)
+  thumbnailUrl          String?
+  sourceUrl             String?
   validation            KbValidationStatus @default(PENDIENTE)
   syncStatus            KbSyncStatus       @default(SIN_SINCRONIZAR)
   isActive              Boolean            @default(true)
-  thumbnailUrl          String?
-  sourceUrl             String?
-  variantCount          Int                @default(1)
-  variantLabel          String?
   sourceRowKey          String?
   lastSyncedAt          DateTime?
 
@@ -866,14 +863,43 @@ model KbProduct {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  categoryRef Category? @relation(fields: [categoryId], references: [id])
+  company     Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  categoryRef Category?           @relation(fields: [categoryId], references: [id])
   categoryId  String?
+  variants    KbProductVariant[]
 
   @@unique([companyId, sku])
   @@index([companyId])
   @@index([validation])
   @@index([syncStatus])
   @@index([line])
+  @@index([isActive, deletedAt])
   @@map("kb_products")
+}
+
+model KbProductVariant {
+  id               String   @id @default(cuid())
+  productId        String
+  sku              String   @unique
+  name             String
+  color            String?
+  colorHex         String?
+  price            Decimal? @db.Decimal(14, 2)
+  stock            Int      @default(0)
+  imageUrl         String?
+  description      String?
+  isActive         Boolean  @default(true)
+  sortOrder        Int      @default(0)
+  sourceRowKey     String?
+  especificaciones Json?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  product KbProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([isActive, deletedAt])
+  @@map("kb_product_variants")
 }

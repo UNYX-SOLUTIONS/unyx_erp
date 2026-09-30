@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { ProductDto } from '../types/product.types';
+import type { ProductDetailDto } from '../types/product.types';
 import {
   generalSchema,
   variantsSchema,
@@ -22,10 +22,7 @@ const EMPTY_GENERAL: GeneralFormValues = {
   keywords: [],
 };
 
-const VARIANT_NAME_POOL = ['Taupe', 'Beige con café', 'Gris perla', 'Negro grafito', 'Azul marino'];
-const VARIANT_COLOR_POOL = ['#B8A99A', '#D9CBB8', '#C9CDD1', '#3F3F46', '#334155'];
-
-function buildGeneralDefaults(product: ProductDto): GeneralFormValues {
+function buildGeneralDefaults(product: ProductDetailDto): GeneralFormValues {
   return {
     ...EMPTY_GENERAL,
     name: product.name,
@@ -39,29 +36,22 @@ function buildGeneralDefaults(product: ProductDto): GeneralFormValues {
   };
 }
 
-function buildVariantsDefaults(product: ProductDto): VariantsFormValues {
-  const count = Math.max(1, product.variantCount);
+function buildVariantsDefaults(product: ProductDetailDto): VariantsFormValues {
   return {
-    variants: Array.from({ length: count }, (_, index) => {
-      const name =
-        index === 0 && product.color
-          ? product.color
-          : (VARIANT_NAME_POOL[index % VARIANT_NAME_POOL.length] as string);
-      return {
-        id: `${product.id}-v${index + 1}`,
-        name,
-        sku: `${product.sku}-${index + 1}`,
-        color: VARIANT_COLOR_POOL[index % VARIANT_COLOR_POOL.length] as string,
-        colorLabel: name,
-        price: product.price ?? 0,
-        description: '',
-        isActive: true,
-      };
-    }),
+    variants: product.variants.map((variant) => ({
+      id: variant.id,
+      name: variant.name,
+      sku: variant.sku,
+      color: variant.colorHex ?? '#9CA3AF',
+      colorLabel: variant.color ?? variant.name,
+      price: variant.price ?? 0,
+      description: variant.description ?? '',
+      isActive: variant.isActive,
+    })),
   };
 }
 
-export function useProductDetail(product: ProductDto | null) {
+export function useProductDetail(product: ProductDetailDto | null) {
   const generalForm = useForm<GeneralFormValues>({
     resolver: zodResolver(generalSchema),
     defaultValues: EMPTY_GENERAL,

@@ -1,11 +1,31 @@
 import 'dotenv/config';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, type KbValidationStatus } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 const DEFAULT_COMPANY_TAX_ID = '0000000000001';
 
-const DEMO_PRODUCTS = [
+interface DemoVariant {
+  sku: string;
+  name: string;
+  color: string;
+  colorHex: string;
+  price: number | null;
+}
+
+interface DemoProduct {
+  sku: string;
+  name: string;
+  line: string;
+  category: string;
+  subcategory: string;
+  commercialDescription: string;
+  keywords: string[];
+  validation: KbValidationStatus;
+  variants: DemoVariant[];
+}
+
+const DEMO_PRODUCTS: DemoProduct[] = [
   {
     sku: 'ALT-P-1042',
     name: 'Silla Sandy',
@@ -14,10 +34,12 @@ const DEMO_PRODUCTS = [
     subcategory: 'Interiores / Oficina',
     commercialDescription:
       'Silla ergonómica Sandy tapizada con soporte lumbar anatómico integrado y espuma inyectada de alta densidad.',
-    keywords: ['silla oficina', 'ejecutiva', 'ergonómica'],
-    color: 'Taupe',
-    price: 95,
-    validation: 'PENDIENTE' as const,
+    keywords: ['silla oficina', 'ejecutiva', 'ergonómica', 'tapizada'],
+    validation: 'PENDIENTE',
+    variants: [
+      { sku: 'ALT-P-1042-1', name: 'Taupe', color: 'Taupe', colorHex: '#B8A99A', price: 95 },
+      { sku: 'ALT-P-1042-2', name: 'Beige con café', color: 'Beige con café', colorHex: '#D9CBB8', price: 95 },
+    ],
   },
   {
     sku: 'ALT-P-2018',
@@ -27,9 +49,12 @@ const DEMO_PRODUCTS = [
     subcategory: 'Interiores / Comedor',
     commercialDescription: 'Silla tapizada en tono verde oliva con estructura metálica reforzada.',
     keywords: ['silla comedor', 'tapizada'],
-    color: 'Verde Oliva',
-    price: 110,
-    validation: 'APROBADO' as const,
+    validation: 'APROBADO',
+    variants: [
+      { sku: 'ALT-P-2018-1', name: 'Verde Oliva', color: 'Verde Oliva', colorHex: '#7A8B5C', price: 110 },
+      { sku: 'ALT-P-2018-2', name: 'Gris', color: 'Gris', colorHex: '#9CA3AF', price: 110 },
+      { sku: 'ALT-P-2018-3', name: 'Mostaza', color: 'Mostaza', colorHex: '#D4A937', price: 115 },
+    ],
   },
   {
     sku: 'ALT-P-3845',
@@ -39,9 +64,11 @@ const DEMO_PRODUCTS = [
     subcategory: 'Oficina ejecutiva',
     commercialDescription: 'Silla ejecutiva con mecanismo reclinable y base giratoria.',
     keywords: ['silla ejecutiva', 'oficina'],
-    color: 'Negro',
-    price: 145,
-    validation: 'APROBADO' as const,
+    validation: 'APROBADO',
+    variants: [
+      { sku: 'ALT-P-3845-1', name: 'Negro', color: 'Negro', colorHex: '#1F2937', price: 145 },
+      { sku: 'ALT-P-3845-2', name: 'Azul marino', color: 'Azul marino', colorHex: '#334155', price: 145 },
+    ],
   },
   {
     sku: 'ALT-P-4182',
@@ -51,9 +78,10 @@ const DEMO_PRODUCTS = [
     subcategory: 'Sala de espera',
     commercialDescription: 'Sillón de brazos en estructura de madera y tapizado premium.',
     keywords: ['sillón', 'brazos'],
-    color: 'Beige',
-    price: null,
-    validation: 'REQUIERE_CORRECCION' as const,
+    validation: 'REQUIERE_CORRECCION',
+    variants: [
+      { sku: 'ALT-P-4182-1', name: 'Beige', color: 'Beige', colorHex: '#D9CBB8', price: null },
+    ],
   },
   {
     sku: 'ALT-P-5820',
@@ -63,9 +91,11 @@ const DEMO_PRODUCTS = [
     subcategory: 'Sala / Recibidor',
     commercialDescription: 'Mesa auxiliar con tapa de madera natural y base metálica.',
     keywords: ['mesa', 'auxiliar'],
-    color: 'Roble',
-    price: 180,
-    validation: 'APROBADO' as const,
+    validation: 'APROBADO',
+    variants: [
+      { sku: 'ALT-P-5820-1', name: 'Roble', color: 'Roble', colorHex: '#B08968', price: 180 },
+      { sku: 'ALT-P-5820-2', name: 'Nogal', color: 'Nogal', colorHex: '#6B4F3A', price: 190 },
+    ],
   },
   {
     sku: 'ALT-P-6231',
@@ -75,9 +105,12 @@ const DEMO_PRODUCTS = [
     subcategory: 'Exteriores',
     commercialDescription: 'Silla monobloque de polipropileno resistente a la intemperie.',
     keywords: ['silla plástica', 'exterior'],
-    color: 'Blanco',
-    price: 25.5,
-    validation: 'APROBADO' as const,
+    validation: 'APROBADO',
+    variants: [
+      { sku: 'ALT-P-6231-1', name: 'Blanco', color: 'Blanco', colorHex: '#F3F4F6', price: 25.5 },
+      { sku: 'ALT-P-6231-2', name: 'Negro', color: 'Negro', colorHex: '#1F2937', price: 25.5 },
+      { sku: 'ALT-P-6231-3', name: 'Rojo', color: 'Rojo', colorHex: '#B91C1C', price: 27 },
+    ],
   },
   {
     sku: 'ALT-P-7044',
@@ -87,9 +120,11 @@ const DEMO_PRODUCTS = [
     subcategory: 'Barra / Cocina',
     commercialDescription: 'Taburete alto con asiento acolchado y reposapiés cromado.',
     keywords: ['taburete', 'barra'],
-    color: 'Negro',
-    price: 78,
-    validation: 'PENDIENTE' as const,
+    validation: 'PENDIENTE',
+    variants: [
+      { sku: 'ALT-P-7044-1', name: 'Negro', color: 'Negro', colorHex: '#1F2937', price: 78 },
+      { sku: 'ALT-P-7044-2', name: 'Café', color: 'Café', colorHex: '#6B4F3A', price: 78 },
+    ],
   },
   {
     sku: 'ALT-P-8890',
@@ -99,9 +134,11 @@ const DEMO_PRODUCTS = [
     subcategory: 'Home office',
     commercialDescription: 'Silla operativa con soporte lumbar ajustable y ruedas de silicona.',
     keywords: ['silla ergonómica', 'home office'],
-    color: 'Gris',
-    price: 210.75,
-    validation: 'APROBADO' as const,
+    validation: 'APROBADO',
+    variants: [
+      { sku: 'ALT-P-8890-1', name: 'Gris', color: 'Gris', colorHex: '#9CA3AF', price: 210.75 },
+      { sku: 'ALT-P-8890-2', name: 'Negro', color: 'Negro', colorHex: '#1F2937', price: 210.75 },
+    ],
   },
 ];
 
@@ -119,7 +156,7 @@ async function main(): Promise<void> {
   const companyId = await resolveCompanyId();
 
   for (const product of DEMO_PRODUCTS) {
-    await prisma.kbProduct.upsert({
+    const parent = await prisma.kbProduct.upsert({
       where: { companyId_sku: { companyId, sku: product.sku } },
       create: {
         companyId,
@@ -130,13 +167,9 @@ async function main(): Promise<void> {
         subcategory: product.subcategory,
         commercialDescription: product.commercialDescription,
         keywords: product.keywords,
-        color: product.color,
-        price: product.price,
         validation: product.validation,
         syncStatus: 'SINCRONIZADO',
         isActive: true,
-        variantCount: 1,
-        variantLabel: product.color,
         lastSyncedAt: new Date(),
       },
       update: {
@@ -146,14 +179,38 @@ async function main(): Promise<void> {
         subcategory: product.subcategory,
         commercialDescription: product.commercialDescription,
         keywords: product.keywords,
-        color: product.color,
-        price: product.price,
         validation: product.validation,
       },
     });
+
+    for (const [index, variant] of product.variants.entries()) {
+      await prisma.kbProductVariant.upsert({
+        where: { sku: variant.sku },
+        create: {
+          productId: parent.id,
+          sku: variant.sku,
+          name: variant.name,
+          color: variant.color,
+          colorHex: variant.colorHex,
+          price: variant.price,
+          sortOrder: index,
+        },
+        update: {
+          productId: parent.id,
+          name: variant.name,
+          color: variant.color,
+          colorHex: variant.colorHex,
+          price: variant.price,
+          sortOrder: index,
+        },
+      });
+    }
   }
 
-  console.log(`Seed demo completado: ${DEMO_PRODUCTS.length} productos en kb_products`);
+  const variantCount = DEMO_PRODUCTS.reduce((sum, product) => sum + product.variants.length, 0);
+  console.log(
+    `Seed demo completado: ${DEMO_PRODUCTS.length} productos y ${variantCount} variantes en kb_products`
+  );
 }
 
 main()

@@ -4,7 +4,8 @@ RUN corepack enable && apk add --no-cache openssl
 COPY package.json ./
 RUN pnpm install --no-frozen-lockfile
 COPY prisma ./prisma
-RUN ./node_modules/.bin/prisma generate
+ENV DATABASE_URL_ALTOSA="postgresql://build:build@localhost:5432/build"
+RUN ./node_modules/.bin/prisma generate && ./node_modules/.bin/prisma generate --schema prisma/schema-altosa.prisma
 COPY tsconfig.json ./
 COPY src ./src
 COPY scripts ./scripts
@@ -12,12 +13,11 @@ RUN pnpm run build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
-RUN corepack enable && apk add --no-cache openssl
-COPY package.json ./
-RUN pnpm install --no-frozen-lockfile
-COPY prisma ./prisma
-RUN ./node_modules/.bin/prisma generate
+RUN apk add --no-cache openssl
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/package.json ./package.json
 RUN chown -R node:node /app
 ENV NODE_ENV=production
 ENV PORT=4000

@@ -19,12 +19,21 @@ import type { VariantsFormValues } from '../../../schemas/product-schema';
 interface VariantCardProps {
   form: UseFormReturn<VariantsFormValues>;
   index: number;
+  isBusy?: boolean;
   onDuplicate: (index: number) => void;
   onRemove: (index: number) => void;
+  onToggleActive: (index: number) => void;
 }
 
-export function VariantCard({ form, index, onDuplicate, onRemove }: VariantCardProps) {
-  const { register, control, watch, setValue, formState } = form;
+export function VariantCard({
+  form,
+  index,
+  isBusy = false,
+  onDuplicate,
+  onRemove,
+  onToggleActive,
+}: VariantCardProps) {
+  const { register, control, watch, formState } = form;
   const variant = watch(`variants.${index}`);
   const errors = formState.errors.variants?.[index];
   const variantNumber = String(index + 1).padStart(2, '0');
@@ -51,17 +60,14 @@ export function VariantCard({ form, index, onDuplicate, onRemove }: VariantCardP
               size="icon"
               className="h-8 w-8 text-gray-500"
               aria-label={`Acciones de la variante ${variantNumber}`}
+              disabled={isBusy}
             >
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => onDuplicate(index)}>Duplicar</DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() =>
-                setValue(`variants.${index}.isActive`, !variant?.isActive, { shouldDirty: true })
-              }
-            >
+            <DropdownMenuItem onClick={() => onToggleActive(index)}>
               {variant?.isActive ? 'Marcar inactiva' : 'Marcar activa'}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -120,7 +126,6 @@ export function VariantCard({ form, index, onDuplicate, onRemove }: VariantCardP
 
         <FormField
           label="Precio"
-          required
           htmlFor={`variant-${index}-price`}
           error={errors?.price?.message}
         >
