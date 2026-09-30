@@ -27,14 +27,26 @@ function getCrumbs(pathname: string): Crumb[] {
   if (settingsLabel) {
     return [{ title: 'Configuración', href: '/dashboard/settings/profile' }, { title: settingsLabel }];
   }
+  let best: { title: string; href: string } | null = null;
+  const consider = (title: string, href: string) => {
+    if (pathname === href || pathname.startsWith(`${href}/`)) {
+      if (!best || href.length > best.href.length) {
+        best = { title, href };
+      }
+    }
+  };
   for (const section of NAV_SECTIONS) {
     for (const item of section.items) {
-      if (pathname === item.href || pathname.startsWith(`${item.href}/`)) {
-        return [{ title: item.title, href: item.href }];
+      consider(item.title, item.href);
+    }
+    for (const subcategory of section.subcategories ?? []) {
+      consider(subcategory.title, subcategory.href);
+      for (const item of subcategory.items) {
+        consider(item.title, item.href);
       }
     }
   }
-  return [];
+  return best ? [best] : [];
 }
 
 export function Breadcrumbs() {
