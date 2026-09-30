@@ -27,29 +27,26 @@ function getCrumbs(pathname: string): Crumb[] {
   if (settingsLabel) {
     return [{ title: 'Configuración', href: '/dashboard/settings/profile' }, { title: settingsLabel }];
   }
-  let best: { href: string; crumbs: Crumb[] } | null = null;
-  const consider = (href: string, crumbs: Crumb[]) => {
-    if (pathname === href || pathname.startsWith(`${href}/`)) {
-      if (!best || href.length > best.href.length) {
-        best = { href, crumbs };
-      }
-    }
-  };
+  let best: { title: string; href: string } | null = null;
   for (const section of NAV_SECTIONS) {
     for (const item of section.items) {
-      consider(item.href, [{ title: item.title, href: item.href }]);
+      if (pathname === item.href || pathname.startsWith(`${item.href}/`)) {
+        if (!best || item.href.length > best.href.length) {
+          best = { title: item.title, href: item.href };
+        }
+      }
     }
     for (const subcategory of section.subcategories ?? []) {
-      consider(subcategory.href, [{ title: subcategory.title, href: subcategory.href }]);
       for (const item of subcategory.items) {
-        consider(item.href, [
-          { title: subcategory.title, href: subcategory.href },
-          { title: item.title, href: item.href },
-        ]);
+        if (pathname === item.href || pathname.startsWith(`${item.href}/`)) {
+          if (!best || item.href.length > best.href.length) {
+            best = { title: item.title, href: item.href };
+          }
+        }
       }
     }
   }
-  return best ? (best as { href: string; crumbs: Crumb[] }).crumbs : [];
+  return best ? [best] : [];
 }
 
 export function Breadcrumbs() {

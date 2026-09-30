@@ -27,7 +27,6 @@ export interface NavItem {
 
 export interface NavSubcategory {
   title: string;
-  href: string;
   icon: LucideIcon;
   items: NavItem[];
   permission?: string;
@@ -43,29 +42,29 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Operaciones',
     items: [
-      { title: 'Inicio', href: '/dashboard', icon: LayoutDashboard },
-      { title: 'Pedidos', href: '/dashboard/orders', icon: ShoppingCart },
+      { title: 'Inicio', href: '/operations/dashboard', icon: LayoutDashboard },
+      { title: 'Pedidos', href: '/operations/orders', icon: ShoppingCart },
     ],
     subcategories: [
       {
         title: 'Bodega',
-        href: '/dashboard/inventory',
         icon: Package,
         items: [
-          { title: 'Picking', href: '/dashboard/picking', icon: ClipboardList },
-          { title: 'Movimientos', href: '/dashboard/movements', icon: ArrowLeftRight },
-          { title: 'Transferencias', href: '/dashboard/transfers', icon: Truck },
-          { title: 'Conteos', href: '/dashboard/counts', icon: Calculator },
-          { title: 'Ubicaciones', href: '/dashboard/locations', icon: MapPin },
+          { title: 'Inventario', href: '/operations/warehouse/inventory', icon: Package },
+          { title: 'Picking', href: '/operations/warehouse/picking', icon: ClipboardList },
+          { title: 'Movimientos', href: '/operations/warehouse/movements', icon: ArrowLeftRight },
+          { title: 'Transferencias', href: '/operations/warehouse/transfers', icon: Truck },
+          { title: 'Conteos', href: '/operations/warehouse/counts', icon: Calculator },
+          { title: 'Ubicaciones', href: '/operations/warehouse/locations', icon: MapPin },
         ],
       },
       {
         title: 'Logística',
-        href: '/dashboard/dispatches',
         icon: Truck,
         items: [
-          { title: 'Agenda', href: '/dashboard/schedule', icon: Calendar },
-          { title: 'Incidencias', href: '/dashboard/incidents', icon: AlertTriangle },
+          { title: 'Despachos y entregas', href: '/operations/logistics/dispatches', icon: Truck },
+          { title: 'Agenda', href: '/operations/logistics/schedule', icon: Calendar },
+          { title: 'Incidencias', href: '/operations/logistics/incidents', icon: AlertTriangle },
         ],
       },
     ],
@@ -76,13 +75,12 @@ export const NAV_SECTIONS: NavSection[] = [
     subcategories: [
       {
         title: 'Base de conocimiento',
-        href: '/dashboard/ai/knowledge-base',
         icon: BookOpen,
         items: [
-          { title: 'Resumen', href: '/dashboard/ai/knowledge-base/summary', icon: FileText },
-          { title: 'Productos', href: '/dashboard/ai/knowledge-base/products', icon: Package },
-          { title: 'Ubicaciones', href: '/dashboard/ai/knowledge-base/locations', icon: MapPin },
-          { title: 'Catálogos', href: '/dashboard/ai/knowledge-base/catalogs', icon: Library },
+          { title: 'Resumen', href: '/ai/knowledge-base/summary', icon: FileText },
+          { title: 'Productos', href: '/ai/knowledge-base/products', icon: Package },
+          { title: 'Ubicaciones', href: '/ai/knowledge-base/locations', icon: MapPin },
+          { title: 'Catálogos', href: '/ai/knowledge-base/catalogs', icon: Library },
           {
             title: 'Garantías',
             href: '/dashboard/ai/knowledge-base/warranties',
