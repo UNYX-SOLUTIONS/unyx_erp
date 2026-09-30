@@ -1,15 +1,39 @@
+export type TopbarBadgeTone = 'green' | 'yellow' | 'orange' | 'red' | 'blue' | 'gray';
+
+export interface TopbarBreadcrumbSegment {
+  label: string;
+  href?: string;
+}
+
 export interface TopbarPageConfig {
-  breadcrumb: string[];
+  breadcrumb?: TopbarBreadcrumbSegment[];
   badge?: string;
+  badgeTone?: TopbarBadgeTone;
+  subtitle?: string;
   action?: 'sync-knowledge';
   actionMeta?: string;
 }
 
 export const TOPBAR_PAGE_CONFIG: Record<string, TopbarPageConfig> = {
   '/dashboard/ai/knowledge-base': {
-    breadcrumb: ['KB-01', 'Modelo IA', 'Base de conocimiento'],
+    breadcrumb: [
+      { label: 'KB-01' },
+      { label: 'Modelo IA' },
+      { label: 'Base de conocimiento' },
+    ],
     badge: 'Base operativa',
+    badgeTone: 'green',
     action: 'sync-knowledge',
     actionMeta: 'Última sincronización: 21 Sep 2026, 16:32',
+  },
+  '/dashboard/ai/knowledge-base/products': {
+    breadcrumb: [
+      { label: 'Inicio', href: '/dashboard' },
+      { label: 'Base de conocimiento', href: '/dashboard/ai/knowledge-base' },
+      { label: 'Productos' },
+    ],
+    badge: 'KB-02 · Módulo IA',
+    badgeTone: 'blue',
+    subtitle: 'Base de conocimiento · Productos',
   },
 };

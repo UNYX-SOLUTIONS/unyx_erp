@@ -27,26 +27,29 @@ function getCrumbs(pathname: string): Crumb[] {
   if (settingsLabel) {
     return [{ title: 'Configuración', href: '/dashboard/settings/profile' }, { title: settingsLabel }];
   }
-  let best: { title: string; href: string } | null = null;
-  const consider = (title: string, href: string) => {
+  let best: { href: string; crumbs: Crumb[] } | null = null;
+  const consider = (href: string, crumbs: Crumb[]) => {
     if (pathname === href || pathname.startsWith(`${href}/`)) {
       if (!best || href.length > best.href.length) {
-        best = { title, href };
+        best = { href, crumbs };
       }
     }
   };
   for (const section of NAV_SECTIONS) {
     for (const item of section.items) {
-      consider(item.title, item.href);
+      consider(item.href, [{ title: item.title, href: item.href }]);
     }
     for (const subcategory of section.subcategories ?? []) {
-      consider(subcategory.title, subcategory.href);
+      consider(subcategory.href, [{ title: subcategory.title, href: subcategory.href }]);
       for (const item of subcategory.items) {
-        consider(item.title, item.href);
+        consider(item.href, [
+          { title: subcategory.title, href: subcategory.href },
+          { title: item.title, href: item.href },
+        ]);
       }
     }
   }
-  return best ? [best] : [];
+  return best ? (best as { href: string; crumbs: Crumb[] }).crumbs : [];
 }
 
 export function Breadcrumbs() {

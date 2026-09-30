@@ -1,0 +1,47 @@
+'use client';
+
+import { Clock, Save } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import type { ProductLastUpdate } from '../../types/product.types';
+
+interface ProductDetailFooterProps {
+  lastUpdate: ProductLastUpdate;
+  canSave: boolean;
+  onCancel: () => void;
+  onSave: () => void;
+}
+
+export function ProductDetailFooter({
+  lastUpdate,
+  canSave,
+  onCancel,
+  onSave,
+}: ProductDetailFooterProps) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 bg-white px-6 py-4">
+      <div className="flex items-center gap-2 text-xs text-gray-500">
+        <Clock className="h-3.5 w-3.5" />
+        <span>
+          Último cambio por {lastUpdate.author} ({lastUpdate.label})
+        </span>
+      </div>
+      <div className="flex items-center gap-3">
+        <Button
+          variant="outline"
+          onClick={onCancel}
+          className="border-gray-300 text-gray-700 hover:bg-gray-50"
+        >
+          Cancelar
+        </Button>
+        <Button
+          onClick={onSave}
+          disabled={!canSave}
+          className="gap-1.5 bg-blue-600 text-white hover:bg-blue-700"
+        >
+          <Save className="h-4 w-4" />
+          Guardar cambios
+        </Button>
+      </div>
+    </div>
+  );
+}

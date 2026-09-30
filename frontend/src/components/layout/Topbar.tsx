@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, useState } from 'react';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -47,23 +48,43 @@ export function Topbar() {
       </Button>
 
       {pageConfig ? (
-        <nav aria-label="Breadcrumb" className="hidden items-center gap-2 text-sm sm:flex">
-          {pageConfig.breadcrumb.map((segment, index) => (
-            <Fragment key={segment}>
-              {index > 0 && <span className="text-gray-300">·</span>}
-              <span
-                className={
-                  index === pageConfig.breadcrumb.length - 1
-                    ? 'font-medium text-gray-900'
-                    : 'text-gray-400'
-                }
-              >
-                {segment}
-              </span>
-            </Fragment>
-          ))}
-          {pageConfig.badge && <BadgeDot label={pageConfig.badge} tone="green" className="ml-1" />}
-        </nav>
+        <div className="hidden min-w-0 flex-col justify-center sm:flex">
+          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm">
+            {(pageConfig.breadcrumb ?? []).map((segment, index, segments) => (
+              <Fragment key={`${segment.label}-${index}`}>
+                {index > 0 && <span className="text-gray-300">·</span>}
+                {segment.href ? (
+                  <Link
+                    href={segment.href}
+                    className="text-gray-400 transition-colors hover:text-gray-600"
+                  >
+                    {segment.label}
+                  </Link>
+                ) : (
+                  <span
+                    className={
+                      index === segments.length - 1
+                        ? 'font-medium text-gray-900'
+                        : 'text-gray-400'
+                    }
+                  >
+                    {segment.label}
+                  </span>
+                )}
+              </Fragment>
+            ))}
+            {pageConfig.badge && (
+              <BadgeDot
+                label={pageConfig.badge}
+                tone={pageConfig.badgeTone ?? 'green'}
+                className="ml-1"
+              />
+            )}
+          </nav>
+          {pageConfig.subtitle && (
+            <span className="text-xs text-gray-500">{pageConfig.subtitle}</span>
+          )}
+        </div>
       ) : (
         <Breadcrumbs />
       )}
