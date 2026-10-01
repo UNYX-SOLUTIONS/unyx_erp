@@ -9,16 +9,16 @@ export function KpiCard({ kpi }: KpiCardProps) {
   const Icon = kpi.icon;
 
   return (
-    <div className="flex items-start justify-between rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+    <div className="flex items-start justify-between rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
       <div className="min-w-0">
-        <p className="truncate text-xs font-medium text-gray-500">{kpi.label}</p>
+        <p className="truncate text-xs font-medium text-gray-500 dark:text-slate-400">{kpi.label}</p>
         <div className="mt-2 flex items-center gap-1.5">
-          <span className="text-2xl font-semibold text-gray-900">{kpi.value}</span>
+          <span className="text-2xl font-semibold text-gray-900 dark:text-slate-100">{kpi.value}</span>
           {kpi.trend === 'positive' && <ArrowUpRight className="h-3.5 w-3.5 text-green-600" />}
           {kpi.trend === 'negative' && <ArrowDownRight className="h-3.5 w-3.5 text-red-500" />}
         </div>
       </div>
-      <Icon className="h-5 w-5 shrink-0 text-gray-400" />
+      <Icon className="h-5 w-5 shrink-0 text-gray-400 dark:text-slate-500" />
     </div>
   );
 }

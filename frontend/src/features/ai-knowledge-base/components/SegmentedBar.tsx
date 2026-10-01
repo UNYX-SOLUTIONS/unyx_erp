@@ -8,7 +8,7 @@ interface SegmentedBarProps {
 
 export function SegmentedBar({ segments, className }: SegmentedBarProps) {
   return (
-    <div className={cn('flex h-3 w-full overflow-hidden rounded-full bg-gray-100', className)}>
+    <div className={cn('flex h-3 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-slate-800', className)}>
       {segments.map((segment) => (
         <div
           key={segment.label}

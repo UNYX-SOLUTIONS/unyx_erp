@@ -3,7 +3,7 @@ import { siteConfig } from '@/config/site';
 
 export function SplashScreen() {
   return (
-    <div className="relative flex min-h-screen select-none flex-col items-center justify-between overflow-hidden bg-slate-50 font-sans text-slate-900 antialiased">
+    <div className="relative flex min-h-screen select-none flex-col items-center justify-between overflow-hidden bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 antialiased">
       <div className="pointer-events-none absolute inset-0 animate-splash-in overflow-hidden">
         <div className="absolute -inset-6 animate-splash-drift bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] opacity-40 [background-size:24px_24px]" />
       </div>
@@ -18,21 +18,11 @@ export function SplashScreen() {
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="h-28 w-28 animate-splash-ripple rounded-full border border-blue-500/25 [animation-delay:350ms]" />
           </div>
-          <div className="flex h-28 w-28 animate-splash-logo items-center justify-center overflow-hidden rounded-full bg-black shadow-sm ring-1 ring-slate-900/5 transition-transform duration-500 hover:scale-[1.02] [animation-delay:150ms]">
-            <Image src="/logo-mark.svg" alt="UNYX ERP Logo" width={84} height={84} priority />
+          <div className="flex h-28 w-28 animate-splash-logo items-center justify-center overflow-hidden transition-transform duration-500 hover:scale-[1.02] [animation-delay:150ms]">
+            <Image src="/logo.svg" alt="UNYX ERP Logo" width={84} height={84} priority />
           </div>
         </div>
-
-        <div className="mb-2.5 flex items-center justify-center gap-3">
-          <span className="whitespace-nowrap text-3xl font-bold animate-splash-tracking text-slate-950 [animation-delay:300ms]">
-            UNYX
-          </span>
-          <span className="animate-splash-in rounded-sm border border-slate-300/80 bg-slate-200/90 px-2.5 py-0.5 font-mono text-[12px] font-semibold uppercase tracking-wider text-slate-800 [animation-delay:550ms]">
-            ERP
-          </span>
-        </div>
-
-        <p className="mb-8 animate-splash-in text-[15px] font-medium tracking-normal text-slate-700 [animation-delay:750ms]">
+        <p className="mb-8 animate-splash-in text-[15px] font-medium tracking-normal text-slate-700 dark:text-slate-300 [animation-delay:750ms]">
           Gestión operativa, conectada.
         </p>
 
@@ -41,7 +31,7 @@ export function SplashScreen() {
             <div className="h-full w-full origin-left animate-indeterminate rounded-full bg-unyx-700" />
           </div>
 
-          <div className="flex animate-pulseSubtle items-center gap-1.5 text-[13px] font-medium text-slate-600">
+          <div className="flex animate-pulseSubtle items-center gap-1.5 text-[13px] font-medium text-slate-600 dark:text-slate-300">
             <span>Preparando tu espacio de trabajo...</span>
           </div>
         </div>

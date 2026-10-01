@@ -163,7 +163,7 @@ export function ProductDetailSheet() {
                 onTabChange={setActiveTab}
                 variantCount={variantsArray.fields.length}
               />
-              <div className="flex-1 overflow-y-auto bg-white px-6 py-6">
+              <div className="flex-1 overflow-y-auto bg-white dark:bg-slate-900 px-6 py-6">
                 {activeTab === 'general' && <GeneralTab form={generalForm} />}
                 {activeTab === 'variants' && (
                   <VariantsTab
@@ -187,7 +187,7 @@ export function ProductDetailSheet() {
               />
             </>
           ) : (
-            <div className="flex-1 p-6 text-sm text-gray-500">No se encontró el producto.</div>
+            <div className="flex-1 p-6 text-sm text-gray-500 dark:text-slate-400">No se encontró el producto.</div>
           )}
         </SheetContent>
       </Sheet>
@@ -204,7 +204,7 @@ export function ProductDetailSheet() {
             <Button
               variant="outline"
               onClick={() => setConfirmDiscardOpen(false)}
-              className="border-gray-300 text-gray-700"
+              className="border-gray-300 text-gray-700 dark:text-slate-300"
             >
               Seguir editando
             </Button>

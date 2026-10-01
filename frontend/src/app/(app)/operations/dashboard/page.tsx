@@ -13,8 +13,8 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight text-gray-900">Dashboard operativo</h1>
-        <p className="text-sm text-gray-500">Pedidos, inventario y entregas</p>
+        <h1 className="text-xl font-semibold tracking-tight text-gray-900 dark:text-slate-100">Dashboard operativo</h1>
+        <p className="text-sm text-gray-500 dark:text-slate-400">Pedidos, inventario y entregas</p>
       </div>
 
       <KpiGrid />

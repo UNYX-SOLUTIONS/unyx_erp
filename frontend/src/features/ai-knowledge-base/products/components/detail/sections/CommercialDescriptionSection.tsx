@@ -15,7 +15,7 @@ export function CommercialDescriptionSection({ form }: { form: UseFormReturn<Gen
       icon={MessageSquare}
       title="Descripción comercial para el asistente IA"
       headerRight={
-        <span className="text-xs text-gray-400">Información utilizada por el asistente comercial</span>
+        <span className="text-xs text-gray-400 dark:text-slate-500">Información utilizada por el asistente comercial</span>
       }
     >
       <FormField

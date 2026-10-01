@@ -27,14 +27,14 @@ export function TagsInput({ value, onChange, placeholder = 'Agregar término' }:
       {value.map((tag) => (
         <span
           key={tag}
-          className="flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-700"
+          className="flex items-center gap-1.5 rounded-full bg-gray-100 dark:bg-slate-800 px-3 py-1 text-sm text-gray-700 dark:text-slate-300"
         >
           {tag}
           <button
             type="button"
             aria-label={`Quitar ${tag}`}
             onClick={() => onChange(value.filter((item) => item !== tag))}
-            className="rounded-full p-0.5 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-600"
+            className="rounded-full p-0.5 text-gray-400 dark:text-slate-500 transition-colors hover:bg-gray-200 hover:text-gray-600 dark:hover:text-slate-300"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -53,7 +53,7 @@ export function TagsInput({ value, onChange, placeholder = 'Agregar término' }:
           }}
           onBlur={addTag}
           placeholder={placeholder}
-          className="w-36 bg-transparent text-sm text-gray-900 outline-none placeholder:text-blue-600"
+          className="w-36 bg-transparent text-sm text-gray-900 dark:text-slate-100 outline-none placeholder:text-blue-600"
         />
       </div>
     </div>

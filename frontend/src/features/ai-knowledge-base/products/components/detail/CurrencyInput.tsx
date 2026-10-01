@@ -32,12 +32,12 @@ export function CurrencyInput({
   return (
     <div
       className={cn(
-        'flex h-10 items-center rounded-md border border-gray-200 bg-white pl-3 transition-colors focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100',
+        'flex h-10 items-center rounded-md border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 pl-3 transition-colors focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100',
         hasError && 'border-rose-500 ring-2 ring-rose-100',
         className
       )}
     >
-      <span className="shrink-0 text-sm text-gray-400">$</span>
+      <span className="shrink-0 text-sm text-gray-400 dark:text-slate-500">$</span>
       <input
         id={id}
         type="text"
@@ -60,7 +60,7 @@ export function CurrencyInput({
           setText(safeValue.toFixed(2));
           onBlur?.();
         }}
-        className="h-full w-full bg-transparent pr-3 text-sm text-gray-900 outline-none"
+        className="h-full w-full bg-transparent pr-3 text-sm text-gray-900 dark:text-slate-100 outline-none"
       />
     </div>
   );

@@ -39,15 +39,15 @@ export function VariantCard({
   const variantNumber = String(index + 1).padStart(2, '0');
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-5">
+    <div className="rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center">
-          <h4 className="text-sm font-semibold text-gray-900">Variante {variantNumber}</h4>
+          <h4 className="text-sm font-semibold text-gray-900 dark:text-slate-100">Variante {variantNumber}</h4>
           <span
             className={
               variant?.isActive
                 ? 'ml-3 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs text-green-700'
-                : 'ml-3 rounded-full border border-gray-200 bg-gray-100 px-2 py-0.5 text-xs text-gray-500'
+                : 'ml-3 rounded-full border border-gray-200 dark:border-slate-800 bg-gray-100 dark:bg-slate-800 px-2 py-0.5 text-xs text-gray-500 dark:text-slate-400'
             }
           >
             {variant?.isActive ? 'Activa' : 'Inactiva'}
@@ -58,7 +58,7 @@ export function VariantCard({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-gray-500"
+              className="h-8 w-8 text-gray-500 dark:text-slate-400"
               aria-label={`Acciones de la variante ${variantNumber}`}
               disabled={isBusy}
             >

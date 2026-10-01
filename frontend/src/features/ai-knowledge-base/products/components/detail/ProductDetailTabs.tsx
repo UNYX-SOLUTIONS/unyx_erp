@@ -31,7 +31,7 @@ export function ProductDetailTabs({
   variantCount,
 }: ProductDetailTabsProps) {
   return (
-    <div className="flex items-center gap-6 overflow-x-auto border-b border-gray-200 px-6">
+    <div className="flex items-center gap-6 overflow-x-auto border-b border-gray-200 dark:border-slate-800 px-6">
       {TABS.map((tab) => (
         <button
           key={tab.id}
@@ -41,13 +41,13 @@ export function ProductDetailTabs({
             'flex items-center gap-2 whitespace-nowrap border-b-2 py-3 text-sm font-medium transition-colors',
             activeTab === tab.id
               ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+              : 'border-transparent text-gray-500 dark:text-slate-400 hover:border-gray-300 dark:hover:border-slate-600 hover:text-gray-700 dark:hover:text-slate-200'
           )}
         >
           <tab.icon className="h-4 w-4" />
           {tab.label}
           {tab.id === 'variants' && (
-            <span className="min-w-[20px] rounded-full bg-gray-100 px-1.5 py-0.5 text-center text-xs text-gray-600">
+            <span className="min-w-[20px] rounded-full bg-gray-100 dark:bg-slate-800 px-1.5 py-0.5 text-center text-xs text-gray-600 dark:text-slate-300">
               {variantCount}
             </span>
           )}

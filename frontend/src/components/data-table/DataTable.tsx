@@ -73,16 +73,16 @@ export function DataTable<TData>({
   const rows = table.getRowModel().rows;
 
   return (
-    <div className={cn('overflow-hidden rounded-lg border border-gray-200 bg-white', className)}>
+    <div className={cn('overflow-hidden rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900', className)}>
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="border-gray-200 bg-gray-50 hover:bg-gray-50">
+            <TableRow key={headerGroup.id} className="border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/60 hover:bg-gray-50 dark:hover:bg-slate-800/50">
               {headerGroup.headers.map((header) => (
                 <TableHead
                   key={header.id}
                   style={header.column.columnDef.size ? { width: header.column.columnDef.size } : undefined}
-                  className="h-11 px-4 text-xs font-medium uppercase tracking-wide text-gray-500"
+                  className="h-11 px-4 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-slate-400"
                 >
                   {header.isPlaceholder
                     ? null
@@ -104,7 +104,7 @@ export function DataTable<TData>({
                   key={row.id}
                   onClick={onRowClick ? () => onRowClick(row.original) : undefined}
                   className={cn(
-                    'border-gray-100 transition-colors hover:bg-gray-50',
+                    'border-gray-100 dark:border-slate-800 transition-colors hover:bg-gray-50 dark:hover:bg-slate-800/50',
                     onRowClick && 'cursor-pointer',
                     isSelected && 'border-l-2 border-l-blue-600 bg-blue-50/50 hover:bg-blue-50/50'
                   )}

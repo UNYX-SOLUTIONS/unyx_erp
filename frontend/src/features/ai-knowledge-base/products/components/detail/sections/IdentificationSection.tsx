@@ -37,7 +37,7 @@ export function IdentificationSection({ form }: { form: UseFormReturn<GeneralFor
       title="Identificación del producto"
       headerRight={
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500">Estado:</span>
+          <span className="text-xs text-gray-500 dark:text-slate-400">Estado:</span>
           <Controller
             control={control}
             name="isActive"
@@ -49,7 +49,7 @@ export function IdentificationSection({ form }: { form: UseFormReturn<GeneralFor
               />
             )}
           />
-          <span className="text-xs font-medium text-gray-700">
+          <span className="text-xs font-medium text-gray-700 dark:text-slate-300">
             {watch('isActive') ? 'Activo' : 'Inactivo'}
           </span>
         </div>
@@ -95,7 +95,7 @@ export function IdentificationSection({ form }: { form: UseFormReturn<GeneralFor
                   : LINE_OPTIONS;
               return (
                 <Select value={field.value || undefined} onValueChange={field.onChange}>
-                  <SelectTrigger className="h-10 border-gray-200">
+                  <SelectTrigger className="h-10 border-gray-200 dark:border-slate-800">
                     <SelectValue placeholder="Selecciona una línea" />
                   </SelectTrigger>
                   <SelectContent>

@@ -13,7 +13,7 @@ export function KeywordsSection({ form }: { form: UseFormReturn<GeneralFormValue
     <SectionCard
       icon={Tag}
       title="Palabras clave / Sinónimos comerciales"
-      headerRight={<span className="text-xs text-gray-400">Facilita el match en chat</span>}
+      headerRight={<span className="text-xs text-gray-400 dark:text-slate-500">Facilita el match en chat</span>}
     >
       <Controller
         control={control}

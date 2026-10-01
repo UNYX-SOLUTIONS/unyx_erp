@@ -42,7 +42,7 @@ export function Topbar() {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-gray-200 bg-white px-4">
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4">
       <Button variant="ghost" size="icon" onClick={toggleSidebar} className="lg:hidden">
         <Menu className="h-5 w-5" />
       </Button>
@@ -56,7 +56,7 @@ export function Topbar() {
                 {segment.href ? (
                   <Link
                     href={segment.href}
-                    className="text-gray-400 transition-colors hover:text-gray-600"
+                    className="text-gray-400 dark:text-slate-500 transition-colors hover:text-gray-600 dark:hover:text-slate-300"
                   >
                     {segment.label}
                   </Link>
@@ -64,8 +64,8 @@ export function Topbar() {
                   <span
                     className={
                       index === segments.length - 1
-                        ? 'font-medium text-gray-900'
-                        : 'text-gray-400'
+                        ? 'font-medium text-gray-900 dark:text-slate-100'
+                        : 'text-gray-400 dark:text-slate-500'
                     }
                   >
                     {segment.label}
@@ -82,7 +82,7 @@ export function Topbar() {
             )}
           </nav>
           {pageConfig.subtitle && (
-            <span className="text-xs text-gray-500">{pageConfig.subtitle}</span>
+            <span className="text-xs text-gray-500 dark:text-slate-400">{pageConfig.subtitle}</span>
           )}
         </div>
       ) : (
@@ -95,11 +95,11 @@ export function Topbar() {
             <Button
               variant="outline"
               size="sm"
-              className="hidden gap-2 border-gray-200 text-gray-700 md:flex"
+              className="hidden gap-2 border-gray-200 dark:border-slate-800 text-gray-700 dark:text-slate-300 md:flex"
             >
-              <Calendar className="h-4 w-4 text-gray-400" />
+              <Calendar className="h-4 w-4 text-gray-400 dark:text-slate-500" />
               Hoy ({today})
-              <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
+              <ChevronDown className="h-3.5 w-3.5 text-gray-400 dark:text-slate-500" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -115,11 +115,11 @@ export function Topbar() {
             <Button
               variant="outline"
               size="sm"
-              className="hidden gap-2 border-gray-200 text-gray-700 lg:flex"
+              className="hidden gap-2 border-gray-200 dark:border-slate-800 text-gray-700 dark:text-slate-300 lg:flex"
             >
-              <MapPin className="h-4 w-4 text-gray-400" />
+              <MapPin className="h-4 w-4 text-gray-400 dark:text-slate-500" />
               {CURRENT_LOCATION}
-              <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
+              <ChevronDown className="h-3.5 w-3.5 text-gray-400 dark:text-slate-500" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -139,7 +139,7 @@ export function Topbar() {
               <span className="hidden sm:inline">Sincronizar conocimiento</span>
             </Button>
             {pageConfig.actionMeta && (
-              <span className="hidden text-xs text-gray-500 lg:block">{pageConfig.actionMeta}</span>
+              <span className="hidden text-xs text-gray-500 dark:text-slate-400 lg:block">{pageConfig.actionMeta}</span>
             )}
           </div>
         ) : (
@@ -149,7 +149,7 @@ export function Topbar() {
           </Button>
         )}
 
-        <Button variant="ghost" size="icon" className="relative text-gray-500">
+        <Button variant="ghost" size="icon" className="relative text-gray-500 dark:text-slate-400">
           <Bell className="h-5 w-5" />
           <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
             2

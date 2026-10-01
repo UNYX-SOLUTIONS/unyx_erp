@@ -11,7 +11,7 @@ const badgeDotVariants = cva(
         orange: 'border-orange-200 bg-orange-50 text-orange-700',
         red: 'border-red-200 bg-red-50 text-red-700',
         blue: 'border-blue-200 bg-blue-50 text-blue-700',
-        gray: 'border-gray-200 bg-gray-100 text-gray-700',
+        gray: 'border-gray-200 dark:border-slate-800 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300',
       },
     },
     defaultVariants: {

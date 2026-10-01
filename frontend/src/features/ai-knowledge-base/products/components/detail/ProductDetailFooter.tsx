@@ -20,8 +20,8 @@ export function ProductDetailFooter({
   onSave,
 }: ProductDetailFooterProps) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 bg-white px-6 py-4">
-      <div className="flex items-center gap-2 text-xs text-gray-500">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 py-4">
+      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-slate-400">
         <Clock className="h-3.5 w-3.5" />
         <span>
           {lastUpdate.author
@@ -33,7 +33,7 @@ export function ProductDetailFooter({
         <Button
           variant="outline"
           onClick={onCancel}
-          className="border-gray-300 text-gray-700 hover:bg-gray-50"
+          className="border-gray-300 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800/50"
         >
           Cancelar
         </Button>

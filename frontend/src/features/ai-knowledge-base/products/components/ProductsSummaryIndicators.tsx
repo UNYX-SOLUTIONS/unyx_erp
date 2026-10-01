@@ -11,11 +11,11 @@ export function ProductsSummaryIndicators() {
 
   return (
     <>
-      <span className="flex items-center gap-2 text-sm text-gray-700">
+      <span className="flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300">
         <span className="h-2 w-2 rounded-full bg-green-500" />
         {total ?? '—'} productos registrados
       </span>
-      <span className="flex items-center gap-2 text-sm text-gray-700">
+      <span className="flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300">
         <span className="h-2 w-2 rounded-full bg-yellow-400" />
         {pending ?? '—'} pendientes de revisión
       </span>

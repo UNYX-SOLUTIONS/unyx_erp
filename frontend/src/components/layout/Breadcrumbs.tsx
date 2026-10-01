@@ -55,18 +55,18 @@ export function Breadcrumbs() {
 
   return (
     <nav aria-label="Breadcrumb" className="hidden items-center gap-1.5 text-sm sm:flex">
-      <Link href="/operations/dashboard" className="text-gray-400 transition-colors hover:text-gray-600">
+      <Link href="/operations/dashboard" className="text-gray-400 dark:text-slate-500 transition-colors hover:text-gray-600 dark:hover:text-slate-300">
         Inicio
       </Link>
       {crumbs.map((crumb, index) => (
         <Fragment key={`${crumb.title}-${index}`}>
           <ChevronRight className="h-3.5 w-3.5 text-gray-300" />
           {crumb.href && index < crumbs.length - 1 ? (
-            <Link href={crumb.href} className="text-gray-400 transition-colors hover:text-gray-600">
+            <Link href={crumb.href} className="text-gray-400 dark:text-slate-500 transition-colors hover:text-gray-600 dark:hover:text-slate-300">
               {crumb.title}
             </Link>
           ) : (
-            <span className="font-medium text-gray-900">{crumb.title}</span>
+            <span className="font-medium text-gray-900 dark:text-slate-100">{crumb.title}</span>
           )}
         </Fragment>
       ))}

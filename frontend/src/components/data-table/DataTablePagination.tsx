@@ -56,15 +56,15 @@ export function DataTablePagination({
   const to = Math.min(page * pageSize, total);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 bg-white px-4 py-3">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3">
       <div className="flex flex-wrap items-center gap-4">
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-gray-500 dark:text-slate-400">
           Mostrando {from}-{to} de {total} {itemLabel}
         </p>
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium uppercase tracking-wide text-gray-500">Filas:</span>
+          <span className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-slate-400">Filas:</span>
           <Select value={`${pageSize}`} onValueChange={(value) => onPageSizeChange(Number(value))}>
-            <SelectTrigger className="h-8 w-[72px] border-gray-200">
+            <SelectTrigger className="h-8 w-[72px] border-gray-200 dark:border-slate-800">
               <SelectValue />
             </SelectTrigger>
             <SelectContent side="top">
@@ -82,7 +82,7 @@ export function DataTablePagination({
         <Button
           variant="outline"
           size="icon"
-          className="h-8 w-8 border-gray-200"
+          className="h-8 w-8 border-gray-200 dark:border-slate-800"
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
           aria-label="Página anterior"
@@ -92,7 +92,7 @@ export function DataTablePagination({
 
         {getPageItems(page, totalPages).map((item, index) =>
           item === 'ellipsis' ? (
-            <span key={`ellipsis-${index}`} className="px-1.5 text-sm text-gray-400">
+            <span key={`ellipsis-${index}`} className="px-1.5 text-sm text-gray-400 dark:text-slate-500">
               …
             </span>
           ) : (
@@ -101,7 +101,7 @@ export function DataTablePagination({
               variant={item === page ? 'default' : 'outline'}
               size="icon"
               className={cn(
-                'h-8 w-8 border-gray-200 text-sm',
+                'h-8 w-8 border-gray-200 dark:border-slate-800 text-sm',
                 item === page && 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
               )}
               onClick={() => onPageChange(item)}
@@ -115,7 +115,7 @@ export function DataTablePagination({
         <Button
           variant="outline"
           size="icon"
-          className="h-8 w-8 border-gray-200"
+          className="h-8 w-8 border-gray-200 dark:border-slate-800"
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
           aria-label="Página siguiente"

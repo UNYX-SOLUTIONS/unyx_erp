@@ -81,7 +81,7 @@ export function ProductsTable() {
           line={line}
           onLineChange={handleLineChange}
         />
-        <div className="rounded-lg border border-gray-200 bg-white">
+        <div className="rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900">
           <DataTableEmptyState
             icon={RefreshCw}
             title="No se pudieron cargar los productos"
@@ -90,7 +90,7 @@ export function ProductsTable() {
               <Button
                 variant="outline"
                 onClick={() => void refetch()}
-                className="border-gray-200 text-gray-700"
+                className="border-gray-200 dark:border-slate-800 text-gray-700 dark:text-slate-300"
               >
                 Reintentar
               </Button>
@@ -142,7 +142,7 @@ export function ProductsTable() {
           }
         />
         {isFetching && !isLoading && (
-          <p className="mt-2 text-right text-xs text-gray-400">Actualizando…</p>
+          <p className="mt-2 text-right text-xs text-gray-400 dark:text-slate-500">Actualizando…</p>
         )}
       </div>
     </div>

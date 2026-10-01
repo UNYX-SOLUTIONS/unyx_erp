@@ -15,8 +15,8 @@ export default function KnowledgeProductsPage() {
     <div className="mx-auto max-w-[1600px] space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Productos</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-slate-100">Productos</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
             Administra la información de productos y variantes disponible para el asistente
             comercial.
           </p>

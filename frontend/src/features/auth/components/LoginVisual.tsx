@@ -55,7 +55,7 @@ export function LoginVisual() {
             OPERACIÓN CONECTADA
           </span>
         </div>
-        <div className="font-mono text-[9px] uppercase tracking-widest text-slate-500">
+        <div className="font-mono text-[9px] uppercase tracking-widest text-slate-500 dark:text-slate-400">
           PEDIDOS · INVENTARIO · PREPARACIÓN · ENTREGAS
         </div>
       </div>
@@ -94,13 +94,13 @@ export function LoginVisual() {
         {VISUAL_CARDS.map((card) => (
           <div
             key={card.title}
-            className={`absolute z-20 flex items-center gap-3.5 rounded-2xl border border-slate-100 bg-white px-5 py-3.5 shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-blue-900/20 ${card.position}`}
+            className={`absolute z-20 flex items-center gap-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 px-5 py-3.5 shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-blue-900/20 ${card.position}`}
           >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-unyx-700">
               <card.icon className="h-5 w-5" />
             </div>
             <div className="pr-1">
-              <span className="block text-[12px] font-bold uppercase tracking-wider text-slate-900">
+              <span className="block text-[12px] font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">
                 {card.title}
               </span>
               <span className="block font-mono text-[11px] text-slate-400">{card.subtitle}</span>
@@ -111,7 +111,7 @@ export function LoginVisual() {
 
       <div className="z-10 flex w-full items-center justify-between border-t border-slate-800/80 pt-5">
         <div className="w-full text-center">
-          <span className="font-mono text-[11px] font-medium uppercase tracking-wider text-slate-500">
+          <span className="font-mono text-[11px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
             UNYX ERP · Enterprise Suite
           </span>
         </div>

@@ -20,11 +20,11 @@ export function DataTableEmptyState({
 }: DataTableEmptyStateProps) {
   return (
     <div className={cn('flex flex-col items-center gap-1.5 px-6 py-14 text-center', className)}>
-      <span className="mb-1 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-400">
+      <span className="mb-1 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500">
         <Icon className="h-6 w-6" />
       </span>
-      <p className="text-sm font-medium text-gray-900">{title}</p>
-      <p className="text-xs text-gray-500">{description}</p>
+      <p className="text-sm font-medium text-gray-900 dark:text-slate-100">{title}</p>
+      <p className="text-xs text-gray-500 dark:text-slate-400">{description}</p>
       {action && <div className="mt-2">{action}</div>}
     </div>
   );

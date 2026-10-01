@@ -31,6 +31,13 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" suppressHydrationWarning className={`${inter.variable} ${jetbrainsMono.variable}`}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var raw=localStorage.getItem('unyx-ui');var theme=raw?JSON.parse(raw).state.theme:'system';var isDark=theme==='dark'||(theme!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);var root=document.documentElement;root.classList.remove('light','dark');root.classList.add(isDark?'dark':'light');}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body>
         <ThemeProvider>
           <QueryProvider>

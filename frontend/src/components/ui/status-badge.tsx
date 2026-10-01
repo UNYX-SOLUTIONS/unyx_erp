@@ -13,7 +13,7 @@ const statusBadgeVariants = cva(
         error: 'border-red-200 bg-red-50 text-red-700',
         warning: 'border-orange-200 bg-orange-50 text-orange-700',
         info: 'border-blue-200 bg-blue-50 text-blue-700',
-        neutral: 'border-gray-200 bg-gray-100 text-gray-500',
+        neutral: 'border-gray-200 dark:border-slate-800 bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400',
       },
     },
     defaultVariants: {

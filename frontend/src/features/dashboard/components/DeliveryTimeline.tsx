@@ -14,11 +14,11 @@ import { StatusBadge } from './StatusBadge';
 export function DeliveryTimeline({ className }: { className?: string }) {
   return (
     <section className={className}>
-      <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
-        <header className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+      <div className="rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+        <header className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 px-5 py-4">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-gray-900">Entregas de hoy</h2>
-            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-slate-100">Entregas de hoy</h2>
+            <span className="rounded-full bg-gray-100 dark:bg-slate-800 px-2 py-0.5 text-xs font-medium text-gray-600 dark:text-slate-300">
               {DELIVERY_ITEMS.length} rutas
             </span>
           </div>
@@ -33,21 +33,21 @@ export function DeliveryTimeline({ className }: { className?: string }) {
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="h-10 px-5 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+              <TableHead className="h-10 px-5 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-slate-500">
                 Ventana
               </TableHead>
-              <TableHead className="h-10 px-5 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+              <TableHead className="h-10 px-5 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-slate-500">
                 Pedido
               </TableHead>
-              <TableHead className="h-10 px-5 text-right text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+              <TableHead className="h-10 px-5 text-right text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-slate-500">
                 Estado
               </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {DELIVERY_ITEMS.map((item) => (
-              <TableRow key={item.id} className="border-gray-100 hover:bg-gray-50">
-                <TableCell className="px-5 py-3.5 text-sm font-medium text-gray-900">
+              <TableRow key={item.id} className="border-gray-100 dark:border-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                <TableCell className="px-5 py-3.5 text-sm font-medium text-gray-900 dark:text-slate-100">
                   {item.ventana}
                 </TableCell>
                 <TableCell className="px-5 py-3.5 text-sm font-semibold text-blue-600">

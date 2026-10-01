@@ -13,8 +13,8 @@ export function PriceCell({ price, priceFrom }: PriceCellProps) {
 
   return (
     <div className="flex flex-col">
-      {priceFrom && <span className="text-xs text-gray-500">Desde</span>}
-      <span className="text-sm font-medium text-gray-900">{formatCurrency(price)}</span>
+      {priceFrom && <span className="text-xs text-gray-500 dark:text-slate-400">Desde</span>}
+      <span className="text-sm font-medium text-gray-900 dark:text-slate-100">{formatCurrency(price)}</span>
     </div>
   );
 }

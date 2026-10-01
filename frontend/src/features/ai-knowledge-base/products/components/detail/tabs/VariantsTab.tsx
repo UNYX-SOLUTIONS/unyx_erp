@@ -60,20 +60,20 @@ export function VariantsTab({
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="text-sm font-medium text-gray-900">Variantes del producto</h3>
-          <p className="mt-0.5 text-xs text-gray-500">
+          <h3 className="text-sm font-medium text-gray-900 dark:text-slate-100">Variantes del producto</h3>
+          <p className="mt-0.5 text-xs text-gray-500 dark:text-slate-400">
             Administra las variantes y precios disponibles para este producto.
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-600">
+          <span className="rounded-full bg-gray-100 dark:bg-slate-800 px-3 py-1 text-xs text-gray-600 dark:text-slate-300">
             {fields.length} {fields.length === 1 ? 'variante' : 'variantes'}
           </span>
           <Button
             variant="outline"
             onClick={handleAdd}
             disabled={isBusy}
-            className="gap-1 border-gray-300 text-gray-700 hover:bg-gray-50"
+            className="gap-1 border-gray-300 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800/50"
           >
             <Plus className="h-4 w-4" />
             Agregar variante
@@ -83,15 +83,15 @@ export function VariantsTab({
 
       {fields.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-gray-300 px-6 py-12 text-center">
-          <p className="text-sm font-medium text-gray-900">Sin variantes todavía</p>
-          <p className="text-xs text-gray-500">
+          <p className="text-sm font-medium text-gray-900 dark:text-slate-100">Sin variantes todavía</p>
+          <p className="text-xs text-gray-500 dark:text-slate-400">
             Agrega la primera variante para este producto (color, SKU y precio).
           </p>
           <Button
             variant="outline"
             onClick={handleAdd}
             disabled={isBusy}
-            className="mt-1 gap-1 border-gray-300 text-gray-700"
+            className="mt-1 gap-1 border-gray-300 text-gray-700 dark:text-slate-300"
           >
             <Plus className="h-4 w-4" />
             Agregar variante

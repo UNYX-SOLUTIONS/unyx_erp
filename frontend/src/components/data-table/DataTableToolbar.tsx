@@ -10,7 +10,7 @@ export function DataTableToolbar({ children, className }: DataTableToolbarProps)
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 bg-white p-4',
+        'flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4',
         className
       )}
     >
