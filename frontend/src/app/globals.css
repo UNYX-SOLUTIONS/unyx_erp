@@ -50,10 +50,17 @@
 }
 
 @layer base {
+  html {
+    overscroll-behavior-x: none;
+    overscroll-behavior-y: none;
+  }
   * {
     @apply border-border;
   }
   body {
     @apply bg-background text-foreground antialiased;
+    overflow-x: hidden;
+    overflow-x: clip;
+    overscroll-behavior-x: none;
   }
 }
