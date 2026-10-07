@@ -93,7 +93,7 @@ export function OrdersListPage() {
           </div>
           <Button
             onClick={() => router.push('/operations/orders/new')}
-            className="gap-2 bg-blue-600 hover:bg-blue-700"
+            className="gap-2 bg-blue-600 hover:bg-blue-700 text-gray-50 dark:text-slate-100"
           >
             <Plus className="h-4 w-4" />
             Nuevo pedido

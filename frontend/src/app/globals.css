@@ -56,6 +56,13 @@
   }
   * {
     @apply border-border;
+    caret-color: transparent;
+  }
+  input,
+  textarea,
+  select,
+  [contenteditable='true'] {
+    caret-color: auto;
   }
   body {
     @apply bg-background text-foreground antialiased;

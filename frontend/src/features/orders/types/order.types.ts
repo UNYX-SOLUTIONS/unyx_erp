@@ -1,5 +1,7 @@
 // frontend/src/features/orders/types/order.types.ts
 
+import type { StockStatus } from './product.types';
+
 export type OrderStatus =
   | 'DRAFT'                    // Borrador
   | 'RESERVED'                 // Reservado
@@ -58,6 +60,7 @@ export interface OrderCustomer {
   id: string;
   name: string;
   ruc: string;
+  email?: string;
   contactName?: string;
   phone?: string;
   linkedToKommo?: boolean;
@@ -83,7 +86,7 @@ export interface OrderItem {
   productLine: string;      // Sillines Tapizadas
   variantSku: string;       // 095-B
   variantName: string;      // Negro
-  variantStockStatus: 'AVAILABLE' | 'BETWEEN_WAREHOUSES' | 'LOW_STOCK';
+  variantStockStatus: StockStatus;
   variantStockLabel?: string;
   quantity: number;
   gye: number;              // stock Guayaquil

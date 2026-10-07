@@ -2,25 +2,50 @@
 
 'use client';
 
+import { useState } from 'react';
 import { Search, UserPlus, Lock, CheckCircle2, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useNewOrderStore } from '../../stores/newOrder.store';
-import { MOCK_CURRENT_CUSTOMER, MOCK_LEADS } from '../../data/mock';
+import { MOCK_CUSTOMERS, MOCK_LEADS } from '../../data/mock';
+import type { OrderCustomer } from '../../types/order.types';
 
 export function Step1Client() {
   const router = useRouter();
   const { customer, lead, setCustomer, setLead, nextStep, reset, canProceed } =
     useNewOrderStore();
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
 
-  const handleSelectCustomer = () => {
-    setCustomer(MOCK_CURRENT_CUSTOMER);
+  const normalizedQuery = query.trim().toLowerCase();
+  const results = normalizedQuery
+    ? MOCK_CUSTOMERS.filter(
+        (c) =>
+          c.name.toLowerCase().includes(normalizedQuery) ||
+          c.ruc.toLowerCase().includes(normalizedQuery),
+      )
+    : [];
+
+  const handleSelectCustomer = (selected: OrderCustomer) => {
+    setCustomer(selected);
+    setQuery('');
+    setOpen(false);
   };
 
   const handleChangeCustomer = () => {
     setCustomer(null);
     setLead(null);
+    setQuery('');
+  };
+
+  const handleCreateCustomer = () => {
+    setOpen(false);
+    toast('Crear nuevo cliente', {
+      description: 'La creación de clientes se conectará al backend próximamente.',
+    });
   };
 
   const handleCancel = () => {
@@ -52,12 +77,66 @@ export function Step1Client() {
         </div>
 
         {!customer ? (
-          <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-gray-300 bg-gray-50 py-8">
-            <Search className="mb-2 h-8 w-8 text-gray-400" />
-            <p className="text-sm text-gray-500">Selecciona un cliente para continuar</p>
-            <Button onClick={handleSelectCustomer} className="mt-4">
-              Buscar cliente
-            </Button>
+          <div className="relative">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Input
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setOpen(true);
+                }}
+                onFocus={() => setOpen(true)}
+                onBlur={() => setOpen(false)}
+                placeholder="Buscar cliente por nombre o RUC..."
+                className="pl-9"
+                autoComplete="off"
+              />
+            </div>
+
+            {open && normalizedQuery.length > 0 && (
+              <div className="absolute z-10 mt-2 w-full overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg">
+                {results.length > 0 ? (
+                  <ul className="max-h-72 overflow-auto">
+                    {results.map((c) => (
+                      <li key={c.id}>
+                        <button
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleSelectCustomer(c);
+                          }}
+                          className="flex w-full flex-col items-start gap-0.5 border-b border-gray-100 px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-gray-50"
+                        >
+                          <span className="text-sm font-semibold text-gray-900">
+                            {c.name}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {c.ruc} · {c.email ?? 'Sin correo'}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="px-4 py-3 text-sm text-gray-500">
+                    No se encontraron clientes.
+                  </p>
+                )}
+
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    handleCreateCustomer();
+                  }}
+                  className="flex w-full items-center gap-1.5 border-t border-gray-100 px-4 py-3 text-sm font-medium text-blue-600 transition-colors hover:bg-blue-50"
+                >
+                  <Plus className="h-4 w-4" />
+                  Crear nuevo cliente
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="rounded-md border border-gray-200 bg-white p-4">
@@ -220,7 +299,7 @@ export function Step1Client() {
         <Button
           disabled={!canProceed()}
           onClick={nextStep}
-          className="gap-2 bg-blue-600 hover:bg-blue-700"
+          className="gap-2 bg-blue-600 hover:bg-blue-700 text-gray-50 dark:text-slate-100"
         >
           Continuar a productos
           <span>→</span>
