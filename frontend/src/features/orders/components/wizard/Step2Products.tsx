@@ -7,9 +7,10 @@ import { Search, Plus, Minus, ShoppingCart, ArrowLeft, MoreVertical, Info } from
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useNewOrderStore } from '../../stores/newOrder.store';
+import { useNewOrderStore, computeLineSubtotal } from '../../stores/newOrder.store';
 import type { OrderItem } from '../../types/order.types';
 import { MOCK_ORDER_ITEMS } from '../../data/mock';
+import { OrderTotalsSummary } from './OrderTotalsSummary';
 
 const STOCK_COLORS = {
   AVAILABLE: 'text-green-600',
@@ -18,29 +19,35 @@ const STOCK_COLORS = {
 };
 
 export function Step2Products() {
-  const { customer, lead, items, addItem, updateItem, removeItem, nextStep, prevStep, totals } =
-    useNewOrderStore();
+  const {
+    customer,
+    lead,
+    items,
+    addItem,
+    updateItem,
+    removeItem,
+    nextStep,
+    prevStep,
+    setStep,
+    canProceed,
+    totals,
+  } = useNewOrderStore();
   const [search, setSearch] = useState('');
   const [quantity, setQuantity] = useState(1);
 
   const t = totals();
 
   const handleAddMock = () => {
+    const base = MOCK_ORDER_ITEMS[0];
     const mockItem: OrderItem = {
+      ...base,
       id: `i-${Date.now()}`,
-      productSku: 'ALT-P-1042',
-      productName: 'Silla Sandy',
-      productLine: 'Sillines Tapizadas',
-      variantSku: '095-B',
-      variantName: 'Negro',
-      variantStockStatus: 'AVAILABLE',
-      variantStockLabel: 'Disponible',
       quantity,
-      gye: 8,
-      uio: 4,
-      price: 89.0,
-      discount: 0,
-      subtotal: quantity * 89.0,
+      subtotal: computeLineSubtotal({
+        quantity,
+        price: base.price,
+        discount: base.discount,
+      }),
     };
     addItem(mockItem);
     setQuantity(1);
@@ -60,7 +67,11 @@ export function Step2Products() {
           <span className="text-gray-300">·</span>
           <span className="text-sm text-gray-600">{lead?.name}</span>
         </div>
-        <button className="text-sm font-medium text-blue-600 hover:text-blue-700">
+        <button
+          type="button"
+          onClick={() => setStep(1)}
+          className="text-sm font-medium text-blue-600 hover:text-blue-700"
+        >
           Cambiar cliente / lead
         </button>
       </div>
@@ -216,19 +227,8 @@ export function Step2Products() {
 
           {/* Totales */}
           <div className="flex justify-end border-t border-gray-200 p-6">
-            <div className="w-72 space-y-2 rounded-md border border-gray-200 bg-gray-50 p-4">
-              <Row label="Subtotal" value={t.subtotal} />
-              <Row label="Descuento" value={-t.discount} muted />
-              <Row label="Base imponible" value={t.base} />
-              <Row label="IVA (15%)" value={t.iva} muted />
-              <div className="border-t border-gray-200 pt-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-gray-900">TOTAL</span>
-                  <span className="text-base font-bold text-gray-900">
-                    ${t.total.toFixed(2)}
-                  </span>
-                </div>
-              </div>
+            <div className="w-72 rounded-md border border-gray-200 bg-gray-50 p-4">
+              <OrderTotalsSummary totals={t} />
             </div>
           </div>
         </section>
@@ -248,7 +248,7 @@ export function Step2Products() {
           Volver a cliente
         </Button>
         <Button
-          disabled={items.length === 0}
+          disabled={!canProceed()}
           onClick={nextStep}
           className="gap-2 bg-blue-600 hover:bg-blue-700"
         >
@@ -256,17 +256,6 @@ export function Step2Products() {
           <span>→</span>
         </Button>
       </div>
-    </div>
-  );
-}
-
-function Row({ label, value, muted }: { label: string; value: number; muted?: boolean }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-sm text-gray-600">{label}</span>
-      <span className={cn('text-sm font-medium', muted ? 'text-gray-500' : 'text-gray-900')}>
-        ${value.toFixed(2)}
-      </span>
     </div>
   );
 }

@@ -34,7 +34,15 @@ interface NewOrderState {
   canProceed: () => boolean;
 }
 
-const IVA_RATE = 0.15;
+export const IVA_RATE = 0.15;
+
+export function computeLineSubtotal(item: {
+  quantity: number;
+  price: number;
+  discount: number;
+}): number {
+  return item.quantity * item.price * (1 - item.discount / 100);
+}
 
 export const useNewOrderStore = create<NewOrderState>((set, get) => ({
   currentStep: 1,
@@ -56,15 +64,16 @@ export const useNewOrderStore = create<NewOrderState>((set, get) => ({
         (i) => i.productSku === item.productSku && i.variantSku === item.variantSku,
       );
       if (existing) {
+        const merged = { ...existing, quantity: existing.quantity + item.quantity };
         return {
           items: s.items.map((i) =>
             i.id === existing.id
-              ? { ...i, quantity: i.quantity + item.quantity, subtotal: (i.quantity + item.quantity) * i.price * (1 - i.discount / 100) }
+              ? { ...merged, subtotal: computeLineSubtotal(merged) }
               : i,
           ),
         };
       }
-      return { items: [...s.items, item] };
+      return { items: [...s.items, { ...item, subtotal: computeLineSubtotal(item) }] };
     }),
 
   updateItem: (id, patch) =>
@@ -72,8 +81,7 @@ export const useNewOrderStore = create<NewOrderState>((set, get) => ({
       items: s.items.map((i) => {
         if (i.id !== id) return i;
         const merged = { ...i, ...patch };
-        merged.subtotal = merged.quantity * merged.price * (1 - merged.discount / 100);
-        return merged;
+        return { ...merged, subtotal: computeLineSubtotal(merged) };
       }),
     })),
 
@@ -93,11 +101,9 @@ export const useNewOrderStore = create<NewOrderState>((set, get) => ({
   totals: () => {
     const { items } = get();
     const subtotal = items.reduce((sum, i) => sum + i.quantity * i.price, 0);
-    const discountAmount = items.reduce(
-      (sum, i) => sum + i.quantity * i.price * (i.discount / 100),
-      0,
-    );
-    const base = subtotal - discountAmount;
+    const discounted = items.reduce((sum, i) => sum + i.subtotal, 0);
+    const discountAmount = subtotal - discounted;
+    const base = discounted;
     const iva = base * IVA_RATE;
     return {
       subtotal,
@@ -115,8 +121,14 @@ export const useNewOrderStore = create<NewOrderState>((set, get) => ({
         return !!s.customer && !!s.lead;
       case 2:
         return s.items.length > 0;
-      case 3:
-        return !!s.delivery.address && !!s.delivery.contactName && !!s.delivery.contactPhone;
+      case 3: {
+        const needsAddress = s.delivery.modality === 'HOME_DELIVERY';
+        return (
+          !!s.delivery.contactName &&
+          !!s.delivery.contactPhone &&
+          (!needsAddress || (!!s.delivery.address && !!s.delivery.city))
+        );
+      }
       case 4:
         return true;
       default:

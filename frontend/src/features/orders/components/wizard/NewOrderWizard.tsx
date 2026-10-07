@@ -2,6 +2,7 @@
 
 'use client';
 
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useNewOrderStore } from '../../stores/newOrder.store';
@@ -14,6 +15,10 @@ import { Step4Confirm } from './Step4Confirm';
 export function NewOrderWizard() {
   const router = useRouter();
   const { currentStep, reset } = useNewOrderStore();
+
+  useEffect(() => {
+    reset();
+  }, [reset]);
 
   const handleConfirm = () => {
     toast.success('Pedido reservado', {

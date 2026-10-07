@@ -3,16 +3,29 @@
 'use client';
 
 import { Search, UserPlus, Lock, CheckCircle2, Plus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useNewOrderStore } from '../../stores/newOrder.store';
 import { MOCK_CURRENT_CUSTOMER, MOCK_LEADS } from '../../data/mock';
 
 export function Step1Client() {
-  const { customer, lead, setCustomer, setLead, nextStep } = useNewOrderStore();
+  const router = useRouter();
+  const { customer, lead, setCustomer, setLead, nextStep, reset, canProceed } =
+    useNewOrderStore();
 
   const handleSelectCustomer = () => {
     setCustomer(MOCK_CURRENT_CUSTOMER);
+  };
+
+  const handleChangeCustomer = () => {
+    setCustomer(null);
+    setLead(null);
+  };
+
+  const handleCancel = () => {
+    reset();
+    router.push('/operations/orders');
   };
 
   const handleSelectLead = (leadId: string) => {
@@ -71,7 +84,11 @@ export function Step1Client() {
                     Vinculado con Kommo
                   </span>
                 )}
-                <button className="text-sm font-medium text-blue-600 hover:text-blue-700">
+                <button
+                  type="button"
+                  onClick={handleChangeCustomer}
+                  className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                >
                   Cambiar
                 </button>
               </div>
@@ -197,9 +214,11 @@ export function Step1Client() {
 
       {/* Footer */}
       <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4">
-        <Button variant="ghost">Cancelar</Button>
+        <Button variant="ghost" onClick={handleCancel}>
+          Cancelar
+        </Button>
         <Button
-          disabled={!customer || !lead}
+          disabled={!canProceed()}
           onClick={nextStep}
           className="gap-2 bg-blue-600 hover:bg-blue-700"
         >

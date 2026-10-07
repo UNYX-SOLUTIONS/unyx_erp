@@ -3,7 +3,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import type { OrderTabFilter } from '../types/order.types';
+import { ORDER_TABS, type OrderTabFilter } from '../types/order.types';
 
 interface Props {
   active: OrderTabFilter;
@@ -11,19 +11,10 @@ interface Props {
   onChange: (tab: OrderTabFilter) => void;
 }
 
-const TABS: { id: OrderTabFilter; label: string; isAlert?: boolean }[] = [
-  { id: 'ALL',          label: 'Todos' },
-  { id: 'DRAFT',        label: 'Borradores' },
-  { id: 'RESERVED',     label: 'Reservados' },
-  { id: 'IN_PROGRESS',  label: 'En proceso' },
-  { id: 'DELIVERED',    label: 'Entregados' },
-  { id: 'WITH_ISSUE',   label: 'Con novedad', isAlert: true },
-];
-
 export function OrderStatusTabs({ active, counts, onChange }: Props) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {TABS.map((tab) => {
+      {ORDER_TABS.map((tab) => {
         const isActive = active === tab.id;
         return (
           <button

@@ -34,13 +34,10 @@ const TIME_SLOTS: { id: DeliveryInfo['preferredTimeSlot']; label: string }[] = [
 ];
 
 export function Step3Delivery() {
-  const { customer, delivery, setDelivery, prevStep, nextStep } = useNewOrderStore();
+  const { customer, delivery, setDelivery, prevStep, nextStep, canProceed } =
+    useNewOrderStore();
 
   const needsAddress = delivery.modality === 'HOME_DELIVERY';
-  const canContinue =
-    !!delivery.contactName &&
-    !!delivery.contactPhone &&
-    (!needsAddress || (!!delivery.address && !!delivery.city));
 
   const useCustomerAddress = () => {
     if (!customer) return;
@@ -211,7 +208,7 @@ export function Step3Delivery() {
           Volver a productos
         </Button>
         <Button
-          disabled={!canContinue}
+          disabled={!canProceed()}
           onClick={nextStep}
           className="gap-2 bg-blue-600 hover:bg-blue-700"
         >

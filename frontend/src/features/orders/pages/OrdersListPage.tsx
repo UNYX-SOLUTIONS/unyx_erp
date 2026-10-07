@@ -26,9 +26,19 @@ export function OrdersListPage() {
   const pageSize = 8;
 
   const filtered = useMemo(() => {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const dayMs = 24 * 60 * 60 * 1000;
+
     return MOCK_ORDERS.filter((o) => {
       if (activeTab !== 'ALL' && ORDER_STATUS_META[o.status].tab !== activeTab) return false;
       if (statusFilter !== 'ALL' && ORDER_STATUS_META[o.status].tab !== statusFilter) return false;
+      if (dateFilter !== 'all') {
+        const orderTime = new Date(o.date).getTime();
+        if (dateFilter === 'today' && orderTime < startOfToday.getTime()) return false;
+        if (dateFilter === '7d' && orderTime < Date.now() - 7 * dayMs) return false;
+        if (dateFilter === '30d' && orderTime < Date.now() - 30 * dayMs) return false;
+      }
       if (search) {
         const q = search.toLowerCase();
         const matchesId = o.id.toLowerCase().includes(q);
@@ -37,7 +47,7 @@ export function OrdersListPage() {
       }
       return true;
     });
-  }, [activeTab, search, statusFilter]);
+  }, [activeTab, search, statusFilter, dateFilter]);
 
   const counts: Record<OrderTabFilter, number> = useMemo(
     () => ({

@@ -5,6 +5,7 @@
 import { ArrowLeft, Pencil, Truck, Home, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNewOrderStore } from '../../stores/newOrder.store';
+import { OrderTotalsSummary } from './OrderTotalsSummary';
 
 export function Step4Confirm({ onConfirm }: { onConfirm: () => void }) {
   const { customer, lead, items, delivery, prevStep, totals } = useNewOrderStore();
@@ -177,20 +178,7 @@ export function Step4Confirm({ onConfirm }: { onConfirm: () => void }) {
         </div>
 
         <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <div className="space-y-2">
-            <Row label="Subtotal" value={t.subtotal} />
-            <Row label="Descuento" value={-t.discount} muted />
-            <Row label="Base imponible" value={t.base} />
-            <Row label="IVA (15%)" value={t.iva} muted />
-            <div className="border-t border-gray-200 pt-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-gray-900">TOTAL</span>
-                <span className="text-lg font-bold text-gray-900">
-                  ${t.total.toFixed(2)}
-                </span>
-              </div>
-            </div>
-          </div>
+          <OrderTotalsSummary totals={t} />
         </div>
       </section>
 
@@ -208,17 +196,6 @@ export function Step4Confirm({ onConfirm }: { onConfirm: () => void }) {
           Confirmar y reservar pedido
         </Button>
       </div>
-    </div>
-  );
-}
-
-function Row({ label, value, muted }: { label: string; value: number; muted?: boolean }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-sm text-gray-600">{label}</span>
-      <span className={muted ? 'text-sm text-gray-500' : 'text-sm font-medium text-gray-900'}>
-        ${Math.abs(value).toFixed(2)}
-      </span>
     </div>
   );
 }

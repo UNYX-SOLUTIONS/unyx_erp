@@ -57,7 +57,6 @@ export const MOCK_ORDERS: Order[] = [
     dateLabel: 'Ayer 14:10',
     total: 1420.00,
     status: 'WITH_ISSUE',
-    hasIssue: true,
   },
   {
     id: '#PED-1049',

@@ -27,7 +27,7 @@ export interface OrderStatusMeta {
 }
 
 export const ORDER_STATUS_META: Record<OrderStatus, OrderStatusMeta> = {
-  DRAFT:            { label: 'Borrador - Productos',        color: 'gray',   tab: 'DRAFT' },
+  DRAFT:            { label: 'Borrador',                   color: 'gray',   tab: 'DRAFT' },
   RESERVED:         { label: 'Reservado',                   color: 'blue',   tab: 'RESERVED' },
   PAYMENT_PENDING:  { label: 'Pendiente de aprobación de pago', color: 'blue', tab: 'IN_PROGRESS' },
   PREPARING:        { label: 'En preparación',              color: 'yellow', tab: 'IN_PROGRESS' },
@@ -38,6 +38,21 @@ export const ORDER_STATUS_META: Record<OrderStatus, OrderStatusMeta> = {
   WITH_ISSUE:       { label: 'Con novedad',                 color: 'red',    tab: 'WITH_ISSUE' },
   IN_PROGRESS:      { label: 'En proceso',                  color: 'blue',   tab: 'IN_PROGRESS' },
 };
+
+export interface OrderTabMeta {
+  id: OrderTabFilter;
+  label: string;
+  isAlert?: boolean;
+}
+
+export const ORDER_TABS: OrderTabMeta[] = [
+  { id: 'ALL', label: 'Todos' },
+  { id: 'DRAFT', label: 'Borradores' },
+  { id: 'RESERVED', label: 'Reservados' },
+  { id: 'IN_PROGRESS', label: 'En proceso' },
+  { id: 'DELIVERED', label: 'Entregados' },
+  { id: 'WITH_ISSUE', label: 'Con novedad', isAlert: true },
+];
 
 export interface OrderCustomer {
   id: string;
@@ -86,7 +101,6 @@ export interface Order {
   total: number;
   status: OrderStatus;
   statusDetail?: string;    // texto adicional mostrado en el badge
-  hasIssue?: boolean;
 }
 
 export interface DeliveryInfo {
@@ -107,13 +121,4 @@ export interface OrderTotals {
   base: number;
   iva: number;
   total: number;
-}
-
-export interface WizardState {
-  currentStep: 1 | 2 | 3 | 4;
-  customer: OrderCustomer | null;
-  lead: OrderLead | null;
-  items: OrderItem[];
-  delivery: DeliveryInfo;
-  totals: OrderTotals;
 }
