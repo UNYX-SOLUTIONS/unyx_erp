@@ -3,16 +3,19 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronLeft, ChevronRight, HelpCircle, Settings, UserRound } from 'lucide-react';
+import { Bell, ChevronLeft, ChevronRight, HelpCircle, Settings, UserRound } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { NAV_SECTIONS } from '@/config/navigation';
 import { useUiStore } from '@/stores/ui-store';
 import { NavSection } from './NavSection';
 import { CompanySwitcher } from './CompanySwitcher';
 import { ThemeOptions } from './ThemeOptions';
+import { UserMenu } from './UserMenu';
 
 const CONFIG_HREF = '/operations/settings/profile';
 const SUPPORT_EMAIL = 'soporte@unyxsolutions.com';
+const NOTIFICATIONS_COUNT = 7;
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -21,11 +24,17 @@ export function Sidebar() {
   const collapsed = useUiStore((state) => state.sidebarCollapsed);
   const setCollapsed = useUiStore((state) => state.setSidebarCollapsed);
 
+  const handleNotifications = () => {
+    toast('Notificaciones', {
+      description: 'Esta sección se conectará al backend próximamente.',
+    });
+  };
+
   return (
     <>
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 flex w-[240px] transform flex-col border-r border-slate-800 bg-slate-900 transition-all duration-200 dark:border-slate-700 dark:bg-slate-800 lg:static lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-40 flex w-[240px] transform flex-col border-r border-slate-800 bg-black transition-all duration-200 dark:border-slate-700 dark:bg-slate-800 lg:static lg:translate-x-0',
           collapsed && 'lg:w-[76px]',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
@@ -82,13 +91,36 @@ export function Sidebar() {
 
         {!collapsed && <CompanySwitcher />}
 
-        <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 pb-4">
+        <nav className="scrollbar-hide flex-1 space-y-0.5 overflow-y-auto px-2 pb-4">
           {NAV_SECTIONS.map((section) => (
             <NavSection key={section.title} section={section} pathname={pathname} />
           ))}
         </nav>
 
         <div className="border-t border-white/10 p-2">
+          <button
+            type="button"
+            onClick={handleNotifications}
+            title={collapsed ? 'Notificaciones' : undefined}
+            className={cn(
+              'relative flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-white',
+              collapsed && 'justify-center px-0'
+            )}
+          >
+            <Bell className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {!collapsed && <span className="truncate">Notificaciones</span>}
+            {NOTIFICATIONS_COUNT > 0 && (
+              <span
+                className={cn(
+                  'flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-semibold text-white',
+                  collapsed ? 'absolute right-2 top-1 h-4 min-w-4 px-1 text-[9px]' : 'ml-auto'
+                )}
+              >
+                {NOTIFICATIONS_COUNT}
+              </span>
+            )}
+          </button>
+
           <div className="group/config relative">
             <Link
               href={CONFIG_HREF}
@@ -113,12 +145,11 @@ export function Sidebar() {
                 group-hover/config:translate-x-0 group-hover/config:opacity-100
                 group-focus-within/config:visible group-focus-within/config:pointer-events-auto
                 group-focus-within/config:translate-x-0 group-focus-within/config:opacity-100
-                dark:border-slate-700 dark:bg-slate-900
               "
             >
               <Link
                 href={CONFIG_HREF}
-                className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100"
               >
                 <UserRound className="h-3.5 w-3.5" aria-hidden="true" />
                 Configuración del perfil
@@ -144,6 +175,10 @@ export function Sidebar() {
             <HelpCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
             {!collapsed && <span className="truncate">Soporte</span>}
           </a>
+        </div>
+
+        <div className="border-t border-white/10 p-2">
+          <UserMenu variant="sidebar" collapsed={collapsed} />
         </div>
       </aside>
 

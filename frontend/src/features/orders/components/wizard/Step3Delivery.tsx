@@ -210,7 +210,7 @@ export function Step3Delivery() {
         <Button
           disabled={!canProceed()}
           onClick={nextStep}
-          className="gap-2 bg-blue-600 hover:bg-blue-700"
+          className="gap-2 bg-blue-600 hover:bg-blue-700 text-gray-50 dark:text-slate-100"
         >
           Continuar a confirmar
           <span>→</span>

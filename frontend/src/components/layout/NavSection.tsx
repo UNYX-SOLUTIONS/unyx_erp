@@ -59,7 +59,7 @@ export function NavSection({ section, pathname }: NavSectionProps) {
             type="button"
             title={subcategory.title}
             onClick={() => expandAndOpenSubcategory(subcategory.title)}
-            className="flex w-full items-center justify-center rounded-lg px-0 py-2 text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+            className="flex w-full items-center justify-center rounded-lg px-0 py-2 text-slate-300 transition-colors hover:bg-white/15 hover:text-white"
           >
             <subcategory.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
             <span className="sr-only">{subcategory.title}</span>
@@ -89,7 +89,7 @@ export function NavSection({ section, pathname }: NavSectionProps) {
                 type="button"
                 onClick={() => toggleSubcategory(subcategory.title)}
                 aria-expanded={isOpen}
-                className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+                className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
               >
                 <span className="flex min-w-0 items-center gap-2.5">
                   <subcategory.icon className="h-4 w-4 shrink-0" aria-hidden="true" />

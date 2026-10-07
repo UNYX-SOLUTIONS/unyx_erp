@@ -190,7 +190,7 @@ export function Step4Confirm({ onConfirm }: { onConfirm: () => void }) {
         </Button>
         <Button
           onClick={onConfirm}
-          className="gap-2 bg-blue-600 hover:bg-blue-700"
+          className="gap-2 bg-blue-600 hover:bg-blue-700 text-gray-50 dark:text-slate-100"
         >
           <CheckCircle2 className="h-4 w-4" />
           Confirmar y reservar pedido

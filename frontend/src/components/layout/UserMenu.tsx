@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { ChevronDown, Loader2, LogOut, User } from 'lucide-react';
+import { ChevronDown, ChevronsUpDown, Loader2, LogOut, User } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useCurrentUser } from '@/features/auth/hooks/useCurrentUser';
 import { useLogout } from '@/features/auth/hooks/useLogout';
 import { initials } from '@/lib/formatters';
@@ -14,7 +15,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-export function UserMenu() {
+interface UserMenuProps {
+  variant?: 'topbar' | 'sidebar';
+  collapsed?: boolean;
+}
+
+export function UserMenu({ variant = 'topbar', collapsed = false }: UserMenuProps) {
   const { user } = useCurrentUser();
   const logout = useLogout();
 
@@ -22,28 +28,65 @@ export function UserMenu() {
     return null;
   }
 
+  const isSidebar = variant === 'sidebar';
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="flex items-center gap-2.5 rounded-md px-1.5 py-1 transition-colors hover:bg-gray-50 dark:hover:bg-slate-800/50 focus:outline-none"
+          className={cn(
+            'flex items-center gap-2.5 transition-colors focus:outline-none',
+            isSidebar
+              ? 'w-full rounded-lg px-2 py-2 hover:bg-white/5'
+              : 'rounded-md px-1.5 py-1 hover:bg-gray-50 dark:hover:bg-slate-800/50',
+            collapsed && 'justify-center px-0'
+          )}
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
             {initials(user.firstName, user.lastName)}
           </span>
-          <span className="hidden flex-col items-start leading-tight lg:flex">
-            <span className="text-sm font-medium text-gray-900 dark:text-slate-100">
-              {user.firstName} {user.lastName}
+          {!collapsed && (
+            <span
+              className={cn(
+                'min-w-0 flex-1 flex-col items-start leading-tight',
+                isSidebar ? 'flex' : 'hidden lg:flex'
+              )}
+            >
+              <span
+                className={cn(
+                  'truncate text-sm font-medium',
+                  isSidebar ? 'text-slate-100' : 'text-gray-900 dark:text-slate-100'
+                )}
+              >
+                {user.firstName} {user.lastName}
+              </span>
+              <span
+                className={cn(
+                  'truncate text-[11px]',
+                  isSidebar ? 'text-slate-400' : 'text-gray-400 dark:text-slate-500'
+                )}
+              >
+                {user.isSuperAdmin ? 'Administrador' : 'Usuario'}
+              </span>
             </span>
-            <span className="text-[11px] text-gray-400 dark:text-slate-500">
-              {user.isSuperAdmin ? 'Administrador' : 'Usuario'}
-            </span>
-          </span>
-          <ChevronDown className="hidden h-3.5 w-3.5 text-gray-400 dark:text-slate-500 lg:block" />
+          )}
+          {!collapsed &&
+            (isSidebar ? (
+              <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden="true" />
+            ) : (
+              <ChevronDown
+                className="hidden h-3.5 w-3.5 text-gray-400 dark:text-slate-500 lg:block"
+                aria-hidden="true"
+              />
+            ))}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent
+        side={isSidebar ? 'top' : 'bottom'}
+        align={isSidebar ? 'start' : 'end'}
+        className="w-56"
+      >
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">

@@ -65,7 +65,7 @@ export function Topbar() {
                     className={
                       index === segments.length - 1
                         ? 'font-medium text-gray-900 dark:text-slate-100'
-                        : 'text-gray-400 dark:text-slate-500'
+                        : 'font-medium text-gray-400 dark:text-slate-500'
                     }
                   >
                     {segment.label}
@@ -89,7 +89,7 @@ export function Topbar() {
         <Breadcrumbs />
       )}
 
-      <div className="ml-auto flex items-center gap-2">
+      {/* <div className="ml-auto flex items-center gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -158,7 +158,7 @@ export function Topbar() {
         </Button>
 
         <UserMenu />
-      </div>
+      </div> */}
     </header>
   );
 }
