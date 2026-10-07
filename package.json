@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "description": "Unyx ERP - Sistema de planificación de recursos empresariales",
-  "packageManager": "pnpm@9.1.0",
   "engines": {
     "node": ">=20.11.0",
     "pnpm": ">=9.0.0"
