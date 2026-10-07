@@ -11,14 +11,21 @@ import {
   ArrowLeft,
   MoreVertical,
   Info,
-  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useNewOrderStore, computeLineSubtotal } from '../../stores/newOrder.store';
 import type { OrderItem } from '../../types/order.types';
-import type { ProductCatalogItem } from '../../types/product.types';
+import type { ProductCatalogItem, ProductVariant } from '../../types/product.types';
 import { MOCK_PRODUCTS } from '../../data/mock';
 import { OrderTotalsSummary } from './OrderTotalsSummary';
 
@@ -44,9 +51,9 @@ export function Step2Products() {
   } = useNewOrderStore();
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<ProductCatalogItem | null>(null);
-  const [selectedVariantSku, setSelectedVariantSku] = useState<string | null>(null);
-  const [quantity, setQuantity] = useState(1);
+  const [dialogProduct, setDialogProduct] = useState<ProductCatalogItem | null>(null);
+  const [dialogVariantSku, setDialogVariantSku] = useState<string | null>(null);
+  const [dialogQuantity, setDialogQuantity] = useState(1);
 
   const t = totals();
 
@@ -60,51 +67,57 @@ export function Step2Products() {
       )
     : [];
 
-  const selectedVariant =
-    selectedProduct?.variants.find((v) => v.sku === selectedVariantSku) ??
-    selectedProduct?.variants[0] ??
-    null;
-
-  const handleSelectProduct = (product: ProductCatalogItem) => {
-    setSelectedProduct(product);
-    setSelectedVariantSku(product.variants[0]?.sku ?? null);
-    setQuantity(1);
-    setSearch('');
-    setOpen(false);
-  };
-
-  const handleClearSelection = () => {
-    setSelectedProduct(null);
-    setSelectedVariantSku(null);
-    setQuantity(1);
-  };
-
-  const handleAdd = () => {
-    if (!selectedProduct || !selectedVariant) {
-      return;
-    }
+  const addVariantToOrder = (
+    product: ProductCatalogItem,
+    variant: ProductVariant,
+    quantity: number,
+  ) => {
     const item: OrderItem = {
       id: `i-${Date.now()}`,
-      productSku: selectedProduct.sku,
-      productName: selectedProduct.name,
-      productLine: selectedProduct.line,
-      variantSku: selectedVariant.sku,
-      variantName: selectedVariant.name,
-      variantStockStatus: selectedVariant.stockStatus,
-      variantStockLabel: selectedVariant.stockLabel,
+      productSku: product.sku,
+      productName: product.name,
+      productLine: product.line,
+      variantSku: variant.sku,
+      variantName: variant.name,
+      variantStockStatus: variant.stockStatus,
+      variantStockLabel: variant.stockLabel,
       quantity,
-      gye: selectedVariant.gye,
-      uio: selectedVariant.uio,
-      price: selectedVariant.price,
+      gye: variant.gye,
+      uio: variant.uio,
+      price: variant.price,
       discount: 0,
-      subtotal: computeLineSubtotal({
-        quantity,
-        price: selectedVariant.price,
-        discount: 0,
-      }),
+      subtotal: computeLineSubtotal({ quantity, price: variant.price, discount: 0 }),
     };
     addItem(item);
-    setQuantity(1);
+  };
+
+  const handleSelectProduct = (product: ProductCatalogItem) => {
+    setSearch('');
+    setOpen(false);
+
+    const [firstVariant] = product.variants;
+    if (product.variants.length === 1 && firstVariant) {
+      addVariantToOrder(product, firstVariant, 1);
+      return;
+    }
+
+    setDialogProduct(product);
+    setDialogVariantSku(firstVariant?.sku ?? null);
+    setDialogQuantity(1);
+  };
+
+  const handleDialogAdd = () => {
+    if (!dialogProduct) {
+      return;
+    }
+    const variant =
+      dialogProduct.variants.find((v) => v.sku === dialogVariantSku) ??
+      dialogProduct.variants[0];
+    if (!variant) {
+      return;
+    }
+    addVariantToOrder(dialogProduct, variant, dialogQuantity);
+    setDialogProduct(null);
   };
 
   return (
@@ -130,7 +143,7 @@ export function Step2Products() {
         </button>
       </div>
 
-      {/* Buscador + agregar */}
+      {/* Buscador */}
       <section className="rounded-lg border border-gray-200 bg-white p-6">
         <div className="mb-3">
           <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">
@@ -185,76 +198,10 @@ export function Step2Products() {
           )}
         </div>
 
-        {/* Producto seleccionado */}
-        {selectedProduct && selectedVariant ? (
-          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-md border border-gray-200 bg-gray-50 p-3">
-            <div className="flex items-center gap-3 flex-1 min-w-[240px]">
-              <div className="flex h-10 w-10 items-center justify-center rounded-md border border-gray-200 bg-white">
-                <ShoppingCart className="h-4 w-4 text-gray-400" />
-              </div>
-              <div>
-                <div className="text-sm font-medium text-gray-900">{selectedProduct.name}</div>
-                <div className="flex items-center gap-2 text-xs text-gray-500">
-                  <span className="text-blue-600">{selectedProduct.sku}</span>
-                  <span>·</span>
-                  <span>{selectedProduct.line}</span>
-                </div>
-              </div>
-            </div>
-
-            <select
-              value={selectedVariant.sku}
-              onChange={(e) => setSelectedVariantSku(e.target.value)}
-              className="rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs"
-            >
-              {selectedProduct.variants.map((variant) => (
-                <option key={variant.sku} value={variant.sku}>
-                  {variant.sku} · {variant.name} · ${variant.price.toFixed(2)} — GYE:{' '}
-                  {variant.gye} · UIO: {variant.uio}
-                </option>
-              ))}
-            </select>
-
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-white hover:bg-gray-50"
-              >
-                <Minus className="h-3 w-3" />
-              </button>
-              <span className="w-8 text-center text-sm font-medium">{quantity}</span>
-              <button
-                type="button"
-                onClick={() => setQuantity(quantity + 1)}
-                className="flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-white hover:bg-gray-50"
-              >
-                <Plus className="h-3 w-3" />
-              </button>
-            </div>
-
-            <Button
-              onClick={handleAdd}
-              className="gap-2 bg-blue-600 hover:bg-blue-700 text-gray-50 dark:text-slate-100"
-            >
-              <ShoppingCart className="h-4 w-4" />
-              Agregar al pedido
-            </Button>
-
-            <button
-              type="button"
-              onClick={handleClearSelection}
-              title="Quitar selección"
-              className="rounded p-1 text-gray-400 hover:bg-gray-100"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        ) : (
-          <p className="mt-4 text-xs text-gray-500">
-            Busca y selecciona un producto para agregarlo al pedido.
-          </p>
-        )}
+        <p className="mt-3 text-xs text-gray-500">
+          Haz clic en un producto para agregarlo al pedido. Si tiene varias variantes, elegirás una
+          en el diálogo.
+        </p>
       </section>
 
       {/* Items del pedido */}
@@ -371,12 +318,119 @@ export function Step2Products() {
         <Button
           disabled={!canProceed()}
           onClick={nextStep}
-          className="gap-2 bg-blue-600 hover:bg-blue-700 text-white dark:text-slate-100"
+          className="gap-2 bg-blue-600 hover:bg-blue-700"
         >
           Continuar a entrega
           <span>→</span>
         </Button>
       </div>
+
+      {/* Dialog de variante */}
+      <Dialog
+        open={!!dialogProduct}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setDialogProduct(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Selecciona la variante</DialogTitle>
+            <DialogDescription>
+              {dialogProduct?.name} · {dialogProduct?.sku}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            {dialogProduct?.variants.map((variant) => {
+              const isSelected = variant.sku === dialogVariantSku;
+              return (
+                <button
+                  key={variant.sku}
+                  type="button"
+                  onClick={() => setDialogVariantSku(variant.sku)}
+                  className={cn(
+                    'flex w-full items-start gap-3 rounded-md border p-3 text-left transition-colors',
+                    isSelected
+                      ? 'border-blue-600 bg-blue-50'
+                      : 'border-gray-200 bg-white hover:border-gray-300',
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2',
+                      isSelected ? 'border-blue-600 bg-blue-600' : 'border-gray-300 bg-white',
+                    )}
+                  >
+                    {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                  </span>
+                  <span className="flex-1">
+                    <span className="flex items-center justify-between">
+                      <span
+                        className={cn(
+                          'text-sm font-medium',
+                          isSelected ? 'text-blue-700' : 'text-gray-900',
+                        )}
+                      >
+                        {variant.name}
+                      </span>
+                      <span className="text-sm font-medium text-gray-900">
+                        ${variant.price.toFixed(2)}
+                      </span>
+                    </span>
+                    <span className="mt-0.5 block text-xs text-gray-500">
+                      {variant.sku} · GYE: {variant.gye} · UIO: {variant.uio}
+                      {variant.stockLabel && (
+                        <>
+                          {' · '}
+                          <span className={STOCK_COLORS[variant.stockStatus]}>
+                            {variant.stockLabel}
+                          </span>
+                        </>
+                      )}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center justify-between rounded-md border border-gray-200 bg-gray-50 p-3">
+            <span className="text-sm text-gray-600">Cantidad</span>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setDialogQuantity(Math.max(1, dialogQuantity - 1))}
+                className="flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-white hover:bg-gray-50"
+              >
+                <Minus className="h-3 w-3" />
+              </button>
+              <span className="w-8 text-center text-sm font-medium">{dialogQuantity}</span>
+              <button
+                type="button"
+                onClick={() => setDialogQuantity(dialogQuantity + 1)}
+                className="flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-white hover:bg-gray-50"
+              >
+                <Plus className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:space-x-0">
+            <Button variant="ghost" onClick={() => setDialogProduct(null)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleDialogAdd}
+              className="gap-2 bg-blue-600 hover:bg-blue-700 text-gray-50 dark:text-slate-100"
+            >
+              <ShoppingCart className="h-4 w-4" />
+              Agregar al pedido
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

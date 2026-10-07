@@ -86,6 +86,7 @@ export interface OrderItem {
   productLine: string;      // Sillines Tapizadas
   variantSku: string;       // 095-B
   variantName: string;      // Negro
+  variantDescription?: string; // Descripción de la variante
   variantStockStatus: StockStatus;
   variantStockLabel?: string;
   quantity: number;
