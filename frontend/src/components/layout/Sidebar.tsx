@@ -3,14 +3,13 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bell, ChevronLeft, ChevronRight, HelpCircle, Settings, UserRound } from 'lucide-react';
+import { Bell, ChevronLeft, ChevronRight, HelpCircle, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { NAV_SECTIONS } from '@/config/navigation';
 import { useUiStore } from '@/stores/ui-store';
 import { NavSection } from './NavSection';
 import { CompanySwitcher } from './CompanySwitcher';
-import { ThemeOptions } from './ThemeOptions';
 import { UserMenu } from './UserMenu';
 
 const CONFIG_HREF = '/operations/settings/profile';
@@ -121,48 +120,18 @@ export function Sidebar() {
             )}
           </button>
 
-          <div className="group/config relative">
-            <Link
-              href={CONFIG_HREF}
-              aria-current={pathname.startsWith(CONFIG_HREF) ? 'page' : undefined}
-              title={collapsed ? 'Configuración' : undefined}
-              className={cn(
-                'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-white',
-                collapsed && 'justify-center px-0'
-              )}
-            >
-              <Settings className="h-4 w-4 shrink-0" aria-hidden="true" />
-              {!collapsed && <span className="truncate">Configuración</span>}
-            </Link>
-
-            <div
-              className="
-                pointer-events-none invisible absolute bottom-0 left-full z-50 ml-2 w-56
-                translate-x-1 rounded-xl border border-slate-200 dark:border-slate-700
-                bg-white dark:bg-slate-900 p-1.5 opacity-0 shadow-xl
-                transition-all duration-150
-                group-hover/config:visible group-hover/config:pointer-events-auto
-                group-hover/config:translate-x-0 group-hover/config:opacity-100
-                group-focus-within/config:visible group-focus-within/config:pointer-events-auto
-                group-focus-within/config:translate-x-0 group-focus-within/config:opacity-100
-              "
-            >
-              <Link
-                href={CONFIG_HREF}
-                className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-50 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-              >
-                <UserRound className="h-3.5 w-3.5" aria-hidden="true" />
-                Configuración del perfil
-              </Link>
-
-              <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
-
-              <p className="px-3 pb-0.5 pt-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                Tema
-              </p>
-              <ThemeOptions />
-            </div>
-          </div>
+          <Link
+            href={CONFIG_HREF}
+            aria-current={pathname.startsWith(CONFIG_HREF) ? 'page' : undefined}
+            title={collapsed ? 'Configuración' : undefined}
+            className={cn(
+              'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-white',
+              collapsed && 'justify-center px-0'
+            )}
+          >
+            <Settings className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {!collapsed && <span className="truncate">Configuración</span>}
+          </Link>
 
           <a
             href={`mailto:${SUPPORT_EMAIL}`}
