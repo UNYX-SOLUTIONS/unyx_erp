@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import type { AxiosError } from 'axios';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
@@ -38,8 +39,14 @@ export function LoginForm() {
         toast.success('Bienvenido');
         router.push('/operations/dashboard');
       },
-      onError: (error) =>
-        setGeneralError(getApiErrorMessage(error, 'Correo o contraseña incorrectos.')),
+      onError: (error) => {
+        const hasResponse = Boolean((error as AxiosError | undefined)?.response);
+        setGeneralError(
+          hasResponse
+            ? getApiErrorMessage(error, 'Correo o contraseña incorrectos.')
+            : 'No se pudo conectar con el servidor. Revisa tu conexión e intenta de nuevo.'
+        );
+      },
     });
   });
 
