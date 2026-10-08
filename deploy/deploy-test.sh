@@ -19,13 +19,13 @@ COMPOSE_FILE="$REPO_DIR/docker-compose.test.yml"
 ENV_FILE="$REPO_DIR/.env.deploy"
 FRONTEND_PORT="${FRONTEND_PORT:-3000}"
 RUN_SEED=1
-PUBLIC_HOST=""
+PUBLIC_INPUT=""
 
 for arg in "$@"; do
   case "$arg" in
     --no-seed) RUN_SEED=0 ;;
     --*) echo "Opcion desconocida: $arg" >&2; exit 1 ;;
-    *) PUBLIC_HOST="$arg" ;;
+    *) PUBLIC_INPUT="$arg" ;;
   esac
 done
 
@@ -51,26 +51,44 @@ fi
 
 docker compose version >/dev/null 2>&1 || fail "Falta el plugin 'docker compose'. Instalalo y vuelve a ejecutar."
 
-if [ -z "$PUBLIC_HOST" ]; then
-  log "Detectando IP publica del VPS..."
-  PUBLIC_HOST="$(curl -4 -fsS --max-time 8 https://ifconfig.me || true)"
-  if [ -z "$PUBLIC_HOST" ]; then
-    PUBLIC_HOST="$(curl -4 -fsS --max-time 8 https://api.ipify.org || true)"
-  fi
-  if [ -z "$PUBLIC_HOST" ]; then
-    PUBLIC_HOST="$(hostname -I | tr ' ' '\n' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)"
-  fi
-fi
-
-if [[ "$PUBLIC_HOST" == *:* ]]; then
-  PUBLIC_URL_HOST="[${PUBLIC_HOST}]"
+# Dominio público: 1er argumento (URL o dominio), o PUBLIC_DOMAIN, o el default de test.
+DEFAULT_DOMAIN="${PUBLIC_DOMAIN:-altosa-test.erp.unyxsolutions.com}"
+PUBLIC_INPUT="${PUBLIC_INPUT:-${PUBLIC_DOMAIN:-}}"
+if [ -z "$PUBLIC_INPUT" ]; then
+  PUBLIC_URL="https://${DEFAULT_DOMAIN}"
+elif printf '%s' "$PUBLIC_INPUT" | grep -Eq '^https?://'; then
+  PUBLIC_URL="$PUBLIC_INPUT"
+elif printf '%s' "$PUBLIC_INPUT" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'; then
+  PUBLIC_URL="http://${PUBLIC_INPUT}:${FRONTEND_PORT}"
 else
-  PUBLIC_URL_HOST="$PUBLIC_HOST"
+  PUBLIC_URL="https://${PUBLIC_INPUT}"
 fi
-PUBLIC_ORIGIN="http://${PUBLIC_URL_HOST}:${FRONTEND_PORT}"
+PUBLIC_DOMAIN="$(printf '%s' "$PUBLIC_URL" | sed -E 's#^https?://##; s#/.*$##; s#:[0-9]+$##')"
+PUBLIC_ORIGIN="$PUBLIC_URL"
+
+# Red externa donde vive Traefik (se autodetecta y se puede forzar con TRAEFIK_NETWORK).
+if [ -z "${TRAEFIK_NETWORK:-}" ]; then
+  TRAEFIK_CONTAINER="$(docker ps --format '{{.Names}}' | grep -i traefik | head -n 1 || true)"
+  if [ -n "$TRAEFIK_CONTAINER" ]; then
+    TRAEFIK_NETWORK="$(docker inspect -f '{{range $k, $v := .NetworkSettings.Networks}}{{$k}}|{{end}}' "$TRAEFIK_CONTAINER" | tr '|' '\n' | grep -E 'front|traefik|public' | head -n 1 || true)"
+  fi
+fi
+TRAEFIK_NETWORK="${TRAEFIK_NETWORK:-unyx-workspace-front}"
+docker network inspect "$TRAEFIK_NETWORK" >/dev/null 2>&1 || fail "No existe la red de Traefik '$TRAEFIK_NETWORK'. Revisa 'docker network ls' o pasala con TRAEFIK_NETWORK=<red>."
+
+log "Dominio: ${PUBLIC_URL}"
+log "Red de Traefik: ${TRAEFIK_NETWORK}"
 
 log "Archivo de entorno (.env.deploy)"
 gen_secret() { head -c 48 /dev/urandom | od -An -tx1 | tr -d ' \n'; }
+set_env_value() {
+  local key="$1" value="$2"
+  if grep -q "^${key}=" "$ENV_FILE"; then
+    sed -i "s|^${key}=.*|${key}=${value}|" "$ENV_FILE"
+  else
+    printf '%s=%s\n' "$key" "$value" >> "$ENV_FILE"
+  fi
+}
 if [ ! -f "$ENV_FILE" ]; then
   cat > "$ENV_FILE" <<EOF
 POSTGRES_USER=unyx
@@ -79,22 +97,29 @@ POSTGRES_DB=unyx_erp
 JWT_ACCESS_SECRET=$(gen_secret)
 JWT_REFRESH_SECRET=$(gen_secret)
 PUBLIC_ORIGIN=${PUBLIC_ORIGIN}
+PUBLIC_DOMAIN=${PUBLIC_DOMAIN}
 NEXT_PUBLIC_API_URL=
 FRONTEND_PORT=${FRONTEND_PORT}
+TRAEFIK_NETWORK=${TRAEFIK_NETWORK}
 SEED_ADMIN_PASSWORD=Admin123!
 EOF
   echo "Creado .env.deploy con secretos nuevos"
 else
-  sed -i "s|^PUBLIC_ORIGIN=.*|PUBLIC_ORIGIN=${PUBLIC_ORIGIN}|" "$ENV_FILE"
-  echo "Reutilizando .env.deploy existente (se actualizo PUBLIC_ORIGIN)"
+  set_env_value PUBLIC_ORIGIN "$PUBLIC_ORIGIN"
+  set_env_value PUBLIC_DOMAIN "$PUBLIC_DOMAIN"
+  set_env_value TRAEFIK_NETWORK "$TRAEFIK_NETWORK"
+  set_env_value FRONTEND_PORT "$FRONTEND_PORT"
+  echo "Reutilizando .env.deploy existente (dominio y red de Traefik actualizados)"
 fi
 
 log "Firewall"
 if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: active"; then
+  ufw allow 80/tcp >/dev/null || true
+  ufw allow 443/tcp >/dev/null || true
   ufw allow "${FRONTEND_PORT}/tcp" >/dev/null || true
-  echo "Puerto ${FRONTEND_PORT}/tcp abierto en ufw"
+  echo "Puertos 80, 443 y ${FRONTEND_PORT} abiertos en ufw"
 else
-  echo "ufw no esta activo. Si tu VPS usa firewall del proveedor, abre el puerto ${FRONTEND_PORT}/tcp"
+  echo "ufw no esta activo. Si tu VPS usa firewall del proveedor, asegura 80/tcp y 443/tcp abiertos"
 fi
 
 log "Construyendo imagenes (la primera vez tarda varios minutos)"
@@ -151,8 +176,9 @@ cat <<EOF
 ============================================================
  Unyx ERP desplegado - AMBIENTE DE PRUEBAS
 ------------------------------------------------------------
- Link:    ${PUBLIC_ORIGIN}
- Admin:   admin@unyx.erp / Admin123!
+ Link:      ${PUBLIC_URL}
+ Fallback:  http://<IP-del-VPS>:${FRONTEND_PORT}
+ Admin:     admin@unyx.erp / Admin123!
 ------------------------------------------------------------
  Logs:       docker compose --env-file .env.deploy -f docker-compose.test.yml logs -f
  Reiniciar:  docker compose --env-file .env.deploy -f docker-compose.test.yml restart
