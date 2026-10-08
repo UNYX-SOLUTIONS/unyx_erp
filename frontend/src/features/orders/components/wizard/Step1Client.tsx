@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Search, UserPlus, Lock, CheckCircle2, Plus, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -54,6 +54,16 @@ export function Step1Client() {
   const [newCustomer, setNewCustomer] = useState(EMPTY_CUSTOMER_FORM);
   const [formError, setFormError] = useState<string | null>(null);
 
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const focusSearchRef = useRef(false);
+
+  useEffect(() => {
+    if (!customer && focusSearchRef.current) {
+      focusSearchRef.current = false;
+      searchInputRef.current?.focus();
+    }
+  }, [customer]);
+
   const customers = [...createdCustomers, ...MOCK_CUSTOMERS];
 
   const normalizedQuery = query.trim().toLowerCase();
@@ -72,6 +82,7 @@ export function Step1Client() {
   };
 
   const handleChangeCustomer = () => {
+    focusSearchRef.current = true;
     setCustomer(null);
     setLead(null);
     setQuery('');
@@ -147,12 +158,7 @@ export function Step1Client() {
           <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400">
             Cliente
           </h2>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={handleCreateCustomer}
-          >
+          <Button variant="outline" size="sm" className="gap-2" onClick={handleCreateCustomer}>
             <UserPlus className="h-4 w-4" />
             Nuevo cliente
           </Button>
@@ -160,20 +166,18 @@ export function Step1Client() {
 
         {!customer ? (
           <div className="relative">
-            <div className="relative">
-              <Input
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setOpen(true);
-                }}
-                onFocus={() => setOpen(true)}
-                onBlur={() => setOpen(false)}
-                placeholder="Buscar cliente por nombre o RUC..."
-                className="pl-9"
-                autoComplete="off"
-              />
-            </div>
+            <Input
+              ref={searchInputRef}
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setOpen(true);
+              }}
+              onFocus={() => setOpen(true)}
+              onBlur={() => setOpen(false)}
+              placeholder="Buscar cliente por nombre o RUC..."
+              autoComplete="off"
+            />
 
             {open && normalizedQuery.length > 0 && (
               <div className="absolute z-10 mt-2 w-full overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
@@ -224,7 +228,6 @@ export function Step1Client() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2">
-                  <Search className="h-4 w-4 text-gray-400 dark:text-slate-500" />
                   <span className="text-sm font-semibold text-gray-900 dark:text-slate-100">
                     {customer.name}
                   </span>
@@ -255,10 +258,13 @@ export function Step1Client() {
                 <button
                   type="button"
                   onClick={handleChangeCustomer}
-                  className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 px-2 py-1 rounded-md transition-colors hover:bg-slate-100 dark:hover:bg-slate-700"
                 >
-                  Cambiar{' '}
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 text-gray-400 dark:text-slate-500" />
+                  Cambiar
+                  <div className="flex-shrink-0 rotate-90 ">
+                  <Search className="h-3.5 w-3.5" />
+
+                  </div>
                 </button>
               </div>
             </div>
