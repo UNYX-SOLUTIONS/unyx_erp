@@ -189,7 +189,7 @@ export function UserMenu({ variant = 'topbar', collapsed = false }: UserMenuProp
         <DropdownMenuItem
           onClick={() => logout.mutate()}
           disabled={logout.isPending}
-          className="text-destructive focus:text-destructive"
+          className="text-destructive focus:text-destructive dark:text-red-300"
         >
           {logout.isPending ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />

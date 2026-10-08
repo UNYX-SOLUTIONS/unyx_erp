@@ -63,7 +63,7 @@ export function LoginForm() {
     <div>
       <div className="mb-8">
         <h1 className="mb-2 text-[28px] font-semibold leading-tight tracking-tight text-slate-900 dark:text-slate-100 sm:text-[30px]">
-          Bienvenido a UNYX ERP
+          Bienvenido
         </h1>
         <p className="text-[14px] font-normal leading-relaxed text-slate-500 dark:text-slate-400">
           Ingresa tus credenciales para acceder a tu espacio de trabajo.
