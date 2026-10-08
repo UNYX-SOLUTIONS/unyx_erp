@@ -80,4 +80,44 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  .orbit-spin {
+    animation: orbit 30s linear infinite;
+  }
+  .orbit-svg {
+    transform-box: view-box;
+    transform-origin: 340px 295px;
+  }
+  .orbit-reverse {
+    animation-direction: reverse;
+  }
+  .float-soft {
+    animation: float-soft 7s ease-in-out infinite;
+  }
+}
+
+@keyframes orbit {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes float-soft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbit-spin,
+  .float-soft {
+    animation: none;
+  }
 }

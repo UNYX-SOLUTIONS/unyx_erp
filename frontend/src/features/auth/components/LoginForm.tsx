@@ -55,17 +55,17 @@ export function LoginForm() {
   const hasPasswordError = Boolean(form.formState.errors.password?.message) || Boolean(generalError);
   const inputContainerClass = (hasError: boolean) =>
     cn(
-      'flex h-[50px] w-full items-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 transition-all duration-150 focus-within:border-unyx-700 focus-within:shadow-[0_0_0_3px_rgba(30,64,175,0.08)]',
+      'flex h-[50px] w-full items-center rounded-lg border border-slate-200 px-3.5 transition-all duration-150 focus-within:border-unyx-700 focus-within:shadow-[0_0_0_3px_rgba(30,64,175,0.08)]',
       hasError && 'border-rose-500 shadow-[0_0_0_3px_rgba(239,68,68,0.08)]'
     );
 
   return (
     <div>
       <div className="mb-8">
-        <h1 className="mb-2 text-[28px] font-semibold leading-tight tracking-tight text-slate-900 dark:text-slate-100 sm:text-[30px]">
-          Bienvenido a UNYX ERP
+        <h1 className="mb-2 text-[28px] font-semibold leading-tight tracking-tight text-slate-900 sm:text-[30px]">
+          Bienvenido
         </h1>
-        <p className="text-[14px] font-normal leading-relaxed text-slate-500 dark:text-slate-400">
+        <p className="text-[14px] font-normal leading-relaxed text-slate-500">
           Ingresa tus credenciales para acceder a tu espacio de trabajo.
         </p>
       </div>
@@ -74,7 +74,7 @@ export function LoginForm() {
         <div className="space-y-1.5">
           <label
             htmlFor="email"
-            className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400"
+            className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500"
           >
             Correo Electrónico
           </label>
@@ -85,7 +85,7 @@ export function LoginForm() {
               type="email"
               autoComplete="email"
               placeholder="nombre@empresa.com"
-              className="h-full w-full bg-transparent text-[14px] font-normal text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none"
+              className="h-full w-full bg-transparent text-[14px] font-normal text-slate-900 placeholder-slate-400 focus:outline-none"
               {...form.register('email')}
             />
           </div>
@@ -100,7 +100,7 @@ export function LoginForm() {
         <div className="space-y-1.5">
           <label
             htmlFor="password"
-            className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400"
+            className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500"
           >
             Contraseña
           </label>
@@ -112,7 +112,7 @@ export function LoginForm() {
               autoComplete="current-password"
               placeholder="••••••••••••"
               className={cn(
-                'h-full w-full bg-transparent text-[14px] font-normal text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none',
+                'h-full w-full bg-transparent text-[14px] font-normal text-slate-900 placeholder-slate-400 focus:outline-none',
                 !showPassword && 'tracking-widest'
               )}
               {...form.register('password')}
@@ -146,7 +146,7 @@ export function LoginForm() {
               type="checkbox"
               className="h-4 w-4 rounded border-slate-300 text-unyx-800 transition focus:ring-0 focus:ring-offset-0"
             />
-            <span className="text-[13px] text-slate-600 dark:text-slate-300 transition-colors group-hover:text-slate-800">
+            <span className="text-[13px] text-slate-600  transition-colors group-hover:text-slate-800">
               Mantener sesión iniciada
             </span>
           </label>
@@ -180,7 +180,7 @@ export function LoginForm() {
 
         <div className="flex select-none items-center justify-center gap-1.5 pt-3 text-slate-400">
           <ShieldCheck className="h-4 w-4 shrink-0" />
-          <span className="text-[12px] font-normal tracking-tight text-slate-500 dark:text-slate-400">
+          <span className="text-[12px] font-normal tracking-tight text-slate-500">
             Acceso seguro administrado por UNYX
           </span>
         </div>
