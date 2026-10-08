@@ -53,12 +53,21 @@ docker compose version >/dev/null 2>&1 || fail "Falta el plugin 'docker compose'
 
 if [ -z "$PUBLIC_HOST" ]; then
   log "Detectando IP publica del VPS..."
-  PUBLIC_HOST="$(curl -fsS --max-time 8 https://ifconfig.me || true)"
+  PUBLIC_HOST="$(curl -4 -fsS --max-time 8 https://ifconfig.me || true)"
   if [ -z "$PUBLIC_HOST" ]; then
-    PUBLIC_HOST="$(hostname -I | awk '{print $1}')"
+    PUBLIC_HOST="$(curl -4 -fsS --max-time 8 https://api.ipify.org || true)"
+  fi
+  if [ -z "$PUBLIC_HOST" ]; then
+    PUBLIC_HOST="$(hostname -I | tr ' ' '\n' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)"
   fi
 fi
-PUBLIC_ORIGIN="http://${PUBLIC_HOST}:${FRONTEND_PORT}"
+
+if [[ "$PUBLIC_HOST" == *:* ]]; then
+  PUBLIC_URL_HOST="[${PUBLIC_HOST}]"
+else
+  PUBLIC_URL_HOST="$PUBLIC_HOST"
+fi
+PUBLIC_ORIGIN="http://${PUBLIC_URL_HOST}:${FRONTEND_PORT}"
 
 log "Archivo de entorno (.env.deploy)"
 gen_secret() { head -c 48 /dev/urandom | od -An -tx1 | tr -d ' \n'; }
