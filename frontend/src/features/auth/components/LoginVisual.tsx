@@ -17,29 +17,29 @@ const VISUAL_CARDS: VisualCard[] = [
     title: 'PEDIDOS',
     subtitle: 'Flujo comercial',
     icon: FileText,
-    left: 22.65,
-    top: 21.19,
+    left: 19.56,
+    top: 17.97,
   },
   {
     title: 'INVENTARIO',
     subtitle: 'Stock en tiempo real',
     icon: Boxes,
-    left: 77.35,
-    top: 21.19,
+    left: 80.44,
+    top: 17.97,
   },
   {
     title: 'PREPARACIÓN',
     subtitle: 'Picking & Packing',
     icon: Package,
-    left: 22.65,
-    top: 78.81,
+    left: 19.56,
+    top: 82.03,
   },
   {
     title: 'ENTREGAS',
     subtitle: 'Despacho & Rutas',
     icon: Truck,
-    left: 77.35,
-    top: 78.81,
+    left: 80.44,
+    top: 82.03,
   },
 ];
 
@@ -48,7 +48,7 @@ const PLANETS = [
     duration: '18s',
     reverse: false,
     delay: '0s',
-    cx: 448,
+    cx: 460,
     r: 3,
     fill: '#60a5fa',
     glowR: 7,
@@ -58,7 +58,7 @@ const PLANETS = [
     duration: '30s',
     reverse: true,
     delay: '-12s',
-    cx: 516,
+    cx: 535,
     r: 4.5,
     fill: '#3b82f6',
     glowR: 10,
@@ -68,7 +68,7 @@ const PLANETS = [
     duration: '48s',
     reverse: false,
     delay: '0s',
-    cx: 596,
+    cx: 620,
     r: 3.5,
     fill: '#93c5fd',
     glowR: 8,
@@ -78,7 +78,7 @@ const PLANETS = [
     duration: '48s',
     reverse: false,
     delay: '-24s',
-    cx: 596,
+    cx: 620,
     r: 2.5,
     fill: '#1e40af',
     glowR: 6,
@@ -103,13 +103,16 @@ export function LoginVisual() {
         <div className="flex items-center gap-2">
       
         </div>
-        <div className="font-mono text-[9px] uppercase tracking-widest text-slate-500 dark:text-slate-400">
+        <div className="text-[9px] uppercase tracking-widest text-slate-400">
            Todo en uno
         </div>
       </div>
 
       <div className="relative my-auto flex w-full items-center justify-center">
-        <div className="relative aspect-[680/590] w-full max-w-[min(820px,calc((100vh_-_280px)*680/590))]">
+        <div
+          className="relative aspect-[680/590] w-full"
+          style={{ maxWidth: 'min(1000px, calc((100vh - 200px) * 680 / 590))' }}
+        >
           <svg
             className="pointer-events-none absolute inset-0 h-full w-full"
             fill="none"
@@ -117,24 +120,24 @@ export function LoginVisual() {
             viewBox="0 0 680 590"
           >
             {/* Órbitas */}
-            <circle cx="340" cy="295" r="256" stroke="#1e40af" strokeDasharray="4 6" strokeOpacity="0.18" strokeWidth="1" />
-            <circle cx="340" cy="295" r="176" stroke="#1e40af" strokeOpacity="0.28" strokeWidth="1" />
-            <circle cx="340" cy="295" r="108" stroke="#3b82f6" strokeDasharray="2 4" strokeOpacity="0.35" strokeWidth="1" />
+            <circle cx="340" cy="295" r="280" stroke="#1e40af" strokeDasharray="4 6" strokeOpacity="0.18" strokeWidth="1" />
+            <circle cx="340" cy="295" r="195" stroke="#1e40af" strokeOpacity="0.28" strokeWidth="1" />
+            <circle cx="340" cy="295" r="120" stroke="#3b82f6" strokeDasharray="2 4" strokeOpacity="0.35" strokeWidth="1" />
 
             {/* Balizas hacia cada módulo (giran con las cards, sin tocarlas) */}
             <g className="orbit-spin orbit-svg" style={{ animationDuration: ORBIT_DURATION }}>
-              <line stroke="#1e40af" strokeOpacity="0.45" strokeWidth="1.2" x1="340" x2="253" y1="295" y2="215" />
-              <circle cx="253" cy="215" fill="rgba(96, 165, 250, 0.2)" r="5" />
-              <circle cx="253" cy="215" fill="#60a5fa" r="2.5" />
-              <line stroke="#1e40af" strokeOpacity="0.45" strokeWidth="1.2" x1="340" x2="427" y1="295" y2="215" />
-              <circle cx="427" cy="215" fill="rgba(96, 165, 250, 0.2)" r="5" />
-              <circle cx="427" cy="215" fill="#60a5fa" r="2.5" />
-              <line stroke="#1e40af" strokeOpacity="0.45" strokeWidth="1.2" x1="340" x2="253" y1="295" y2="375" />
-              <circle cx="253" cy="375" fill="rgba(96, 165, 250, 0.2)" r="5" />
-              <circle cx="253" cy="375" fill="#60a5fa" r="2.5" />
-              <line stroke="#1e40af" strokeOpacity="0.45" strokeWidth="1.2" x1="340" x2="427" y1="295" y2="375" />
-              <circle cx="427" cy="375" fill="rgba(96, 165, 250, 0.2)" r="5" />
-              <circle cx="427" cy="375" fill="#60a5fa" r="2.5" />
+              <line stroke="#1e40af" strokeOpacity="0.45" strokeWidth="1.2" x1="340" x2="245" y1="295" y2="207" />
+              <circle cx="245" cy="207" fill="rgba(96, 165, 250, 0.2)" r="5" />
+              <circle cx="245" cy="207" fill="#60a5fa" r="2.5" />
+              <line stroke="#1e40af" strokeOpacity="0.45" strokeWidth="1.2" x1="340" x2="435" y1="295" y2="207" />
+              <circle cx="435" cy="207" fill="rgba(96, 165, 250, 0.2)" r="5" />
+              <circle cx="435" cy="207" fill="#60a5fa" r="2.5" />
+              <line stroke="#1e40af" strokeOpacity="0.45" strokeWidth="1.2" x1="340" x2="245" y1="295" y2="383" />
+              <circle cx="245" cy="383" fill="rgba(96, 165, 250, 0.2)" r="5" />
+              <circle cx="245" cy="383" fill="#60a5fa" r="2.5" />
+              <line stroke="#1e40af" strokeOpacity="0.45" strokeWidth="1.2" x1="340" x2="435" y1="295" y2="383" />
+              <circle cx="435" cy="383" fill="rgba(96, 165, 250, 0.2)" r="5" />
+              <circle cx="435" cy="383" fill="#60a5fa" r="2.5" />
             </g>
 
             {/* Planetas orbitando */}
