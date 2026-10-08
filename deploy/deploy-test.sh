@@ -130,7 +130,7 @@ wait_healthy unyx-test-frontend || fail "El frontend no quedo healthy"
 if [ "$RUN_SEED" = "1" ]; then
   log "Sembrando permisos, roles y admin (idempotente)"
   docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T -e NODE_ENV=development backend \
-    ./node_modules/.bin/tsx prisma/seed.ts
+    node dist/prisma/seed.js
 
   log "Sembrando catalogo demo de productos"
   docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T backend \

@@ -38,7 +38,9 @@ const DEMO_ADMIN_USERNAME = 'admin';
 
 async function main() {
   for (const module of PERMISSION_MODULES) {
-    const actions = READ_ONLY_MODULES.includes(module) ? (['read'] as const) : CRUD_ACTIONS;
+    const actions = (READ_ONLY_MODULES as readonly string[]).includes(module)
+      ? (['read'] as const)
+      : CRUD_ACTIONS;
     for (const action of actions) {
       const code = `${module}.${action}`;
       await prisma.permission.upsert({
