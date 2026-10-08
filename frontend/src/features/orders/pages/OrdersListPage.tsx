@@ -4,7 +4,7 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, CheckCircle2 } from 'lucide-react';
+import { Plus, CheckCircle2, ArrowLeftIcon, ArrowRightIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OrderStatusTabs } from '@/features/orders/components/OrderStatusTabs';
 import { OrdersFilters } from '@/features/orders/components/OrdersFilter';
@@ -60,7 +60,7 @@ export function OrdersListPage() {
       WITH_ISSUE: MOCK_ORDERS.filter((o) => ORDER_STATUS_META[o.status].tab === 'WITH_ISSUE')
         .length,
     }),
-    [],
+    []
   );
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -137,9 +137,10 @@ export function OrdersListPage() {
           <button
             disabled={page === 1}
             onClick={() => setPage(page - 1)}
-            className="rounded-md border border-gray-200 px-3 py-1.5 text-sm disabled:opacity-50"
+            className="rounded-md border border-gray-200 px-3 py-1.5 text-sm disabled:opacity-50 flex items-center gap-1"
           >
-            ← Anterior
+            <ArrowLeftIcon className="h-4 w-4" />
+            Anterior
           </button>
           {Array.from({ length: totalPages }).map((_, i) => (
             <button
@@ -157,9 +158,10 @@ export function OrdersListPage() {
           <button
             disabled={page === totalPages}
             onClick={() => setPage(page + 1)}
-            className="rounded-md border border-gray-200 px-3 py-1.5 text-sm disabled:opacity-50"
+            className="rounded-md border border-gray-200 px-3 py-1.5 text-sm disabled:opacity-50 flex items-center gap-1"
           >
-            Siguiente →
+            Siguiente
+            <ArrowRightIcon className="h-4 w-4" />
           </button>
         </div>
       </div>

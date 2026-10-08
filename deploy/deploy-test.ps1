@@ -16,6 +16,7 @@ param(
   [string]$VpsUser = 'root',
   [int]$SshPort = 22,
   [string]$RemoteDir = '/opt/unyx-erp',
+  [string]$PublicUrl = '',
   [switch]$SkipUpload,
   [switch]$NoSeed
 )
@@ -57,14 +58,17 @@ if (-not $SkipUpload) {
 }
 
 $seedFlag = if ($NoSeed) { ' --no-seed' } else { '' }
+$publicArg = if ($PublicUrl) { " '$PublicUrl'" } else { '' }
 $remoteCmd = "cd '$RemoteDir' && sed -i 's/\r`$//' deploy/deploy-test.sh && " +
-  "if [ \"`$(id -u)\" -eq 0 ]; then bash deploy/deploy-test.sh $VpsHost$seedFlag; " +
-  "else sudo bash deploy/deploy-test.sh $VpsHost$seedFlag; fi"
+  "if [ \"`$(id -u)\" -eq 0 ]; then bash deploy/deploy-test.sh$publicArg$seedFlag; " +
+  "else sudo bash deploy/deploy-test.sh$publicArg$seedFlag; fi"
 
 Write-Host "==> Ejecutando despliegue en el VPS (SSH)..." -ForegroundColor Cyan
 & ssh @sshArgs $target $remoteCmd
 if ($LASTEXITCODE -ne 0) { throw 'El despliegue remoto fallo. Revisa la salida de arriba.' }
 
+$finalUrl = if ($PublicUrl) { $PublicUrl } else { 'https://altosa-test.erp.unyxsolutions.com' }
 Write-Host ""
-Write-Host "Listo. Link de pruebas:  http://${VpsHost}:3000" -ForegroundColor Green
+Write-Host "Listo. Link de pruebas:  $finalUrl" -ForegroundColor Green
+Write-Host "Fallback por IP:        http://${VpsHost}:3000" -ForegroundColor Green
 Write-Host "Admin: admin@unyx.erp / Admin123!" -ForegroundColor Green
