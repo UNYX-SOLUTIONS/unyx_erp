@@ -11,7 +11,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         type={type}
         className={cn(
           // Base
-          'flex h-10 w-full rounded-md bg-background px-3 py-2 text-sm',
+          'flex h-10 w-full rounded-md bg-background px-3 py-2 text-sm dark:bg-slate-800 dark:text-slate-200',
           // Un solo borde, controlado con box-shadow interno (más nítido que border)
           'border-0 shadow-[inset_0_0_0_1px_hsl(var(--input))]',
           // Placeholder

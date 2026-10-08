@@ -13,6 +13,7 @@ import { DEFAULT_DELIVERY } from '../data/mock';
 interface NewOrderState {
   currentStep: 1 | 2 | 3 | 4;
   customer: OrderCustomer | null;
+  customers: OrderCustomer[];
   lead: OrderLead | null;
   items: OrderItem[];
   delivery: DeliveryInfo;
@@ -22,6 +23,7 @@ interface NewOrderState {
   nextStep: () => void;
   prevStep: () => void;
   setCustomer: (customer: OrderCustomer | null) => void;
+  addCustomer: (customer: OrderCustomer) => void;
   setLead: (lead: OrderLead | null) => void;
   addItem: (item: OrderItem) => void;
   updateItem: (id: string, patch: Partial<OrderItem>) => void;
@@ -47,6 +49,7 @@ export function computeLineSubtotal(item: {
 export const useNewOrderStore = create<NewOrderState>((set, get) => ({
   currentStep: 1,
   customer: null,
+  customers: [],
   lead: null,
   items: [],
   delivery: { ...DEFAULT_DELIVERY },
@@ -56,6 +59,7 @@ export const useNewOrderStore = create<NewOrderState>((set, get) => ({
   prevStep: () => set((s) => ({ currentStep: Math.max(1, s.currentStep - 1) as 1|2|3|4 })),
 
   setCustomer: (customer) => set({ customer }),
+  addCustomer: (customer) => set((s) => ({ customers: [customer, ...s.customers] })),
   setLead: (lead) => set({ lead }),
 
   addItem: (item) =>
@@ -93,6 +97,7 @@ export const useNewOrderStore = create<NewOrderState>((set, get) => ({
     set({
       currentStep: 1,
       customer: null,
+      customers: [],
       lead: null,
       items: [],
       delivery: { ...DEFAULT_DELIVERY },

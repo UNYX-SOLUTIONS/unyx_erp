@@ -16,7 +16,7 @@ export default function UsersSettingsPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted dark:bg-slate-800">
               <Users className="h-5 w-5" />
             </div>
             <div>
