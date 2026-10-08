@@ -33,8 +33,8 @@ const CRUD_ACTIONS = ['create', 'read', 'update', 'delete'] as const;
 const READ_ONLY_MODULES = ['reports', 'audit'] as const;
 
 const DEMO_COMPANY_TAX_ID = '0000000000001';
-const DEMO_ADMIN_EMAIL = 'admin@unyx.erp';
-const DEMO_ADMIN_USERNAME = 'admin';
+const DEMO_ADMIN_EMAIL = 'xnaranjo@altosamobiliario.com';
+const DEMO_ADMIN_USERNAME = 'xnaranjo';
 
 async function main() {
   for (const module of PERMISSION_MODULES) {
@@ -82,8 +82,8 @@ async function main() {
       email: DEMO_ADMIN_EMAIL,
       username: DEMO_ADMIN_USERNAME,
       passwordHash: await bcrypt.hash(demoAdminPassword, 12),
-      firstName: 'Admin',
-      lastName: 'Unyx',
+      firstName: 'Xavier',
+      lastName: 'Naranjo',
       isSuperAdmin: true,
       emailVerified: true,
     },
