@@ -87,7 +87,7 @@ export function OrdersListPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-xs text-gray-600">
+          <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-slate-400">
             <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
             Sincronizado con Kommo
           </div>
@@ -128,8 +128,8 @@ export function OrdersListPage() {
       <OrdersTable orders={paginated} onView={handleView} onAction={handleView} />
 
       {/* Paginación */}
-      <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3">
-        <span className="text-sm text-gray-500">
+      <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900">
+        <span className="text-sm text-gray-500 dark:text-slate-400">
           Mostrando {paginated.length === 0 ? 0 : (page - 1) * pageSize + 1}-
           {Math.min(page * pageSize, filtered.length)} de {filtered.length} pedidos
         </span>
@@ -137,7 +137,7 @@ export function OrdersListPage() {
           <button
             disabled={page === 1}
             onClick={() => setPage(page - 1)}
-            className="rounded-md border border-gray-200 px-3 py-1.5 text-sm disabled:opacity-50 flex items-center gap-1"
+            className="flex items-center gap-1 rounded-md border border-gray-200 px-3 py-1.5 text-sm text-gray-700 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800/60"
           >
             <ArrowLeftIcon className="h-4 w-4" />
             Anterior
@@ -149,7 +149,7 @@ export function OrdersListPage() {
               className={`h-8 w-8 rounded-md text-sm ${
                 page === i + 1
                   ? 'bg-blue-600 text-white'
-                  : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                  : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/60'
               }`}
             >
               {i + 1}
@@ -158,7 +158,7 @@ export function OrdersListPage() {
           <button
             disabled={page === totalPages}
             onClick={() => setPage(page + 1)}
-            className="rounded-md border border-gray-200 px-3 py-1.5 text-sm disabled:opacity-50 flex items-center gap-1"
+            className="flex items-center gap-1 rounded-md border border-gray-200 px-3 py-1.5 text-sm text-gray-700 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800/60"
           >
             Siguiente
             <ArrowRightIcon className="h-4 w-4" />

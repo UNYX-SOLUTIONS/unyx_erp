@@ -23,18 +23,20 @@ export function OrderStatusTabs({ active, counts, onChange }: Props) {
             className={cn(
               'inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors',
               isActive
-                ? 'border-blue-600 bg-blue-50 text-blue-700'
-                : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50',
-              tab.isAlert && !isActive && 'text-red-600',
+                ? 'border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300'
+                : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/60',
+              tab.isAlert && !isActive && 'text-red-600 dark:text-red-400',
             )}
           >
-            {tab.isAlert && <span className="text-red-500 font-bold">!</span>}
+            {tab.isAlert && <span className="text-red-500 font-bold dark:text-red-400">!</span>}
             <span>{tab.label}</span>
             <span
               className={cn(
                 'rounded-full px-1.5 text-xs',
-                isActive ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600',
-                tab.isAlert && 'bg-red-50 text-red-600',
+                isActive
+                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300'
+                  : 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-400',
+                tab.isAlert && 'bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-400',
               )}
             >
               {counts[tab.id]}

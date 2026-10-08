@@ -33,8 +33,10 @@ export function NewOrderWizard() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Nuevo pedido</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-slate-100">
+            Nuevo pedido
+          </h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
             Completa la información necesaria para crear el pedido.
           </p>
         </div>

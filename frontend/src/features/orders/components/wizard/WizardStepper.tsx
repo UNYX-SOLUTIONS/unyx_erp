@@ -18,7 +18,7 @@ interface Props {
 
 export function WizardStepper({ current }: Props) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-5">
+    <div className="rounded-lg border border-gray-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
       <div className="flex items-center justify-between">
         {STEPS.map((step, idx) => {
           const isCompleted = step.id < current;
@@ -32,7 +32,9 @@ export function WizardStepper({ current }: Props) {
                     'flex h-8 w-8 items-center justify-center rounded-full border-2 text-sm font-semibold transition-colors',
                     isCompleted && 'border-blue-600 bg-blue-600 text-white',
                     isActive && 'border-blue-600 bg-blue-600 text-white',
-                    !isCompleted && !isActive && 'border-gray-300 bg-white text-gray-400',
+                    !isCompleted &&
+                      !isActive &&
+                      'border-gray-300 bg-white text-gray-400 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-500',
                   )}
                 >
                   {isCompleted ? <Check className="h-4 w-4" /> : step.id}
@@ -40,7 +42,9 @@ export function WizardStepper({ current }: Props) {
                 <span
                   className={cn(
                     'text-sm font-medium',
-                    isActive || isCompleted ? 'text-gray-900' : 'text-gray-400',
+                    isActive || isCompleted
+                      ? 'text-gray-900 dark:text-slate-100'
+                      : 'text-gray-400 dark:text-slate-500',
                   )}
                 >
                   {step.label}
@@ -51,7 +55,7 @@ export function WizardStepper({ current }: Props) {
                 <div
                   className={cn(
                     'mx-4 h-0.5 flex-1 rounded-full',
-                    step.id < current ? 'bg-blue-600' : 'bg-gray-200',
+                    step.id < current ? 'bg-blue-600' : 'bg-gray-200 dark:bg-slate-700',
                   )}
                 />
               )}

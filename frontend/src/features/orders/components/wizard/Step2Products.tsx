@@ -30,9 +30,9 @@ import { MOCK_PRODUCTS } from '../../data/mock';
 import { OrderTotalsSummary } from './OrderTotalsSummary';
 
 const STOCK_COLORS = {
-  AVAILABLE: 'text-green-600',
-  BETWEEN_WAREHOUSES: 'text-blue-600',
-  LOW_STOCK: 'text-orange-600',
+  AVAILABLE: 'text-green-600 dark:text-green-400',
+  BETWEEN_WAREHOUSES: 'text-blue-600 dark:text-blue-400',
+  LOW_STOCK: 'text-orange-600 dark:text-orange-400',
 };
 
 const ITEM_COLUMNS = [
@@ -139,35 +139,37 @@ export function Step2Products() {
   return (
     <div className="space-y-6">
       {/* Header con cliente/lead */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <ShoppingCart className="h-4 w-4 text-gray-400" />
-            <span className="text-sm font-semibold text-gray-900">{customer?.name}</span>
+            <ShoppingCart className="h-4 w-4 text-gray-400 dark:text-slate-500" />
+            <span className="text-sm font-semibold text-gray-900 dark:text-slate-100">
+              {customer?.name}
+            </span>
           </div>
-          <span className="text-gray-300">·</span>
-          <span className="text-sm text-gray-600">Lead {lead?.code}</span>
-          <span className="text-gray-300">·</span>
-          <span className="text-sm text-gray-600">{lead?.name}</span>
+          <span className="text-gray-300 dark:text-slate-600">·</span>
+          <span className="text-sm text-gray-600 dark:text-slate-400">Lead {lead?.code}</span>
+          <span className="text-gray-300 dark:text-slate-600">·</span>
+          <span className="text-sm text-gray-600 dark:text-slate-400">{lead?.name}</span>
         </div>
         <button
           type="button"
           onClick={() => setStep(1)}
-          className="text-sm font-medium text-blue-600 hover:text-blue-700"
+          className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
         >
           Cambiar cliente / lead
         </button>
       </div>
 
       {/* Items del pedido */}
-      <section className="rounded-lg border border-gray-200 bg-white px-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 py-4">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 pl-1">
+      <section className="rounded-lg border border-gray-200 bg-white px-6 dark:border-slate-700 dark:bg-slate-900">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 py-4 dark:border-slate-700">
+          <h2 className="pl-1 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400">
             Productos del pedido
           </h2>
           <div className="relative w-full *:max-w-full sm:w-64 md:w-72 lg:w-80 xl:w-96">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-slate-500" />
               <Input
                 value={search}
                 onChange={(e) => {
@@ -183,7 +185,7 @@ export function Step2Products() {
             </div>
 
             {open && normalizedQuery.length > 0 && (
-              <div className="absolute z-10 mt-2 w-full overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg">
+              <div className="absolute z-10 mt-2 w-full overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
                 {results.length > 0 ? (
                   <ul className="max-h-72 overflow-auto">
                     {results.map((p) => (
@@ -194,10 +196,12 @@ export function Step2Products() {
                             e.preventDefault();
                             handleSelectProduct(p);
                           }}
-                          className="flex w-full flex-col items-start gap-0.5 border-b border-gray-100 px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-gray-50"
+                          className="flex w-full flex-col items-start gap-0.5 border-b border-gray-100 px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-gray-50 dark:border-slate-800 dark:hover:bg-slate-800/60"
                         >
-                          <span className="text-sm font-semibold text-gray-900">{p.name}</span>
-                          <span className="text-xs text-gray-500">
+                          <span className="text-sm font-semibold text-gray-900 dark:text-slate-100">
+                            {p.name}
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-slate-400">
                             {p.sku} · {p.line} · {p.variants.length}{' '}
                             {p.variants.length === 1 ? 'variante' : 'variantes'}
                           </span>
@@ -206,7 +210,9 @@ export function Step2Products() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="px-4 py-3 text-sm text-gray-500">No se encontraron productos.</p>
+                  <p className="px-4 py-3 text-sm text-gray-500 dark:text-slate-400">
+                    No se encontraron productos.
+                  </p>
                 )}
               </div>
             )}
@@ -215,19 +221,23 @@ export function Step2Products() {
 
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-1 px-6 py-10 text-center">
-            <ShoppingCart className="mb-1 h-8 w-8 text-gray-300" />
-            <p className="text-sm text-gray-500">Aún no hay productos en el pedido</p>
-            <p className="text-xs text-gray-400">Usa el buscador para agregar el primer producto.</p>
+            <ShoppingCart className="mb-1 h-8 w-8 text-gray-300 dark:text-slate-600" />
+            <p className="text-sm text-gray-500 dark:text-slate-400">
+              Aún no hay productos en el pedido
+            </p>
+            <p className="text-xs text-gray-400 dark:text-slate-500">
+              Usa el buscador para agregar el primer producto.
+            </p>
           </div>
         ) : (
           <>
             <Table>
               <TableHeader>
-                <TableRow className="bg-gray-50 hover:bg-gray-50">
+                <TableRow className="bg-gray-50 hover:bg-gray-50 dark:bg-slate-800/50 dark:hover:bg-slate-800/50">
                   {ITEM_COLUMNS.map((column) => (
                     <TableHead
                       key={column}
-                      className="h-9 px-3 text-xs font-medium uppercase tracking-wide text-gray-500"
+                      className="h-9 px-3 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-slate-400"
                     >
                       {column}
                     </TableHead>
@@ -236,18 +246,23 @@ export function Step2Products() {
               </TableHeader>
               <TableBody>
                 {items.map((item) => (
-                  <TableRow key={item.id} className="border-gray-100">
+                  <TableRow
+                    key={item.id}
+                    className="border-gray-100 dark:border-slate-800 dark:hover:bg-slate-800/40"
+                  >
                     <TableCell className="px-3 py-3">
                       <div className="flex flex-col">
-                        <span className="text-sm font-medium text-gray-900">
+                        <span className="text-sm font-medium text-gray-900 dark:text-slate-100">
                           {item.productName}
                         </span>
-                        <span className="text-xs text-blue-600">{item.productSku}</span>
+                        <span className="text-xs text-blue-600 dark:text-blue-400">
+                          {item.productSku}
+                        </span>
                       </div>
                     </TableCell>
                     <TableCell className="px-3 py-3">
                       <div className="flex flex-col">
-                        <span className="text-sm text-gray-700">
+                        <span className="text-sm text-gray-700 dark:text-slate-300">
                           {item.variantSku} - {item.variantName}
                         </span>
                         {item.variantStockLabel && (
@@ -264,29 +279,35 @@ export function Step2Products() {
                           onClick={() =>
                             updateItem(item.id, { quantity: Math.max(1, item.quantity - 1) })
                           }
-                          className="flex h-6 w-6 items-center justify-center rounded border border-gray-200 text-xs hover:bg-gray-50"
+                          className="flex h-6 w-6 items-center justify-center rounded border border-gray-200 text-xs hover:bg-gray-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                         >
                           −
                         </button>
-                        <span className="w-8 text-center text-sm">{item.quantity}</span>
+                        <span className="w-8 text-center text-sm dark:text-slate-200">
+                          {item.quantity}
+                        </span>
                         <button
                           type="button"
                           onClick={() => updateItem(item.id, { quantity: item.quantity + 1 })}
-                          className="flex h-6 w-6 items-center justify-center rounded border border-gray-200 text-xs hover:bg-gray-50"
+                          className="flex h-6 w-6 items-center justify-center rounded border border-gray-200 text-xs hover:bg-gray-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                         >
                           +
                         </button>
                       </div>
                     </TableCell>
-                    <TableCell className="px-3 py-3 text-sm text-gray-700">{item.gye}</TableCell>
-                    <TableCell className="px-3 py-3 text-sm text-gray-700">{item.uio}</TableCell>
-                    <TableCell className="px-3 py-3 text-sm text-gray-900">
+                    <TableCell className="px-3 py-3 text-sm text-gray-700 dark:text-slate-300">
+                      {item.gye}
+                    </TableCell>
+                    <TableCell className="px-3 py-3 text-sm text-gray-700 dark:text-slate-300">
+                      {item.uio}
+                    </TableCell>
+                    <TableCell className="px-3 py-3 text-sm text-gray-900 dark:text-slate-100">
                       ${item.price.toFixed(2)}
                     </TableCell>
-                    <TableCell className="px-3 py-3 text-sm text-gray-700">
+                    <TableCell className="px-3 py-3 text-sm text-gray-700 dark:text-slate-300">
                       {item.discount > 0 ? `${item.discount}%` : '—'}
                     </TableCell>
-                    <TableCell className="px-3 py-3 text-sm font-medium text-gray-900">
+                    <TableCell className="px-3 py-3 text-sm font-medium text-gray-900 dark:text-slate-100">
                       ${item.subtotal.toFixed(2)}
                     </TableCell>
                     <TableCell className="px-3 py-3">
@@ -295,9 +316,9 @@ export function Step2Products() {
                         onClick={() => removeItem(item.id)}
                         title="Quitar producto"
                         aria-label={`Quitar ${item.productName}`}
-                        className="rounded p-1.5 text-gray-400 hover:bg-red-100"
+                        className="rounded p-1.5 text-gray-400 hover:bg-red-100 dark:text-slate-500 dark:hover:bg-red-500/20"
                       >
-                        <Trash className="h-3.5 w-3.5 text-red-700" />
+                        <Trash className="h-3.5 w-3.5 text-red-700 dark:text-red-400" />
                       </button>
                     </TableCell>
                   </TableRow>
@@ -306,8 +327,8 @@ export function Step2Products() {
             </Table>
 
             {/* Totales */}
-            <div className="flex justify-end border-t border-gray-200 p-6">
-              <div className="w-72 rounded-md border border-gray-200 bg-gray-50 p-4">
+            <div className="flex justify-end border-t border-gray-200 p-6 dark:border-slate-700">
+              <div className="w-72 rounded-md border border-gray-200 bg-gray-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
                 <OrderTotalsSummary totals={t} />
               </div>
             </div>
@@ -316,14 +337,14 @@ export function Step2Products() {
       </section>
 
       {lead && (
-        <div className="flex items-center gap-2 text-xs text-gray-500">
+        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-slate-400">
           <Info className="h-3 w-3" />
           El total actualizará el Lead {lead.code} en Kommo: ${(lead.total + t.total).toFixed(2)}
         </div>
       )}
 
       {/* Footer */}
-      <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4">
+      <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
         <Button variant="ghost" onClick={prevStep} className="gap-2">
           <ArrowLeft className="h-4 w-4" />
           Volver a cliente
@@ -366,14 +387,16 @@ export function Step2Products() {
                   className={cn(
                     'flex w-full items-start gap-3 rounded-md border p-3 text-left transition-colors',
                     isSelected
-                      ? 'border-blue-600 bg-blue-50'
-                      : 'border-gray-200 bg-white hover:border-gray-300'
+                      ? 'border-blue-600 bg-blue-50 dark:bg-blue-500/15'
+                      : 'border-gray-200 bg-white hover:border-gray-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600'
                   )}
                 >
                   <span
                     className={cn(
                       'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2',
-                      isSelected ? 'border-blue-600 bg-blue-600' : 'border-gray-300 bg-white'
+                      isSelected
+                        ? 'border-blue-600 bg-blue-600'
+                        : 'border-gray-300 bg-white dark:border-slate-600 dark:bg-slate-900'
                     )}
                   >
                     {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
@@ -383,16 +406,18 @@ export function Step2Products() {
                       <span
                         className={cn(
                           'text-sm font-medium',
-                          isSelected ? 'text-blue-700' : 'text-gray-900'
+                          isSelected
+                            ? 'text-blue-700 dark:text-blue-300'
+                            : 'text-gray-900 dark:text-slate-100'
                         )}
                       >
                         {variant.name}
                       </span>
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className="text-sm font-medium text-gray-900 dark:text-slate-100">
                         ${variant.price.toFixed(2)}
                       </span>
                     </span>
-                    <span className="mt-0.5 block text-xs text-gray-500">
+                    <span className="mt-0.5 block text-xs text-gray-500 dark:text-slate-400">
                       {variant.sku} · GYE: {variant.gye} · UIO: {variant.uio}
                       {variant.stockLabel && (
                         <>
@@ -409,21 +434,23 @@ export function Step2Products() {
             })}
           </div>
 
-          <div className="flex items-center justify-between rounded-md border border-gray-200 bg-gray-50 p-3">
-            <span className="text-sm text-gray-600">Cantidad</span>
+          <div className="flex items-center justify-between rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-slate-700 dark:bg-slate-800/50">
+            <span className="text-sm text-gray-600 dark:text-slate-400">Cantidad</span>
             <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => setDialogQuantity(Math.max(1, dialogQuantity - 1))}
-                className="flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-white hover:bg-gray-50"
+                className="flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-white hover:bg-gray-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
               >
                 <Minus className="h-3 w-3" />
               </button>
-              <span className="w-8 text-center text-sm font-medium">{dialogQuantity}</span>
+              <span className="w-8 text-center text-sm font-medium dark:text-slate-200">
+                {dialogQuantity}
+              </span>
               <button
                 type="button"
                 onClick={() => setDialogQuantity(dialogQuantity + 1)}
-                className="flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-white hover:bg-gray-50"
+                className="flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-white hover:bg-gray-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
               >
                 <Plus className="h-3 w-3" />
               </button>
