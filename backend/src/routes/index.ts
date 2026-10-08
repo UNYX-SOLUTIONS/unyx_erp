@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { sendSuccess } from '../utils/api-response';
 import { authRoutes } from '../modules/auth/auth-routes';
+import { productsRoutes } from '../modules/products/products-routes';
 
 export const router = Router();
 
@@ -9,3 +10,4 @@ router.get('/health', (_req, res) => {
 });
 
 router.use('/auth', authRoutes);
+router.use('/products', productsRoutes);

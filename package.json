@@ -3,16 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "description": "Unyx ERP - Sistema de planificación de recursos empresariales",
-  "packageManager": "pnpm@9.1.0",
   "engines": {
     "node": ">=20.11.0",
     "pnpm": ">=9.0.0"
   },
   "scripts": {
-    "dev": "pnpm -r --parallel dev",
-    "dev:frontend": "pnpm --filter frontend dev",
-    "dev:backend": "pnpm --filter backend dev",
-    "build": "pnpm -r build",
+    "dev": "node scripts/ensure-deps.mjs && pnpm -r --parallel dev",
+    "dev:frontend": "node scripts/ensure-deps.mjs && pnpm --filter frontend dev",
+    "dev:backend": "node scripts/ensure-deps.mjs && pnpm --filter backend dev",
+    "build": "node scripts/ensure-deps.mjs && pnpm -r build",
     "build:frontend": "pnpm --filter frontend build",
     "build:backend": "pnpm --filter backend build",
     "start": "pnpm -r start",

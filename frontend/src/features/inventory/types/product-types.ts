@@ -1,23 +1,12 @@
 export interface Product {
   id: string;
   sku: string;
-  barcode: string | null;
   name: string;
-  description: string | null;
-  costPrice: number;
-  salePrice: number;
-  minStock: number;
-  maxStock: number;
-  imageUrl: string | null;
+  line: string | null;
+  category: string | null;
+  price: number | null;
   isActive: boolean;
-  isService: boolean;
-  trackStock: boolean;
-  categoryId: string | null;
-  brandId: string | null;
-  unitId: string | null;
-  taxId: string | null;
   createdAt: string;
-  updatedAt: string;
 }
 
 export interface ProductStock {

@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/client-altosa"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_ALTOSA")
+}
+
+model ProductoPlano {
+  id                            Int       @id @default(autoincrement())
+  sku                           String?
+  content_hash                  String?
+  is_active                     Boolean?
+  created_at                    DateTime?
+  updated_at                    DateTime?
+  proteccion_uv                 String?
+  resistencia_intemperie        String?
+  apilable                      String?
+  brazos                        String?
+  soporte_lumbar                String?
+  cabecera                      String?
+  uso_recomendado               String?
+  source_id                     Int?
+  source_row_key                String?
+  last_synced_at                DateTime?
+  sync_metadata                 Json?
+  producto_id                   String?
+  producto                      String?
+  categoria                     String?
+  descripcion                   String?
+  url_producto                  String?
+  id_catalogo                   String?
+  pagina_catalogo               String?
+  color                         String?
+  precio_usd                    Decimal?
+  material                      String?
+  tapizado                      String?
+  estructura                    String?
+  ancho_total_cm                Decimal?
+  profundidad_asiento_cm        Decimal?
+  altura_total_cm               Decimal?
+  altura_asiento_cm             Decimal?
+  ancho_asiento_cm              Decimal?
+  peso_kg                       Decimal?
+  mecanismo                     String?
+  especificaciones_adicionales  String?
+  estado_validacion             String?
+  observaciones_cliente         String?
+
+  @@map("productos")
+}

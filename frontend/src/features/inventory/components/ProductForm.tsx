@@ -50,7 +50,7 @@ export function ProductForm() {
       {
         onSuccess: () => {
           toast.success('Producto creado');
-          router.push('/dashboard/inventory');
+          router.push('/operations/warehouse/inventory');
         },
         onError: (error) => setFormError(getApiErrorMessage(error, 'No se pudo crear el producto')),
       }

@@ -1,0 +1,90 @@
+services:
+  unyx-postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - unyx_pgdata:/var/lib/postgresql/data
+    networks:
+      - unyx-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  unyx-backend:
+    build:
+      context: ./backend
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@unyx-postgres:5432/${POSTGRES_DB}?schema=public
+      DATABASE_URL_ALTOSA: ${DATABASE_URL_ALTOSA}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_ACCESS_EXPIRES: ${JWT_ACCESS_EXPIRES:-15m}
+      JWT_REFRESH_EXPIRES: ${JWT_REFRESH_EXPIRES:-7d}
+      CORS_ORIGIN: https://${UNYX_DOMAIN}
+      TRUST_PROXY: "true"
+    networks:
+      - unyx-internal
+      - traefik-public
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.unyx-backend.rule=Host(`${UNYX_DOMAIN}`) && PathPrefix(`/api`)
+      - traefik.http.routers.unyx-backend.entrypoints=websecure
+      - traefik.http.routers.unyx-backend.tls.certresolver=letsencrypt
+      - traefik.http.routers.unyx-backend.priority=20
+      - traefik.http.services.unyx-backend.loadbalancer.server.port=4000
+    depends_on:
+      unyx-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4000/api/v1/health > /dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  unyx-frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: https://${UNYX_DOMAIN}
+        API_PROXY_URL: http://unyx-backend:4000
+    restart: always
+    networks:
+      - unyx-internal
+      - traefik-public
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.unyx-frontend.rule=Host(`${UNYX_DOMAIN}`)
+      - traefik.http.routers.unyx-frontend.entrypoints=websecure
+      - traefik.http.routers.unyx-frontend.tls.certresolver=letsencrypt
+      - traefik.http.routers.unyx-frontend.priority=10
+      - traefik.http.services.unyx-frontend.loadbalancer.server.port=3000
+    depends_on:
+      unyx-backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ > /dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+networks:
+  unyx-internal:
+    driver: bridge
+  traefik-public:
+    external: true
+
+volumes:
+  unyx_pgdata:

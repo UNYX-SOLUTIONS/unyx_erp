@@ -10,7 +10,8 @@ export function useLogin() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: LoginInput) => authApi.login(input),
+    mutationFn: (input: LoginInput) =>
+      authApi.login({ identifier: input.email, password: input.password }),
     onSuccess: (response) => {
       setSession(response.data.user, response.data.tokens);
       void queryClient.invalidateQueries({ queryKey: ['current-user'] });

@@ -6,6 +6,7 @@ import type { AuthResponse } from '@/features/auth/types/auth-types';
 
 export const apiClient = axios.create({
   baseURL: siteConfig.apiUrl,
+  timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 });
 

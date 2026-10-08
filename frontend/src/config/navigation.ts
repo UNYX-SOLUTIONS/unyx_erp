@@ -1,22 +1,21 @@
 import type { LucideIcon } from 'lucide-react';
 import {
-  LayoutDashboard,
-  Package,
-  Tags,
-  ShoppingCart,
-  FileText,
-  Truck,
-  Users,
-  Factory,
+  AlertTriangle,
+  ArrowLeftRight,
   BookOpen,
-  Briefcase,
-  BarChart3,
+  Calculator,
+  Calendar,
+  ClipboardList,
+  FileText,
+  LayoutDashboard,
+  Library,
+  MapPin,
+  Package,
   Settings,
-  User,
-  Building2,
-  Shield,
-  CreditCard,
-  Boxes,
+  Settings2,
+  ShieldCheck,
+  ShoppingCart,
+  Truck,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -24,98 +23,76 @@ export interface NavItem {
   href: string;
   icon: LucideIcon;
   permission?: string;
-  children?: NavItem[];
 }
 
-export const NAVIGATION: NavItem[] = [
-  { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+export interface NavSubcategory {
+  title: string;
+  icon: LucideIcon;
+  items: NavItem[];
+  permission?: string;
+}
+
+export interface NavSection {
+  title: string;
+  items: NavItem[];
+  subcategories?: NavSubcategory[];
+}
+
+export const NAV_SECTIONS: NavSection[] = [
   {
-    title: 'Inventario',
-    href: '/dashboard/inventory',
-    icon: Boxes,
-    permission: 'products.read',
-    children: [
+    title: 'Operaciones',
+    items: [
+      { title: 'Inicio', href: '/operations/dashboard', icon: LayoutDashboard },
+      { title: 'Pedidos', href: '/operations/orders', icon: ShoppingCart },
+    ],
+    subcategories: [
       {
-        title: 'Productos',
-        href: '/dashboard/inventory',
+        title: 'Bodega',
         icon: Package,
-        permission: 'products.read',
+        items: [
+          { title: 'Inventario', href: '/operations/warehouse/inventory', icon: Package },
+          { title: 'Picking', href: '/operations/warehouse/picking', icon: ClipboardList },
+          { title: 'Movimientos', href: '/operations/warehouse/movements', icon: ArrowLeftRight },
+          { title: 'Transferencias', href: '/operations/warehouse/transfers', icon: Truck },
+          { title: 'Conteos', href: '/operations/warehouse/counts', icon: Calculator },
+          { title: 'Ubicaciones', href: '/operations/warehouse/locations', icon: MapPin },
+        ],
       },
       {
-        title: 'Categorías',
-        href: '/dashboard/inventory/categories',
-        icon: Tags,
-        permission: 'categories.read',
+        title: 'Logística',
+        icon: Truck,
+        items: [
+          { title: 'Despachos y entregas', href: '/operations/logistics/dispatches', icon: Truck },
+          { title: 'Agenda', href: '/operations/logistics/schedule', icon: Calendar },
+          { title: 'Incidencias', href: '/operations/logistics/incidents', icon: AlertTriangle },
+        ],
       },
     ],
   },
   {
-    title: 'Ventas',
-    href: '/dashboard/sales',
-    icon: ShoppingCart,
-    permission: 'sales.read',
-    children: [
+    title: 'Inteligencia Artificial',
+    items: [],
+    subcategories: [
       {
-        title: 'Todas las ventas',
-        href: '/dashboard/sales',
-        icon: ShoppingCart,
-        permission: 'sales.read',
-      },
-      {
-        title: 'Nueva venta',
-        href: '/dashboard/sales/new',
-        icon: FileText,
-        permission: 'sales.create',
-      },
-      {
-        title: 'Facturas',
-        href: '/dashboard/sales/invoices',
-        icon: FileText,
-        permission: 'sales.read',
+        title: 'Base de conocimiento',
+        icon: BookOpen,
+        items: [
+          { title: 'Resumen', href: '/ai/knowledge-base/summary', icon: FileText },
+          { title: 'Productos', href: '/ai/knowledge-base/products', icon: Package },
+          { title: 'Ubicaciones', href: '/ai/knowledge-base/locations', icon: MapPin },
+          { title: 'Catálogos', href: '/ai/knowledge-base/catalogs', icon: Library },
+          {
+            title: 'Garantías',
+            href: '/ai/knowledge-base/warranties',
+            icon: ShieldCheck,
+          },
+          { title: 'Configuración IA', href: '/ai/settings', icon: Settings2 },
+        ],
       },
     ],
   },
-  { title: 'Compras', href: '/dashboard/purchases', icon: Truck, permission: 'purchases.read' },
-  { title: 'Clientes', href: '/dashboard/customers', icon: Users, permission: 'customers.read' },
-  {
-    title: 'Proveedores',
-    href: '/dashboard/suppliers',
-    icon: Factory,
-    permission: 'suppliers.read',
-  },
-  {
-    title: 'Contabilidad',
-    href: '/dashboard/accounting',
-    icon: BookOpen,
-    permission: 'accounting.read',
-  },
-  { title: 'RRHH', href: '/dashboard/hr', icon: Briefcase, permission: 'hr.read' },
-  { title: 'Reportes', href: '/dashboard/reports', icon: BarChart3, permission: 'reports.read' },
-  {
-    title: 'Configuración',
-    href: '/dashboard/settings/profile',
-    icon: Settings,
-    children: [
-      { title: 'Mi perfil', href: '/dashboard/settings/profile', icon: User },
-      {
-        title: 'Empresa',
-        href: '/dashboard/settings/company',
-        icon: Building2,
-        permission: 'companies.update',
-      },
-      {
-        title: 'Usuarios',
-        href: '/dashboard/settings/users',
-        icon: Users,
-        permission: 'users.read',
-      },
-      { title: 'Roles', href: '/dashboard/settings/roles', icon: Shield, permission: 'roles.read' },
-      {
-        title: 'Facturación',
-        href: '/dashboard/settings/billing',
-        icon: CreditCard,
-        permission: 'companies.update',
-      },
-    ],
-  },
+];
+
+export const FOOTER_NAV: NavItem[] = [
+  { title: 'Configuración', href: '/operations/settings/profile', icon: Settings },
 ];

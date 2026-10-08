@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { SplashScreen } from '@/components/SplashScreen';
 import { useAuthStore } from '@/features/auth/stores/auth-store';
 
-const SPLASH_MIN_DURATION_MS = 1800;
+const SPLASH_MIN_DURATION_MS = 2600;
 
 export default function SplashPage() {
   const router = useRouter();
@@ -19,7 +19,7 @@ export default function SplashPage() {
       return;
     }
     redirected.current = true;
-    const target = accessToken ? '/dashboard' : '/login';
+    const target = accessToken ? '/operations/dashboard' : '/login';
     const elapsed = Date.now() - startedAt;
     const remaining = Math.max(0, SPLASH_MIN_DURATION_MS - elapsed);
     const timer = setTimeout(() => router.replace(target), remaining);

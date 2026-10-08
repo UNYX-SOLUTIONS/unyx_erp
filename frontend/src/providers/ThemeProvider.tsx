@@ -8,14 +8,25 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const root = window.document.documentElement;
-    root.classList.remove('light', 'dark');
-    const resolved =
-      theme === 'system'
-        ? window.matchMedia('(prefers-color-scheme: dark)').matches
-          ? 'dark'
-          : 'light'
-        : theme;
-    root.classList.add(resolved);
+
+    const applyTheme = () => {
+      root.classList.remove('light', 'dark');
+      const resolved =
+        theme === 'system'
+          ? window.matchMedia('(prefers-color-scheme: dark)').matches
+            ? 'dark'
+            : 'light'
+          : theme;
+      root.classList.add(resolved);
+    };
+
+    applyTheme();
+
+    if (theme === 'system') {
+      const media = window.matchMedia('(prefers-color-scheme: dark)');
+      media.addEventListener('change', applyTheme);
+      return () => media.removeEventListener('change', applyTheme);
+    }
   }, [theme]);
 
   return <>{children}</>;

@@ -1,19 +1,15 @@
 import { apiClient } from '@/lib/api-client';
 import type { ApiResponse } from '@/types/api-types';
 import type { AuthResponse, MeResponse } from '../types/auth-types';
-import type { LoginInput, RegisterInput } from '../schemas/auth-schema';
+
+interface LoginPayload {
+  identifier: string;
+  password: string;
+}
 
 export const authApi = {
-  login: async (input: LoginInput) => {
+  login: async (input: LoginPayload) => {
     const response = await apiClient.post<ApiResponse<AuthResponse>>('/api/v1/auth/login', input);
-    return response.data;
-  },
-
-  register: async (input: RegisterInput) => {
-    const response = await apiClient.post<ApiResponse<AuthResponse>>(
-      '/api/v1/auth/register',
-      input
-    );
     return response.data;
   },
 

@@ -30,6 +30,7 @@ model Company {
   users       User[]
   roles       Role[]
   products    Product[]
+  kbProducts  KbProduct[]
   categories  Category[]
   customers   Customer[]
   suppliers   Supplier[]
@@ -245,6 +246,7 @@ model Category {
   parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
   children Category[] @relation("CategoryTree")
   products Product[]
+  kbProducts KbProduct[]
 
   @@unique([companyId, slug])
   @@index([companyId])
@@ -824,4 +826,80 @@ model Payroll {
 
   @@index([employeeId])
   @@map("payrolls")
+}
+
+enum KbValidationStatus {
+  APROBADO
+  PENDIENTE
+  REQUIERE_CORRECCION
+  SIN_PRECIO
+}
+
+enum KbSyncStatus {
+  SINCRONIZADO
+  SIN_SINCRONIZAR
+}
+
+model KbProduct {
+  id                    String             @id @default(cuid())
+  companyId             String
+  sku                   String
+  name                  String
+  line                  String?
+  category              String?
+  subcategory           String?
+  description           String?
+  commercialDescription String?
+  keywords              String[]
+  thumbnailUrl          String?
+  sourceUrl             String?
+  validation            KbValidationStatus @default(PENDIENTE)
+  syncStatus            KbSyncStatus       @default(SIN_SINCRONIZAR)
+  isActive              Boolean            @default(true)
+  sourceRowKey          String?
+  lastSyncedAt          DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  company     Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  categoryRef Category?           @relation(fields: [categoryId], references: [id])
+  categoryId  String?
+  variants    KbProductVariant[]
+
+  @@unique([companyId, sku])
+  @@index([companyId])
+  @@index([validation])
+  @@index([syncStatus])
+  @@index([line])
+  @@index([isActive, deletedAt])
+  @@map("kb_products")
+}
+
+model KbProductVariant {
+  id               String   @id @default(cuid())
+  productId        String
+  sku              String   @unique
+  name             String
+  color            String?
+  colorHex         String?
+  price            Decimal? @db.Decimal(14, 2)
+  stock            Int      @default(0)
+  imageUrl         String?
+  description      String?
+  isActive         Boolean  @default(true)
+  sortOrder        Int      @default(0)
+  sourceRowKey     String?
+  especificaciones Json?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  product KbProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([isActive, deletedAt])
+  @@map("kb_product_variants")
 }

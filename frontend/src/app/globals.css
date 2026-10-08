@@ -50,10 +50,34 @@
 }
 
 @layer base {
+  html {
+    overscroll-behavior-x: none;
+    overscroll-behavior-y: none;
+  }
   * {
     @apply border-border;
+    caret-color: transparent;
+  }
+  input,
+  textarea,
+  select,
+  [contenteditable='true'] {
+    caret-color: auto;
   }
   body {
     @apply bg-background text-foreground antialiased;
+    overflow-x: hidden;
+    overflow-x: clip;
+    overscroll-behavior-x: none;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 }

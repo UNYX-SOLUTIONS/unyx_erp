@@ -1,0 +1,88 @@
+# Unyx ERP - Ambiente de PRUEBAS para VPS
+# Uso normal (desde deploy/deploy-test.sh):
+#   docker compose --env-file .env.deploy -f docker-compose.test.yml up -d --build
+# Solo se expone el puerto ${FRONTEND_PORT} (3000): el frontend hace proxy de /api/*
+# al backend por red interna, así no hace falta CORS ni abrir el puerto del backend.
+# El proyecto se llama "unyx-erp-test" para no chocar con el stack de desarrollo local.
+
+name: unyx-erp-test
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: unyx-test-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-unyx}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-unyx_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-unyx_erp}
+    volumes:
+      - unyx_test_pgdata:/var/lib/postgresql/data
+    networks:
+      - unyx-test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-unyx} -d ${POSTGRES_DB:-unyx_erp} && psql -U ${POSTGRES_USER:-unyx} -d ${POSTGRES_DB:-unyx_erp} -c 'SELECT 1' >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  backend:
+    build:
+      context: ./backend
+    image: unyx-erp-backend:test
+    container_name: unyx-test-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-unyx}:${POSTGRES_PASSWORD:-unyx_pass}@postgres:5432/${POSTGRES_DB:-unyx_erp}?schema=public
+      DATABASE_URL_ALTOSA: postgresql://${POSTGRES_USER:-unyx}:${POSTGRES_PASSWORD:-unyx_pass}@postgres:5432/${POSTGRES_DB:-unyx_erp}?schema=public
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-unyx_access_secret_change_me}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-unyx_refresh_secret_change_me}
+      JWT_ACCESS_EXPIRES: 15m
+      JWT_REFRESH_EXPIRES: 7d
+      CORS_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:3000}
+      TRUST_PROXY: "true"
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-Admin123!}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - unyx-test
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4000/api/v1/health > /dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
+        API_PROXY_URL: http://backend:4000
+    image: unyx-erp-frontend:test
+    container_name: unyx-test-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - unyx-test
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ > /dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+networks:
+  unyx-test:
+    driver: bridge
+
+volumes:
+  unyx_test_pgdata:

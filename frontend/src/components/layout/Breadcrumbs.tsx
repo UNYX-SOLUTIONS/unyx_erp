@@ -4,56 +4,70 @@ import { Fragment } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
-import { NAVIGATION } from '@/config/navigation';
+import { NAV_SECTIONS } from '@/config/navigation';
 
 interface Crumb {
   title: string;
-  href: string;
+  href?: string;
 }
 
-function findCrumbs(pathname: string): Crumb[] {
-  for (const item of NAVIGATION) {
-    if (item.href === pathname) {
-      return [{ title: item.title, href: item.href }];
-    }
-    if (item.children) {
-      for (const child of item.children) {
-        if (pathname.startsWith(child.href)) {
-          return [
-            { title: item.title, href: item.href },
-            { title: child.title, href: child.href },
-          ];
+const SETTINGS_LABELS: Record<string, string> = {
+  '/operations/settings/profile': 'Mi perfil',
+  '/operations/settings/company': 'Empresa',
+  '/operations/settings/users': 'Usuarios',
+  '/operations/settings/roles': 'Roles',
+  '/operations/settings/billing': 'Facturación',
+};
+
+function getCrumbs(pathname: string): Crumb[] {
+  if (pathname === '/operations/dashboard') {
+    return [{ title: 'Dashboard operativo' }];
+  }
+  const settingsLabel = SETTINGS_LABELS[pathname];
+  if (settingsLabel) {
+    return [{ title: 'Configuración', href: '/operations/settings/profile' }, { title: settingsLabel }];
+  }
+  let best: { title: string; href: string } | null = null;
+  for (const section of NAV_SECTIONS) {
+    for (const item of section.items) {
+      if (pathname === item.href || pathname.startsWith(`${item.href}/`)) {
+        if (!best || item.href.length > best.href.length) {
+          best = { title: item.title, href: item.href };
         }
       }
-      if (pathname.startsWith(item.href)) {
-        return [{ title: item.title, href: item.href }];
+    }
+    for (const subcategory of section.subcategories ?? []) {
+      for (const item of subcategory.items) {
+        if (pathname === item.href || pathname.startsWith(`${item.href}/`)) {
+          if (!best || item.href.length > best.href.length) {
+            best = { title: item.title, href: item.href };
+          }
+        }
       }
     }
   }
-  return [];
+  return best ? [best] : [];
 }
 
 export function Breadcrumbs() {
   const pathname = usePathname();
-  const crumbs = findCrumbs(pathname);
-
-  if (crumbs.length === 0) {
-    return null;
-  }
+  const crumbs = getCrumbs(pathname);
 
   return (
-    <nav className="hidden items-center gap-1 text-sm text-muted-foreground sm:flex">
+    <nav aria-label="Breadcrumb" className="hidden items-center gap-1.5 text-sm sm:flex">
+      <Link href="/operations/dashboard" className="text-gray-400 dark:text-slate-500 transition-colors hover:text-gray-600 dark:hover:text-slate-300">
+        Inicio
+      </Link>
       {crumbs.map((crumb, index) => (
-        <Fragment key={crumb.href}>
-          {index > 0 && <ChevronRight className="h-4 w-4" />}
-          <Link
-            href={crumb.href}
-            className={
-              index === crumbs.length - 1 ? 'font-medium text-foreground' : 'hover:text-foreground'
-            }
-          >
-            {crumb.title}
-          </Link>
+        <Fragment key={`${crumb.title}-${index}`}>
+          <ChevronRight className="h-3.5 w-3.5 text-gray-300" />
+          {crumb.href && index < crumbs.length - 1 ? (
+            <Link href={crumb.href} className="text-gray-400 dark:text-slate-500 transition-colors hover:text-gray-600 dark:hover:text-slate-300">
+              {crumb.title}
+            </Link>
+          ) : (
+            <span className="font-medium text-gray-900 dark:text-slate-100">{crumb.title}</span>
+          )}
         </Fragment>
       ))}
     </nav>

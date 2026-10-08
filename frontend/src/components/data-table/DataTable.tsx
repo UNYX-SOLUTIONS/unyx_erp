@@ -4,14 +4,13 @@ import * as React from 'react';
 import {
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
-  type ColumnFiltersState,
+  type OnChangeFn,
+  type PaginationState,
   type SortingState,
-  type VisibilityState,
 } from '@tanstack/react-table';
 import {
   Table,
@@ -21,83 +20,113 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { DataTablePagination } from './DataTablePagination';
-import { DataTableToolbar } from './DataTableToolbar';
+import { cn } from '@/lib/utils';
+import { DataTableEmptyState } from './DataTableEmptyState';
+import { DataTableSkeleton } from './DataTableSkeleton';
 
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
+interface DataTableProps<TData> {
+  columns: ColumnDef<TData, unknown>[];
   data: TData[];
-  searchPlaceholder?: string;
-  toolbar?: React.ReactNode;
+  onRowClick?: (row: TData) => void;
+  selectedRowId?: string;
+  getRowId?: (row: TData) => string;
+  isLoading?: boolean;
+  skeletonRows?: number;
+  emptyState?: React.ReactNode;
+  pagination?: PaginationState;
+  onPaginationChange?: OnChangeFn<PaginationState>;
+  footer?: React.ReactNode;
+  className?: string;
 }
 
-export function DataTable<TData, TValue>({
+export function DataTable<TData>({
   columns,
   data,
-  searchPlaceholder,
-  toolbar,
-}: DataTableProps<TData, TValue>) {
+  onRowClick,
+  selectedRowId,
+  getRowId,
+  isLoading = false,
+  skeletonRows = 8,
+  emptyState,
+  pagination,
+  onPaginationChange,
+  footer,
+  className,
+}: DataTableProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
 
   const table = useReactTable({
     data,
     columns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    onColumnVisibilityChange: setColumnVisibility,
     state: {
       sorting,
-      columnFilters,
-      columnVisibility,
+      ...(pagination ? { pagination } : {}),
     },
+    onSortingChange: setSorting,
+    onPaginationChange,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    ...(pagination ? { getPaginationRowModel: getPaginationRowModel() } : {}),
+    getRowId: getRowId ? (originalRow) => getRowId(originalRow) : undefined,
   });
 
+  const rows = table.getRowModel().rows;
+
   return (
-    <div className="space-y-4">
-      {toolbar ?? <DataTableToolbar table={table} searchPlaceholder={searchPlaceholder} />}
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
+    <div className={cn('overflow-hidden rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900', className)}>
+      <Table>
+        <TableHeader>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id} className="border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/60 hover:bg-gray-50 dark:hover:bg-slate-800/50">
+              {headerGroup.headers.map((header) => (
+                <TableHead
+                  key={header.id}
+                  style={header.column.columnDef.size ? { width: header.column.columnDef.size } : undefined}
+                  className="h-11 px-4 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-slate-400"
+                >
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(header.column.columnDef.header, header.getContext())}
+                </TableHead>
+              ))}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {isLoading ? (
+            <DataTableSkeleton columns={columns.length} rows={skeletonRows} />
+          ) : rows.length > 0 ? (
+            rows.map((row) => {
+              const isSelected =
+                selectedRowId !== undefined && getRowId?.(row.original) === selectedRowId;
+              return (
+                <TableRow
+                  key={row.id}
+                  onClick={onRowClick ? () => onRowClick(row.original) : undefined}
+                  className={cn(
+                    'border-gray-100 dark:border-slate-800 transition-colors hover:bg-gray-50 dark:hover:bg-slate-800/50',
+                    onRowClick && 'cursor-pointer',
+                    isSelected && 'border-l-2 border-l-blue-600 bg-blue-50/50 hover:bg-blue-50/50'
+                  )}
+                >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell key={cell.id} className="px-4 py-3">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  Sin resultados.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      <DataTablePagination table={table} />
+              );
+            })
+          ) : (
+            <TableRow className="hover:bg-transparent">
+              <TableCell colSpan={columns.length} className="p-0">
+                {emptyState ?? <DataTableEmptyState />}
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+      {footer}
     </div>
   );
 }
