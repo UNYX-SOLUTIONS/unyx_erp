@@ -393,14 +393,14 @@ export function Step1Client() {
           </div>
         ) : (
           <div className="rounded-md border border-gray-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-gray-900 dark:text-slate-100">
                     {customer.name}
                   </span>
                 </div>
-                <div className="mt-1 flex items-center gap-3 text-xs text-gray-500 dark:text-slate-400">
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-slate-400">
                   <span>{customer.ruc}</span>
                   {customer.contactName && (
                     <>
@@ -457,8 +457,8 @@ export function Step1Client() {
             </Button>
           </div>
 
-          <div className="overflow-hidden rounded-md border border-gray-200 dark:border-slate-700">
-            <table className="w-full">
+          <div className="overflow-x-auto rounded-md border border-gray-200 dark:border-slate-700">
+            <table className="w-full min-w-[640px]">
               <thead className="bg-gray-50 dark:bg-slate-800/50">
                 <tr>
                   {['Lead', 'Nombre', 'Etapa', 'Total', 'Responsable', 'Acción'].map((h) => (
@@ -533,7 +533,7 @@ export function Step1Client() {
                       </td>
                       <td className="px-3 py-3">
                         {isSelected ? (
-                            <CheckCircle2 className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                            <CheckCircle2 className="h-4 w-4 text-blue-700 dark:text-blue-500" />
                         ) : isLocked ? (
                           // Si el lead está siendo atendido por otra asesora, mostrar un candado y no permitir seleccionarlo
                           <TooltipProvider delayDuration={150}>
@@ -544,7 +544,7 @@ export function Step1Client() {
                                   aria-label="Lead en atención"
                                   className="inline-flex items-center justify-center rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500/60"
                                 >
-                                  <CircleAlert className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-400" />
+                                  <CircleAlert className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent
@@ -557,7 +557,7 @@ export function Step1Client() {
                             </Tooltip>
                           </TooltipProvider>
                         ) : (
-                          <Circle className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                          <Circle className="h-4 w-4 text-blue-500 dark:text-blue-300" />
                         )}
                       </td>
                     </tr>
@@ -577,7 +577,7 @@ export function Step1Client() {
       )}
 
       {/* Footer */}
-      <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
         <Button variant="ghost" onClick={handleCancel}>
           Cancelar
         </Button>

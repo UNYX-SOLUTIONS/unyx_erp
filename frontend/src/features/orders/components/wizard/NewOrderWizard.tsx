@@ -36,11 +36,11 @@ export function NewOrderWizard() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-6">
+    <div className="mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-slate-100">
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-slate-100 sm:text-2xl">
             Nuevo pedido
           </h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">

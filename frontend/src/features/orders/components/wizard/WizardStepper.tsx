@@ -44,7 +44,7 @@ export function WizardStepper() {
     <nav
       aria-label="Progreso del pedido"
       className={cn(
-        'rounded-lg border border-gray-200 bg-white p-5',
+        'rounded-lg border border-gray-200 bg-white p-4 sm:p-5',
         'dark:border-slate-700 dark:bg-slate-900',
       )}
     >
@@ -69,7 +69,7 @@ export function WizardStepper() {
                   isCompleted ? ' (completado)' : isActive ? ' (actual)' : ''
                 }`}
                 className={cn(
-                  'group flex items-center gap-2 rounded-md px-2 py-1 text-left transition-colors',
+                  'group flex items-center gap-2 rounded-md px-1 py-1 text-left transition-colors sm:px-2',
                   'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40',
                   isClickable && 'cursor-pointer',
                   !isClickable && 'cursor-default',
@@ -98,7 +98,7 @@ export function WizardStepper() {
                 {/* Label del paso */}
                 <span
                   className={cn(
-                    'text-sm font-medium transition-colors',
+                    'hidden whitespace-nowrap text-sm font-medium transition-colors sm:inline',
                     isActive || isCompleted
                       ? 'text-gray-900 dark:text-slate-100'
                       : 'text-gray-400 dark:text-slate-500',
@@ -114,7 +114,7 @@ export function WizardStepper() {
                 <div
                   aria-hidden="true"
                   className={cn(
-                    'mx-4 h-0.5 flex-1 rounded-full transition-colors',
+                    'mx-2 h-0.5 flex-1 rounded-full transition-colors sm:mx-4',
                     step.id < currentStep
                       ? 'bg-blue-600'
                       : 'bg-gray-200 dark:bg-slate-700',

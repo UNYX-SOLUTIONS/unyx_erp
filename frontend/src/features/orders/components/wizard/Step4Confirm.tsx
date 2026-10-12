@@ -2,14 +2,41 @@
 
 'use client';
 
-import { ArrowLeft, Pencil, Truck, Home, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Pencil, Truck, Home, CheckCircle2, AlertCircle, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNewOrderStore } from '../../stores/newOrder.store';
 import { OrderTotalsSummary } from './OrderTotalsSummary';
 
+function formatPreferredDate(value: string): string {
+  if (!value) {
+    return 'Por definir';
+  }
+  const [year, month, day] = value.split('-');
+  if (!year || !month || !day) {
+    return value;
+  }
+  return `${day}/${month}/${year}`;
+}
+
+function EditButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-500/10 dark:hover:text-blue-300"
+    >
+      <Pencil className="h-3 w-3" />
+      Editar
+    </button>
+  );
+}
+
 export function Step4Confirm({ onConfirm }: { onConfirm: () => void }) {
-  const { customer, lead, items, delivery, prevStep, totals } = useNewOrderStore();
+  const { customer, lead, items, delivery, prevStep, setStep, totals } = useNewOrderStore();
   const t = totals();
+
+  const contactSummary =
+    [delivery.contactName, delivery.contactPhone].filter(Boolean).join(' · ') || 'Por definir';
 
   return (
     <div className="space-y-6">
@@ -31,22 +58,29 @@ export function Step4Confirm({ onConfirm }: { onConfirm: () => void }) {
               <span className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-slate-400">
                 Cliente y lead
               </span>
-              <button className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400">
-                <Pencil className="h-3 w-3" />
-                Editar
-              </button>
+              <EditButton onClick={() => setStep(1)} />
             </div>
             <div className="rounded-md border border-gray-100 bg-gray-50 p-3 dark:border-slate-800 dark:bg-slate-800/50">
               <div className="text-sm font-semibold text-gray-900 dark:text-slate-100">
                 {customer?.name}
               </div>
-              <div className="mt-0.5 text-xs text-gray-500 dark:text-slate-400">
-                {customer?.ruc} · {customer?.phone}
+              <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-gray-500 dark:text-slate-400">
+                <span>{customer?.ruc}</span>
+                {customer?.phone && (
+                  <>
+                    <span className="text-gray-300 dark:text-slate-600">·</span>
+                    <span>{customer.phone}</span>
+                  </>
+                )}
               </div>
-              <div className="mt-2 flex items-center gap-2 text-xs text-gray-600 dark:text-slate-400">
-                <span>{customer?.contactName}</span>
-                <span className="text-gray-300 dark:text-slate-600">·</span>
-                <span>Lead {lead?.code}</span>
+              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-600 dark:text-slate-400">
+                {customer?.contactName && (
+                  <>
+                    <span>{customer.contactName}</span>
+                    <span className="text-gray-300 dark:text-slate-600">·</span>
+                  </>
+                )}
+                <span>Lead {lead?.code ?? '—'}</span>
               </div>
               <div className="text-xs text-gray-500 dark:text-slate-400">{lead?.name}</div>
             </div>
@@ -58,13 +92,10 @@ export function Step4Confirm({ onConfirm }: { onConfirm: () => void }) {
               <span className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-slate-400">
                 Productos ({items.length})
               </span>
-              <button className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400">
-                <Pencil className="h-3 w-3" />
-                Editar
-              </button>
+              <EditButton onClick={() => setStep(2)} />
             </div>
-            <div className="overflow-hidden rounded-md border border-gray-100 bg-gray-50 dark:border-slate-800 dark:bg-slate-800/50">
-              <table className="w-full text-xs">
+            <div className="overflow-x-auto rounded-md border border-gray-100 bg-gray-50 dark:border-slate-800 dark:bg-slate-800/50">
+              <table className="w-full min-w-[420px] text-xs">
                 <thead className="border-b border-gray-200 dark:border-slate-700">
                   <tr>
                     <th className="px-3 py-2 text-left font-medium text-gray-500 dark:text-slate-400">
@@ -128,10 +159,7 @@ export function Step4Confirm({ onConfirm }: { onConfirm: () => void }) {
           <span className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-slate-400">
             Entrega
           </span>
-          <button className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400">
-            <Pencil className="h-3 w-3" />
-            Editar
-          </button>
+          <EditButton onClick={() => setStep(3)} />
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -144,32 +172,38 @@ export function Step4Confirm({ onConfirm }: { onConfirm: () => void }) {
                 {delivery.modality === 'TO_BE_ARRANGED' && 'Por coordinar'}
               </span>
             </div>
-            <div className="flex items-start gap-2 text-sm">
-              <Home className="mt-0.5 h-4 w-4 text-gray-400 dark:text-slate-500" />
-              <div>
-                <div className="text-gray-900 dark:text-slate-100">{delivery.address}</div>
-                <div className="text-xs text-gray-500 dark:text-slate-400">{delivery.city}</div>
-                <div className="text-xs text-gray-500 dark:text-slate-400">{delivery.sector}</div>
+            {delivery.modality === 'HOME_DELIVERY' && (
+              <div className="flex items-start gap-2 text-sm">
+                <Home className="mt-0.5 h-4 w-4 text-gray-400 dark:text-slate-500" />
+                <div>
+                  <div className="text-gray-900 dark:text-slate-100">
+                    {delivery.address || 'Dirección por definir'}
+                  </div>
+                  {(delivery.city || delivery.sector) && (
+                    <div className="text-xs text-gray-500 dark:text-slate-400">
+                      {[delivery.city, delivery.sector].filter(Boolean).join(' · ')}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="space-y-3">
             <div>
               <div className="text-xs text-gray-500 dark:text-slate-400">Contacto receptor</div>
-              <div className="text-sm text-gray-900 dark:text-slate-100">
-                {delivery.contactName} · {delivery.contactPhone}
-              </div>
+              <div className="text-sm text-gray-900 dark:text-slate-100">{contactSummary}</div>
             </div>
             <div>
               <div className="text-xs text-gray-500 dark:text-slate-400">Preferencia de fecha</div>
-              <div className="text-sm text-gray-900 dark:text-slate-100">
-                📅 {delivery.preferredDate || 'Por definir'} ·{' '}
-                {delivery.preferredTimeSlot === 'MORNING'
-                  ? 'Mañana'
-                  : delivery.preferredTimeSlot === 'AFTERNOON'
-                    ? 'Tarde'
-                    : 'Noche'}
+              <div className="flex items-center gap-1.5 text-sm text-gray-900 dark:text-slate-100">
+                <Calendar className="h-3.5 w-3.5 text-gray-400 dark:text-slate-500" />
+                <span>
+                  {formatPreferredDate(delivery.preferredDate)} ·{' '}
+                  {delivery.preferredTimeFrom || delivery.preferredTimeTo
+                    ? `${delivery.preferredTimeFrom || '--:--'} a ${delivery.preferredTimeTo || '--:--'}`
+                    : 'Horario por definir'}
+                </span>
               </div>
             </div>
           </div>
@@ -193,17 +227,19 @@ export function Step4Confirm({ onConfirm }: { onConfirm: () => void }) {
           <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400">
             Al confirmar
           </h3>
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300">
+          <div className="space-y-4 flex flex-col">
+            <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300 mt-2">
               <span className="text-xs text-gray-500 dark:text-slate-400">Estado inicial:</span>
               <span className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/15 dark:text-blue-300">
-                <AlertCircle className="h-3 w-3" />
+                <AlertCircle className="h-3.5 w-3.5" />
                 Pendiente de aprobación de pago
               </span>
             </div>
-            <p className="text-xs text-gray-500 dark:text-slate-400">
-              El pedido quedará reservado mientras Gerencia valida el pago.
-            </p>
+            <div className="flex flex-wrap items-center gap-2 text-sm text-gray-700 dark:text-slate-300">
+              <span className="text-xs text-gray-500 dark:text-slate-400">
+                El pedido quedará reservado mientras Gerencia valida el pago.
+              </span>
+            </div>
           </div>
         </div>
 
@@ -213,7 +249,7 @@ export function Step4Confirm({ onConfirm }: { onConfirm: () => void }) {
       </section>
 
       {/* Footer */}
-      <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
         <Button variant="ghost" onClick={prevStep} className="gap-2">
           <ArrowLeft className="h-4 w-4" />
           Volver a entrega

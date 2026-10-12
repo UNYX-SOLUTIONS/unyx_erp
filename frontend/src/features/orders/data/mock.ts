@@ -315,6 +315,7 @@ export const DEFAULT_DELIVERY = {
   contactName: '',
   contactPhone: '',
   preferredDate: '',
-  preferredTimeSlot: 'MORNING' as const,
+  preferredTimeFrom: '',
+  preferredTimeTo: '',
   notes: '',
 };
