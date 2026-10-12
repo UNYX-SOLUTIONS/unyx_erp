@@ -4,7 +4,18 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Search, UserPlus, Lock, CheckCircle2, Plus, AlertCircle } from 'lucide-react';
+import {
+  Search,
+  UserPlus,
+  Lock,
+  CircleAlert,
+  CheckCircle2,
+  Circle,
+  Plus,
+  AlertCircle,
+  ArrowRight,
+  ExternalLink,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -18,10 +29,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useNewOrderStore } from '../../stores/newOrder.store';
 import { useNewOrderPanelStore } from '../../stores/new-order-panel.store';
+import { kommoLeadUrl } from '@/config/integrations';
 import { MOCK_CUSTOMERS, MOCK_LEADS } from '../../data/mock';
-import type { OrderCustomer } from '../../types/order.types';
+import type { OrderCustomer, OrderLead } from '../../types/order.types';
 
 const EMPTY_CUSTOMER_FORM = {
   name: '',
@@ -36,6 +54,90 @@ const EMPTY_CUSTOMER_FORM = {
 const FIELD_LABEL_CLASS =
   'mb-1.5 block text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-slate-400';
 
+const EMPTY_LEAD_FORM: {
+  name: string;
+  stage: OrderLead['stage'];
+  total: string;
+  responsible: string;
+} = {
+  name: '',
+  stage: 'Negociación',
+  total: '',
+  responsible: '',
+};
+
+const LEAD_STAGES: OrderLead['stage'][] = [
+  'Negociación',
+  'Cotización',
+  'Propuesta',
+  'Ganada',
+  'Perdida',
+];
+
+const STAGE_COLORS: Record<OrderLead['stage'], string> = {
+  Negociación:
+    'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/15 dark:text-blue-300',
+  Cotización:
+    'border-yellow-200 bg-yellow-50 text-yellow-700 dark:border-yellow-500/30 dark:bg-yellow-500/15 dark:text-yellow-300',
+  Propuesta:
+    'border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-500/30 dark:bg-purple-500/15 dark:text-purple-300',
+  Ganada:
+    'border-green-200 bg-green-50 text-green-700 dark:border-green-500/30 dark:bg-green-500/15 dark:text-green-300',
+  Perdida:
+    'border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-300',
+};
+
+function initialsFromName(name: string): string {
+  const parts = name.split(/\s+/).filter(Boolean).slice(0, 2);
+  return parts.map((part) => part[0]?.toUpperCase() ?? '').join('') || '—';
+}
+
+type CustomerField = keyof typeof EMPTY_CUSTOMER_FORM;
+
+function validateCustomerForm(
+  form: typeof EMPTY_CUSTOMER_FORM
+): Partial<Record<CustomerField, string>> {
+  const errors: Partial<Record<CustomerField, string>> = {};
+  const name = form.name.trim();
+  const ruc = form.ruc.trim();
+  const email = form.email.trim();
+  const phone = form.phone.trim();
+  const contactName = form.contactName.trim();
+  const city = form.city.trim();
+  const address = form.address.trim();
+
+  if (name.length < 2) {
+    errors.name = 'Ingresa el nombre o razón social (mínimo 2 caracteres).';
+  }
+  if (!/^(\d{10}|\d{13})$/.test(ruc)) {
+    errors.ruc = 'El RUC debe tener 10 o 13 dígitos.';
+  }
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errors.email = 'Ingresa un correo electrónico válido.';
+  }
+  if (phone && (!/^[+]?[\d\s()-]{7,16}$/.test(phone) || (phone.match(/\d/g) ?? []).length < 7)) {
+    errors.phone = 'Ingresa un teléfono válido (mínimo 7 dígitos).';
+  }
+  if (contactName && contactName.length < 3) {
+    errors.contactName = 'El nombre del contacto es muy corto.';
+  }
+  if (city && city.length < 2) {
+    errors.city = 'Ingresa una ciudad válida.';
+  }
+  if (address && address.length < 5) {
+    errors.address = 'Ingresa una dirección más completa.';
+  }
+
+  return errors;
+}
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) {
+    return null;
+  }
+  return <p className="mt-1 text-xs font-medium text-rose-600 dark:text-rose-400">{message}</p>;
+}
+
 export function Step1Client() {
   const router = useRouter();
   const isPanelOpen = useNewOrderPanelStore((state) => state.isOpen);
@@ -44,9 +146,11 @@ export function Step1Client() {
     customer,
     customers: createdCustomers,
     lead,
+    leads: createdLeads,
     setCustomer,
     addCustomer,
     setLead,
+    addLead,
     nextStep,
     reset,
     canProceed,
@@ -55,7 +159,10 @@ export function Step1Client() {
   const [open, setOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [newCustomer, setNewCustomer] = useState(EMPTY_CUSTOMER_FORM);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [customerErrors, setCustomerErrors] = useState<Partial<Record<CustomerField, string>>>({});
+  const [createLeadOpen, setCreateLeadOpen] = useState(false);
+  const [newLead, setNewLead] = useState(EMPTY_LEAD_FORM);
+  const [leadFormError, setLeadFormError] = useState<string | null>(null);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const focusSearchRef = useRef(false);
@@ -70,13 +177,13 @@ export function Step1Client() {
   const customers = [...createdCustomers, ...MOCK_CUSTOMERS];
 
   const normalizedQuery = query.trim().toLowerCase();
-  const results = normalizedQuery
+  const visibleCustomers = normalizedQuery
     ? customers.filter(
         (c) =>
           c.name.toLowerCase().includes(normalizedQuery) ||
           c.ruc.toLowerCase().includes(normalizedQuery)
       )
-    : [];
+    : customers.slice(0, 5);
 
   const handleSelectCustomer = (selected: OrderCustomer) => {
     setCustomer(selected);
@@ -93,32 +200,28 @@ export function Step1Client() {
 
   const handleCreateCustomer = () => {
     setOpen(false);
-    setFormError(null);
+    setCustomerErrors({});
     setCreateOpen(true);
+  };
+
+  const updateCustomerField = (field: CustomerField, value: string) => {
+    setNewCustomer((prev) => ({ ...prev, [field]: value }));
+    setCustomerErrors((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev));
   };
 
   const handleCreateSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const name = newCustomer.name.trim();
-    const ruc = newCustomer.ruc.trim();
 
-    if (name.length < 2) {
-      setFormError('Ingresa el nombre o razón social del cliente.');
-      return;
-    }
-    if (!/^\d{10,13}$/.test(ruc)) {
-      setFormError('El RUC debe tener entre 10 y 13 dígitos.');
-      return;
-    }
-    if (newCustomer.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newCustomer.email.trim())) {
-      setFormError('Ingresa un correo electrónico válido.');
+    const errors = validateCustomerForm(newCustomer);
+    if (Object.keys(errors).length > 0) {
+      setCustomerErrors(errors);
       return;
     }
 
     const created: OrderCustomer = {
       id: `c-${Date.now()}`,
-      name,
-      ruc,
+      name: newCustomer.name.trim(),
+      ruc: newCustomer.ruc.trim(),
       email: newCustomer.email.trim() || undefined,
       contactName: newCustomer.contactName.trim() || undefined,
       phone: newCustomer.phone.trim() || undefined,
@@ -133,7 +236,7 @@ export function Step1Client() {
     setQuery('');
     setCreateOpen(false);
     setNewCustomer(EMPTY_CUSTOMER_FORM);
-    setFormError(null);
+    setCustomerErrors({});
     toast.success('Cliente creado', {
       description: `${created.name} quedó seleccionado para este pedido.`,
     });
@@ -148,14 +251,67 @@ export function Step1Client() {
     router.push('/operations/orders');
   };
 
+  const leads = [...createdLeads, ...MOCK_LEADS];
+
   const handleSelectLead = (leadId: string) => {
-    const found = MOCK_LEADS.find((l) => l.id === leadId);
+    const found = leads.find((l) => l.id === leadId);
     if (found && found.status === 'AVAILABLE') {
       setLead(found);
     }
   };
 
-  const leadsInAttention = MOCK_LEADS.filter((l) => l.status === 'IN_ATTENTION').length;
+  const handleCreateLead = () => {
+    setLeadFormError(null);
+    setCreateLeadOpen(true);
+  };
+
+  const handleCreateLeadSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const name = newLead.name.trim();
+
+    if (name.length < 2) {
+      setLeadFormError('Ingresa el nombre del lead.');
+      return;
+    }
+
+    let total = 0;
+    if (newLead.total.trim()) {
+      const parsed = Number(newLead.total);
+      if (!Number.isFinite(parsed) || parsed < 0) {
+        setLeadFormError('Ingresa un monto válido.');
+        return;
+      }
+      total = parsed;
+    }
+
+    const maxCode = leads.reduce(
+      (acc, l) => Math.max(acc, Number(l.code.replace(/\D/g, '')) || 0),
+      0
+    );
+    const responsibleName = newLead.responsible.trim() || 'Sin asignar';
+
+    const created: OrderLead = {
+      id: `l-${Date.now()}`,
+      code: `#${maxCode + 1}`,
+      name,
+      stage: newLead.stage,
+      total,
+      responsibleInitials: initialsFromName(responsibleName),
+      responsibleName,
+      status: 'AVAILABLE',
+    };
+
+    addLead(created);
+    setLead(created);
+    setCreateLeadOpen(false);
+    setNewLead(EMPTY_LEAD_FORM);
+    setLeadFormError(null);
+    toast.success('Lead creado', {
+      description: `${created.code} quedó seleccionado para este pedido.`,
+    });
+  };
+
+  const leadsInAttention = leads.filter((l) => l.status === 'IN_ATTENTION').length;
 
   return (
     <div className="space-y-6">
@@ -186,11 +342,16 @@ export function Step1Client() {
               autoComplete="off"
             />
 
-            {open && normalizedQuery.length > 0 && (
+            {open && (
               <div className="absolute z-10 mt-2 w-full overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
-                {results.length > 0 ? (
+                {!normalizedQuery && (
+                  <p className="px-4 pb-0.5 pt-3 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-slate-500">
+                    Recientes
+                  </p>
+                )}
+                {visibleCustomers.length > 0 ? (
                   <ul className="max-h-72 overflow-auto">
-                    {results.map((c) => (
+                    {visibleCustomers.map((c) => (
                       <li key={c.id}>
                         <button
                           type="button"
@@ -269,8 +430,7 @@ export function Step1Client() {
                 >
                   Cambiar
                   <div className="flex-shrink-0 rotate-90 ">
-                  <Search className="h-3.5 w-3.5" />
-
+                    <Search className="h-3.5 w-3.5" />
                   </div>
                 </button>
               </div>
@@ -291,7 +451,7 @@ export function Step1Client() {
                 Selecciona el lead de Kommo asociado a este pedido.
               </p>
             </div>
-            <Button variant="outline" size="sm" className="gap-2">
+            <Button variant="outline" size="sm" className="gap-2" onClick={handleCreateLead}>
               <Plus className="h-4 w-4" />
               Nuevo lead
             </Button>
@@ -301,54 +461,60 @@ export function Step1Client() {
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-slate-800/50">
                 <tr>
-                  {['Selección', 'Lead', 'Nombre', 'Etapa', 'Total', 'Responsable', 'Acción'].map(
-                    (h) => (
-                      <th
-                        key={h}
-                        className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-slate-400"
-                      >
-                        {h}
-                      </th>
-                    )
-                  )}
+                  {['Lead', 'Nombre', 'Etapa', 'Total', 'Responsable', 'Acción'].map((h) => (
+                    <th
+                      key={h}
+                      className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-slate-400"
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {MOCK_LEADS.map((l) => {
+                {leads.map((l) => {
                   const isSelected = lead?.id === l.id;
                   const isLocked = l.status === 'IN_ATTENTION';
 
                   return (
                     <tr
                       key={l.id}
+                      onClick={() => {
+                        if (!isLocked) {
+                          handleSelectLead(l.id);
+                        }
+                      }}
                       className={cn(
                         'border-t border-gray-100 dark:border-slate-800',
-                        isLocked && 'opacity-60'
+                        isLocked
+                          ? 'opacity-60'
+                          : 'cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-slate-800/60',
+                        isSelected && 'bg-blue-50/70 dark:bg-blue-500/10'
                       )}
                     >
                       <td className="px-3 py-3">
-                        <button
-                          disabled={isLocked}
-                          onClick={() => handleSelectLead(l.id)}
-                          className={cn(
-                            'flex h-4 w-4 items-center justify-center rounded-full border-2',
-                            isSelected
-                              ? 'border-blue-600 bg-blue-600'
-                              : 'border-gray-300 bg-white dark:border-slate-600 dark:bg-slate-900',
-                            isLocked && 'cursor-not-allowed'
-                          )}
+                        <a
+                          href={kommoLeadUrl(l.code)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Abrir en Kommo"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
                         >
-                          {isSelected && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
-                        </button>
-                      </td>
-                      <td className="px-3 py-3 text-sm font-medium text-blue-600 dark:text-blue-400">
-                        {l.code}
+                          {l.code}
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
                       </td>
                       <td className="px-3 py-3 text-sm text-gray-900 dark:text-slate-100">
                         {l.name}
                       </td>
                       <td className="px-3 py-3">
-                        <span className="rounded-md border border-green-200 bg-green-50 px-2 py-0.5 text-xs text-green-700 dark:border-green-500/30 dark:bg-green-500/15 dark:text-green-300">
+                        <span
+                          className={cn(
+                            'rounded-md border px-2 py-0.5 text-xs',
+                            STAGE_COLORS[l.stage]
+                          )}
+                        >
                           {l.stage}
                         </span>
                       </td>
@@ -367,21 +533,31 @@ export function Step1Client() {
                       </td>
                       <td className="px-3 py-3">
                         {isSelected ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400">
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                            Seleccionado
-                          </span>
+                            <CheckCircle2 className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                         ) : isLocked ? (
-                          <span className="inline-flex items-center gap-1 rounded-md border border-yellow-200 bg-yellow-50 px-2 py-0.5 text-xs text-yellow-700 dark:border-yellow-500/30 dark:bg-yellow-500/15 dark:text-yellow-300">
-                            En atención
-                          </span>
+                          // Si el lead está siendo atendido por otra asesora, mostrar un candado y no permitir seleccionarlo
+                          <TooltipProvider delayDuration={150}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span
+                                  tabIndex={0}
+                                  aria-label="Lead en atención"
+                                  className="inline-flex items-center justify-center rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500/60"
+                                >
+                                  <CircleAlert className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-400" />
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent
+                                side="left"
+                                align="center"
+                                className="max-w-[220px] text-center text-xs leading-snug border-yellow-200 bg-yellow-50 text-yellow-700 dark:border-yellow-500/30 dark:bg-yellow-500/15 dark:text-yellow-300"
+                              >
+                                Este lead está siendo atendido por otra asesora
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         ) : (
-                          <button
-                            onClick={() => handleSelectLead(l.id)}
-                            className="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                          >
-                            Seleccionar
-                          </button>
+                          <Circle className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                         )}
                       </td>
                     </tr>
@@ -405,13 +581,22 @@ export function Step1Client() {
         <Button variant="ghost" onClick={handleCancel}>
           Cancelar
         </Button>
+        {/* Si hay un Cliente y un lead seleccionado continuar a productos, caso contrario mostrar "Seleccione un cliente" o "Seleccionar lead" sea cual sea el caso  */}
         <Button
           disabled={!canProceed()}
           onClick={nextStep}
           className="gap-2 bg-blue-600 hover:bg-blue-700 text-gray-50 dark:text-slate-100"
         >
-          Continuar a productos
-          <span>→</span>
+          {customer && lead ? (
+            <>
+              Continuar a productos
+              <ArrowRight className="h-4 w-4" />
+            </>
+          ) : !customer ? (
+            'Seleccione un cliente'
+          ) : (
+            'Seleccione un lead'
+          )}
         </Button>
       </div>
 
@@ -421,7 +606,7 @@ export function Step1Client() {
         onOpenChange={(isOpen) => {
           setCreateOpen(isOpen);
           if (!isOpen) {
-            setFormError(null);
+            setCustomerErrors({});
           }
         }}
       >
@@ -437,32 +622,35 @@ export function Step1Client() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <label htmlFor="nc-name" className={FIELD_LABEL_CLASS}>
-                  Nombre / Razón social *
+                  Nombre / Razón social <span className="text-rose-500">*</span>
                 </label>
                 <Input
                   id="nc-name"
                   value={newCustomer.name}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                  aria-required
+                  aria-invalid={Boolean(customerErrors.name)}
+                  onChange={(e) => updateCustomerField('name', e.target.value)}
                   placeholder="Ej. Distribuidora Andina S.A."
                   autoFocus
                 />
+                <FieldError message={customerErrors.name} />
               </div>
               <div>
                 <label htmlFor="nc-ruc" className={FIELD_LABEL_CLASS}>
-                  RUC *
+                  CEDULA / RUC <span className="text-rose-500">*</span>
                 </label>
                 <Input
                   id="nc-ruc"
                   inputMode="numeric"
                   value={newCustomer.ruc}
+                  aria-required
+                  aria-invalid={Boolean(customerErrors.ruc)}
                   onChange={(e) =>
-                    setNewCustomer({
-                      ...newCustomer,
-                      ruc: e.target.value.replace(/\D/g, '').slice(0, 13),
-                    })
+                    updateCustomerField('ruc', e.target.value.replace(/\D/g, '').slice(0, 13))
                   }
                   placeholder="13 dígitos"
                 />
+                <FieldError message={customerErrors.ruc} />
               </div>
               <div>
                 <label htmlFor="nc-phone" className={FIELD_LABEL_CLASS}>
@@ -471,9 +659,11 @@ export function Step1Client() {
                 <Input
                   id="nc-phone"
                   value={newCustomer.phone}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                  aria-invalid={Boolean(customerErrors.phone)}
+                  onChange={(e) => updateCustomerField('phone', e.target.value)}
                   placeholder="+593 99 000 0000"
                 />
+                <FieldError message={customerErrors.phone} />
               </div>
               <div className="sm:col-span-2">
                 <label htmlFor="nc-email" className={FIELD_LABEL_CLASS}>
@@ -483,9 +673,11 @@ export function Step1Client() {
                   id="nc-email"
                   type="email"
                   value={newCustomer.email}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                  aria-invalid={Boolean(customerErrors.email)}
+                  onChange={(e) => updateCustomerField('email', e.target.value)}
                   placeholder="contacto@empresa.com"
                 />
+                <FieldError message={customerErrors.email} />
               </div>
               <div>
                 <label htmlFor="nc-contact" className={FIELD_LABEL_CLASS}>
@@ -494,9 +686,11 @@ export function Step1Client() {
                 <Input
                   id="nc-contact"
                   value={newCustomer.contactName}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, contactName: e.target.value })}
+                  aria-invalid={Boolean(customerErrors.contactName)}
+                  onChange={(e) => updateCustomerField('contactName', e.target.value)}
                   placeholder="Ej. María González"
                 />
+                <FieldError message={customerErrors.contactName} />
               </div>
               <div>
                 <label htmlFor="nc-city" className={FIELD_LABEL_CLASS}>
@@ -505,9 +699,11 @@ export function Step1Client() {
                 <Input
                   id="nc-city"
                   value={newCustomer.city}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, city: e.target.value })}
+                  aria-invalid={Boolean(customerErrors.city)}
+                  onChange={(e) => updateCustomerField('city', e.target.value)}
                   placeholder="Guayaquil"
                 />
+                <FieldError message={customerErrors.city} />
               </div>
               <div className="sm:col-span-2">
                 <label htmlFor="nc-address" className={FIELD_LABEL_CLASS}>
@@ -516,18 +712,13 @@ export function Step1Client() {
                 <Input
                   id="nc-address"
                   value={newCustomer.address}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
+                  aria-invalid={Boolean(customerErrors.address)}
+                  onChange={(e) => updateCustomerField('address', e.target.value)}
                   placeholder="Av. Principal 123"
                 />
+                <FieldError message={customerErrors.address} />
               </div>
             </div>
-
-            {formError && (
-              <div className="flex items-center gap-1.5 text-xs font-medium text-rose-600 dark:text-rose-400">
-                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                <span>{formError}</span>
-              </div>
-            )}
 
             <DialogFooter className="gap-2 sm:space-x-0">
               <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>
@@ -539,6 +730,105 @@ export function Step1Client() {
               >
                 <UserPlus className="h-4 w-4" />
                 Crear cliente
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog nuevo lead */}
+      <Dialog
+        open={createLeadOpen}
+        onOpenChange={(isOpen) => {
+          setCreateLeadOpen(isOpen);
+          if (!isOpen) {
+            setLeadFormError(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Nuevo lead</DialogTitle>
+            <DialogDescription>
+              Crea el lead en Kommo y quedará seleccionado para este pedido.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleCreateLeadSubmit} className="space-y-4" noValidate>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label htmlFor="nl-name" className={FIELD_LABEL_CLASS}>
+                  Nombre del lead *
+                </label>
+                <Input
+                  id="nl-name"
+                  value={newLead.name}
+                  onChange={(e) => setNewLead({ ...newLead, name: e.target.value })}
+                  placeholder="Ej. Venta mobiliario oficina"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label htmlFor="nl-stage" className={FIELD_LABEL_CLASS}>
+                  Etapa *
+                </label>
+                <select
+                  id="nl-stage"
+                  value={newLead.stage}
+                  onChange={(e) =>
+                    setNewLead({ ...newLead, stage: e.target.value as OrderLead['stage'] })
+                  }
+                  className="h-10 w-full rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                >
+                  {LEAD_STAGES.map((stage) => (
+                    <option key={stage} value={stage}>
+                      {stage}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="nl-total" className={FIELD_LABEL_CLASS}>
+                  Total estimado
+                </label>
+                <Input
+                  id="nl-total"
+                  inputMode="decimal"
+                  value={newLead.total}
+                  onChange={(e) => setNewLead({ ...newLead, total: e.target.value })}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="nl-responsible" className={FIELD_LABEL_CLASS}>
+                  Responsable
+                </label>
+                <Input
+                  id="nl-responsible"
+                  value={newLead.responsible}
+                  onChange={(e) => setNewLead({ ...newLead, responsible: e.target.value })}
+                  placeholder="Ej. Rodrigo Vega"
+                />
+              </div>
+            </div>
+
+            {leadFormError && (
+              <div className="flex items-center gap-1.5 text-xs font-medium text-rose-600 dark:text-rose-400">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                <span>{leadFormError}</span>
+              </div>
+            )}
+
+            <DialogFooter className="gap-2 sm:space-x-0">
+              <Button type="button" variant="ghost" onClick={() => setCreateLeadOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                className="gap-2 bg-blue-600 hover:bg-blue-700 text-gray-50 dark:text-slate-100"
+              >
+                <Plus className="h-4 w-4" />
+                Crear lead
               </Button>
             </DialogFooter>
           </form>

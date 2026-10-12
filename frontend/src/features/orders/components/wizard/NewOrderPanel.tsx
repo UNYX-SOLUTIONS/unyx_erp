@@ -24,7 +24,7 @@ export function NewOrderPanel() {
         }
       }}
     >
-      <SheetContent side="right" className="w-full gap-0 p-0 sm:max-w-5xl">
+      <SheetContent side="right" className="w-full gap-0 p-0 sm:max-w-3xl">
         <SheetTitle className="sr-only">Nuevo pedido</SheetTitle>
         <SheetDescription className="sr-only">
           Completa los pasos para crear y reservar un pedido.

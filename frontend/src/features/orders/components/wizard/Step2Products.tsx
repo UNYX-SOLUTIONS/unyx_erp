@@ -3,7 +3,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Plus, Minus, ShoppingCart, ArrowLeft, Info, Trash } from 'lucide-react';
+import { Search, Plus, Minus, ShoppingCart, ArrowLeft, Info, Trash, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -69,8 +69,10 @@ export function Step2Products() {
 
   const t = totals();
 
+  const products = [...MOCK_PRODUCTS];
+
   const normalizedQuery = search.trim().toLowerCase();
-  const results = normalizedQuery
+  const visibleProducts = normalizedQuery
     ? MOCK_PRODUCTS.filter(
         (p) =>
           p.name.toLowerCase().includes(normalizedQuery) ||
@@ -82,7 +84,7 @@ export function Step2Products() {
               v.sku.toLowerCase().includes(normalizedQuery)
           )
       )
-    : [];
+    : MOCK_PRODUCTS.slice(0, 5);
 
   const addVariantToOrder = (
     product: ProductCatalogItem,
@@ -184,11 +186,16 @@ export function Step2Products() {
               />
             </div>
 
-            {open && normalizedQuery.length > 0 && (
+            {open && (
               <div className="absolute z-10 mt-2 w-full overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
-                {results.length > 0 ? (
+                {!normalizedQuery && (
+                  <p className="px-4 pb-0.5 pt-3 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-slate-500">
+                    Recientes
+                  </p>
+                )}
+                {visibleProducts.length > 0 ? (
                   <ul className="max-h-72 overflow-auto">
-                    {results.map((p) => (
+                    {visibleProducts.map((p) => (
                       <li key={p.id}>
                         <button
                           type="button"
@@ -354,8 +361,17 @@ export function Step2Products() {
           onClick={nextStep}
           className="gap-2 bg-blue-600 hover:bg-blue-700 text-gray-50 dark:text-slate-100"
         >
-          Continuar a entrega
-          <span>→</span>
+          {products ? (
+            <>
+            Continuar a Entrega
+              <ArrowRight className="h-4 w-4" />
+            </>
+          ) : (
+            <>
+              <ShoppingCart className="h-4 w-4" />
+              Agregue productos
+            </>
+          )}
         </Button>
       </div>
 
