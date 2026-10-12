@@ -50,7 +50,7 @@ export function NewOrderWizard() {
       </div>
 
       {/* Stepper */}
-      <WizardStepper current={currentStep} />
+      <WizardStepper />
 
       {/* Steps */}
       {currentStep === 1 && <Step1Client />}

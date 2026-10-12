@@ -4,65 +4,127 @@
 
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useNewOrderStore } from '../../stores/newOrder.store';
 
 const STEPS = [
-  { id: 1, label: 'Cliente' },
-  { id: 2, label: 'Productos' },
-  { id: 3, label: 'Entrega' },
-  { id: 4, label: 'Confirmar' },
+  { id: 1, label: 'Cliente', shortLabel: 'Cliente' },
+  { id: 2, label: 'Productos', shortLabel: 'Productos' },
+  { id: 3, label: 'Entrega', shortLabel: 'Entrega' },
+  { id: 4, label: 'Confirmar', shortLabel: 'Confirmar' },
 ] as const;
 
-interface Props {
-  current: 1 | 2 | 3 | 4;
-}
+type StepId = (typeof STEPS)[number]['id'];
 
-export function WizardStepper({ current }: Props) {
+export function WizardStepper() {
+  const currentStep = useNewOrderStore((s) => s.currentStep);
+  const setStep = useNewOrderStore((s) => s.setStep);
+  const canProceed = useNewOrderStore((s) => s.canProceed);
+
+  /**
+   * Determina si se puede navegar a un paso específico.
+   * Reglas:
+   * - Es el paso actual → NO (no hace nada)
+   * - Es un paso anterior → SÍ (siempre se puede volver)
+   * - Es el paso inmediatamente siguiente → SÍ si canProceed() es true
+   * - Es un paso futuro más lejano → NO
+   */
+  const canNavigateTo = (stepId: StepId): boolean => {
+    if (stepId === currentStep) return false;
+    if (stepId < currentStep) return true;
+    if (stepId === currentStep + 1) return canProceed();
+    return false;
+  };
+
+  const handleStepClick = (stepId: StepId) => {
+    if (!canNavigateTo(stepId)) return;
+    setStep(stepId);
+  };
+
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
-      <div className="flex items-center justify-between">
+    <nav
+      aria-label="Progreso del pedido"
+      className={cn(
+        'rounded-lg border border-gray-200 bg-white p-5',
+        'dark:border-slate-700 dark:bg-slate-900',
+      )}
+    >
+      <ol className="flex items-center justify-between">
         {STEPS.map((step, idx) => {
-          const isCompleted = step.id < current;
-          const isActive = step.id === current;
+          const isCompleted = step.id < currentStep;
+          const isActive = step.id === currentStep;
+          const isClickable = canNavigateTo(step.id);
+          const isLast = idx === STEPS.length - 1;
 
           return (
-            <div key={step.id} className="flex flex-1 items-center">
-              <div className="flex items-center gap-3">
-                <div
+            <li
+              key={step.id}
+              className={cn('flex items-center', !isLast && 'flex-1')}
+            >
+              <button
+                type="button"
+                onClick={() => handleStepClick(step.id)}
+                disabled={!isClickable}
+                aria-current={isActive ? 'step' : undefined}
+                aria-label={`Paso ${step.id}: ${step.label}${
+                  isCompleted ? ' (completado)' : isActive ? ' (actual)' : ''
+                }`}
+                className={cn(
+                  'group flex items-center gap-2 rounded-md px-2 py-1 text-left transition-colors',
+                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40',
+                  isClickable && 'cursor-pointer',
+                  !isClickable && 'cursor-default',
+                )}
+              >
+                {/* Círculo del paso */}
+                <span
                   className={cn(
-                    'flex h-8 w-8 items-center justify-center rounded-full border-2 text-sm font-semibold transition-colors',
-                    isCompleted && 'border-blue-600 bg-blue-600 text-white',
-                    isActive && 'border-blue-600 bg-blue-600 text-white',
+                    'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold transition-all',
+                    // Completado: azul relleno
+                    isCompleted && 'border-blue-600 bg-blue-600 text-white shadow-sm shadow-blue-600/20',
+                    // Actual: azul relleno + ring exterior
+                    isActive &&
+                      'border-blue-600 bg-blue-600 text-white shadow-sm shadow-blue-600/20 ring-4 ring-blue-500/15',
+                    // Futuro: gris
                     !isCompleted &&
                       !isActive &&
                       'border-gray-300 bg-white text-gray-400 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-500',
+                    // Hover sobre clickable
+                    isClickable && !isActive && 'group-hover:border-blue-500',
                   )}
                 >
                   {isCompleted ? <Check className="h-4 w-4" /> : step.id}
-                </div>
+                </span>
+
+                {/* Label del paso */}
                 <span
                   className={cn(
-                    'text-sm font-medium',
+                    'text-sm font-medium transition-colors',
                     isActive || isCompleted
                       ? 'text-gray-900 dark:text-slate-100'
                       : 'text-gray-400 dark:text-slate-500',
+                    isClickable && !isActive && 'group-hover:text-gray-700 dark:group-hover:text-slate-300',
                   )}
                 >
                   {step.label}
                 </span>
-              </div>
+              </button>
 
-              {idx < STEPS.length - 1 && (
+              {/* Línea conectora */}
+              {!isLast && (
                 <div
+                  aria-hidden="true"
                   className={cn(
-                    'mx-4 h-0.5 flex-1 rounded-full',
-                    step.id < current ? 'bg-blue-600' : 'bg-gray-200 dark:bg-slate-700',
+                    'mx-4 h-0.5 flex-1 rounded-full transition-colors',
+                    step.id < currentStep
+                      ? 'bg-blue-600'
+                      : 'bg-gray-200 dark:bg-slate-700',
                   )}
                 />
               )}
-            </div>
+            </li>
           );
         })}
-      </div>
-    </div>
+      </ol>
+    </nav>
   );
 }
