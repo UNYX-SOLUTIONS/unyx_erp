@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useNewOrderStore } from '../../stores/newOrder.store';
+import { useNewOrderPanelStore } from '../../stores/new-order-panel.store';
 import { WizardStepper } from './WizardStepper';
 import { Step1Client } from './Step1Client';
 import { Step2Products } from './Step2Products';
@@ -15,6 +16,8 @@ import { Step4Confirm } from './Step4Confirm';
 export function NewOrderWizard() {
   const router = useRouter();
   const { currentStep, reset } = useNewOrderStore();
+  const isPanelOpen = useNewOrderPanelStore((state) => state.isOpen);
+  const closePanel = useNewOrderPanelStore((state) => state.close);
 
   useEffect(() => {
     reset();
@@ -25,6 +28,10 @@ export function NewOrderWizard() {
       description: 'El pedido quedó pendiente de aprobación de pago.',
     });
     reset();
+    if (isPanelOpen) {
+      closePanel();
+      return;
+    }
     router.push('/operations/orders');
   };
 

@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useNewOrderStore } from '../../stores/newOrder.store';
+import { useNewOrderPanelStore } from '../../stores/new-order-panel.store';
 import { MOCK_CUSTOMERS, MOCK_LEADS } from '../../data/mock';
 import type { OrderCustomer } from '../../types/order.types';
 
@@ -37,6 +38,8 @@ const FIELD_LABEL_CLASS =
 
 export function Step1Client() {
   const router = useRouter();
+  const isPanelOpen = useNewOrderPanelStore((state) => state.isOpen);
+  const closePanel = useNewOrderPanelStore((state) => state.close);
   const {
     customer,
     customers: createdCustomers,
@@ -138,6 +141,10 @@ export function Step1Client() {
 
   const handleCancel = () => {
     reset();
+    if (isPanelOpen) {
+      closePanel();
+      return;
+    }
     router.push('/operations/orders');
   };
 

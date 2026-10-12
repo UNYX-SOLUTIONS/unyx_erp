@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { OrderStatusTabs } from '@/features/orders/components/OrderStatusTabs';
 import { OrdersFilters } from '@/features/orders/components/OrdersFilter';
 import { OrdersTable } from '@/features/orders/components/OrdersTable';
+import { NewOrderPanel } from '@/features/orders/components/wizard/NewOrderPanel';
+import { useNewOrderPanelStore } from '@/features/orders/stores/new-order-panel.store';
 import { MOCK_ORDERS } from '@/features/orders/data/mock';
 import {
   ORDER_STATUS_META,
@@ -18,6 +20,7 @@ import {
 
 export function OrdersListPage() {
   const router = useRouter();
+  const openPanel = useNewOrderPanelStore((state) => state.open);
   const [activeTab, setActiveTab] = useState<OrderTabFilter>('ALL');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -68,7 +71,7 @@ export function OrdersListPage() {
 
   const handleView = (order: Order) => {
     if (order.status === 'DRAFT') {
-      router.push('/operations/orders/new');
+      openPanel();
       return;
     }
     router.push(`/operations/orders/${order.id.replace('#', '')}`);
@@ -92,7 +95,7 @@ export function OrdersListPage() {
             Sincronizado con Kommo
           </div>
           <Button
-            onClick={() => router.push('/operations/orders/new')}
+            onClick={openPanel}
             className="gap-2 bg-blue-600 hover:bg-blue-700 text-gray-50 dark:text-slate-100"
           >
             <Plus className="h-4 w-4" />
@@ -165,6 +168,8 @@ export function OrdersListPage() {
           </button>
         </div>
       </div>
+
+      <NewOrderPanel />
     </div>
   );
 }
