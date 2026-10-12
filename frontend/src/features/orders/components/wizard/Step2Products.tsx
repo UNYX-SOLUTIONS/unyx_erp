@@ -47,6 +47,8 @@ const ITEM_COLUMNS = [
   'Acción',
 ];
 
+const DISCOUNT_OPTIONS = [0, 5, 10, 15, 20, 25, 30];
+
 export function Step2Products() {
   const {
     customer,
@@ -311,8 +313,19 @@ export function Step2Products() {
                     <TableCell className="px-3 py-3 text-sm text-gray-900 dark:text-slate-100">
                       ${item.price.toFixed(2)}
                     </TableCell>
-                    <TableCell className="px-3 py-3 text-sm text-gray-700 dark:text-slate-300">
-                      {item.discount > 0 ? `${item.discount}%` : '—'}
+                    <TableCell className="px-3 py-3">
+                      <select
+                        value={item.discount}
+                        onChange={(e) => updateItem(item.id, { discount: Number(e.target.value) })}
+                        aria-label={`Descuento para ${item.productName}`}
+                        className="h-8 cursor-pointer rounded-md border border-gray-200 bg-white px-2 text-xs text-gray-700 transition-colors hover:border-gray-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600"
+                      >
+                        {DISCOUNT_OPTIONS.map((discount) => (
+                          <option key={discount} value={discount}>
+                            {discount}%
+                          </option>
+                        ))}
+                      </select>
                     </TableCell>
                     <TableCell className="px-3 py-3 text-sm font-medium text-gray-900 dark:text-slate-100">
                       ${item.subtotal.toFixed(2)}

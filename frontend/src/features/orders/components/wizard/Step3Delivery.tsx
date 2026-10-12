@@ -3,28 +3,46 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Home, Truck, Clock, ArrowRight, ChevronDown } from 'lucide-react';
+import {
+  ArrowLeft,
+  Home,
+  Truck,
+  Clock,
+  ArrowRight,
+  ChevronDown,
+  CalendarClock,
+  Store,
+  type LucideIcon,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useNewOrderStore } from '../../stores/newOrder.store';
 import type { DeliveryInfo } from '../../types/order.types';
 
-const MODALITIES: { id: DeliveryInfo['modality']; label: string; description: string }[] = [
+const MODALITIES: {
+  id: DeliveryInfo['modality'];
+  label: string;
+  description: string;
+  icon: LucideIcon;
+}[] = [
   {
     id: 'HOME_DELIVERY',
     label: 'Entrega a domicilio',
     description: 'El pedido se envía a la dirección indicada',
+    icon: Truck,
   },
   {
     id: 'STORE_PICKUP',
     label: 'Retiro en tienda',
     description: 'El cliente retira el pedido en el punto de venta',
+    icon: Store,
   },
   {
     id: 'TO_BE_ARRANGED',
     label: 'Por coordinar',
     description: 'La fecha y lugar se coordinan luego con el cliente',
+    icon: CalendarClock,
   },
 ];
 
@@ -142,8 +160,7 @@ function TimeSelect({ value, options, onChange, ariaLabel }: TimeSelectProps) {
 }
 
 export function Step3Delivery() {
-  const { customer, delivery, setDelivery, prevStep, nextStep, canProceed } =
-    useNewOrderStore();
+  const { customer, delivery, setDelivery, prevStep, nextStep, canProceed } = useNewOrderStore();
 
   const needsAddress = delivery.modality === 'HOME_DELIVERY';
   const autoFilledRef = useRef(false);
@@ -185,42 +202,62 @@ export function Step3Delivery() {
         <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
           {MODALITIES.map((m) => {
             const isActive = delivery.modality === m.id;
+            const Icon = m.icon; // ← asumimos que cada modalidad tiene un icono
+
             return (
               <button
                 key={m.id}
                 type="button"
                 onClick={() => setDelivery({ modality: m.id })}
                 className={cn(
-                  'flex items-start gap-3 rounded-md border p-3 text-left transition-colors',
+                  'relative flex items-center justify-between gap-3 rounded-md border p-4 text-left transition-colors',
                   isActive
                     ? 'border-blue-600 bg-blue-50 dark:bg-blue-500/15'
-                    : 'border-gray-200 bg-white hover:border-gray-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600',
+                    : 'border-gray-200 bg-white hover:border-gray-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600'
                 )}
               >
+                {/* Radio en la esquina superior derecha */}
                 <span
                   className={cn(
-                    'mt-0.5 flex h-4 w-4 items-center justify-center rounded-full border-2',
+                    'absolute right-3 top-3 flex h-4 w-4 items-center justify-center rounded-full border-2',
                     isActive
                       ? 'border-blue-600 bg-blue-600'
-                      : 'border-gray-300 bg-white dark:border-slate-600 dark:bg-slate-900',
+                      : 'border-gray-300 bg-white dark:border-slate-600 dark:bg-slate-900'
                   )}
+                  aria-hidden="true"
                 >
                   {isActive && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
                 </span>
-                <span>
+                {/* Icono a la izquierda */}
+                {Icon && (
+                  <Icon
+                    className={cn(
+                      'h-5 w-5 shrink-0 transition-colors',
+                      isActive
+                        ? 'text-blue-600 dark:text-blue-400'
+                        : 'text-gray-400 dark:text-slate-500'
+                    )}
+                    aria-hidden="true"
+                  />
+                )}
+
+                {/* Texto a la derecha */}
+                <span className="flex flex-col pr-6">
                   <span
                     className={cn(
                       'block text-sm font-medium',
                       isActive
                         ? 'text-blue-700 dark:text-blue-300'
-                        : 'text-gray-900 dark:text-slate-100',
+                        : 'text-gray-900 dark:text-slate-100'
                     )}
                   >
                     {m.label}
                   </span>
-                  <span className="mt-0.5 block text-xs text-gray-500 dark:text-slate-400">
-                    {m.description}
-                  </span>
+                  {m.description && (
+                    <span className="mt-0.5 block text-xs text-gray-500 dark:text-slate-400">
+                      {m.description}
+                    </span>
+                  )}
                 </span>
               </button>
             );

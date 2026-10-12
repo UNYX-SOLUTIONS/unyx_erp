@@ -533,7 +533,7 @@ export function Step1Client() {
                       </td>
                       <td className="px-3 py-3">
                         {isSelected ? (
-                            <CheckCircle2 className="h-4 w-4 text-blue-700 dark:text-blue-500" />
+                            <CheckCircle2 className="h-4 w-4 text-blue-700 dark:text-blue-500 animate-in -translate-y-0.5 font-bold" />
                         ) : isLocked ? (
                           // Si el lead está siendo atendido por otra asesora, mostrar un candado y no permitir seleccionarlo
                           <TooltipProvider delayDuration={150}>
