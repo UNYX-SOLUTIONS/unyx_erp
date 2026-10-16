@@ -51,13 +51,6 @@ fi
 
 docker compose version >/dev/null 2>&1 || fail "Falta el plugin 'docker compose'. Instalalo y vuelve a ejecutar."
 
-# Red compartida con la infraestructura del cliente (altosa-api). Debe existir
-# en el VPS (la crea altosa_infrastructure); aquí se asegura por si falta.
-if ! docker network inspect altosa_backend >/dev/null 2>&1; then
-  log "Creando red externa altosa_backend (la usará tambien altosa_infrastructure)"
-  docker network create altosa_backend >/dev/null
-fi
-
 # Dominio público: 1er argumento (URL o dominio), o PUBLIC_DOMAIN, o el default de test.
 DEFAULT_DOMAIN="${PUBLIC_DOMAIN:-altosa-test.erp.unyxsolutions.com}"
 PUBLIC_INPUT="${PUBLIC_INPUT:-${PUBLIC_DOMAIN:-}}"
@@ -109,7 +102,7 @@ NEXT_PUBLIC_API_URL=
 FRONTEND_PORT=${FRONTEND_PORT}
 TRAEFIK_NETWORK=${TRAEFIK_NETWORK}
 SEED_ADMIN_PASSWORD=Admin123!
-ALTOSA_API_URL=http://altosa-api:4100
+ALTOSA_API_URL=https://api.altosamobiliario.com
 ALTOSA_API_KEY=
 EOF
   echo "Creado .env.deploy con secretos nuevos"
@@ -119,9 +112,9 @@ else
   set_env_value PUBLIC_DOMAIN "$PUBLIC_DOMAIN"
   set_env_value TRAEFIK_NETWORK "$TRAEFIK_NETWORK"
   set_env_value FRONTEND_PORT "$FRONTEND_PORT"
-  set_env_value ALTOSA_API_URL "http://altosa-api:4100"
+  grep -q '^ALTOSA_API_URL=' "$ENV_FILE" || printf 'ALTOSA_API_URL=https://api.altosamobiliario.com\n' >> "$ENV_FILE"
   grep -q '^ALTOSA_API_KEY=' "$ENV_FILE" || printf 'ALTOSA_API_KEY=\n' >> "$ENV_FILE"
-  echo "Reutilizando .env.deploy existente (dominio, red de Traefik y Altosa actualizados)"
+  echo "Reutilizando .env.deploy existente (dominio y red de Traefik actualizados)"
 fi
 
 log "Firewall"
