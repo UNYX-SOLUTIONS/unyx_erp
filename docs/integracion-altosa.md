@@ -48,6 +48,15 @@ Regla de oro: **el frontend habla SOLO con el backend del ERP** (patrón BFF). E
   - Idempotente: re-ejecutar no duplica (los registros existentes se saltan salvo `--force`).
 - **Viejo (deprecado)**: `etl:products` + `client-altosa` + `DATABASE_URL_ALTOSA` — conexión directa a la DB del cliente y a una tabla plana legacy. Eliminar junto con `src/config/database-altosa.ts` y `prisma/schema-altosa.prisma` DESPUÉS de validar el nuevo ETL en el VPS.
 
+### 4. Imágenes de variantes
+
+- Flujo: el usuario sube la imagen en el detalle del producto (tab Variantes) → `POST /api/v1/integrations/altosa/uploads/variants` (multipart, JWT del ERP) → el ERP lo reenvía a `altosa-api` → el archivo se guarda en el volumen Docker `altosa_uploads_data` (`/data/uploads/variants/<uuid>.<ext>`).
+- `altosa-api` responde con la **URL pública absoluta** (`PUBLIC_URL_BASE` + ruta) que el frontend guarda en `product_variants.imagen_url` (la constraint del cliente exige `http(s)://`).
+- En el VPS, Traefik expone SOLO la ruta `/uploads` de `altosa-api` sobre el dominio de pruebas (`Host(altosa-test...) && PathPrefix('/uploads')`, prioridad 200); el resto del API sigue privado.
+- Límites: JPG/PNG/WEBP/GIF, máx. 5 MB (`multer`, filtro por MIME en el ERP y en altosa-api).
+- Variables: `UPLOAD_DIR` (default `uploads` local, `/data/uploads` en Docker), `PUBLIC_URL_BASE` (local `http://localhost:4100`; VPS `https://altosa-test.erp.unyxsolutions.com`).
+- Para limpiar una imagen: guardar `imageUrl` vacío en la variante (el API lo convierte a `NULL`).
+
 ## Despliegue (VPS)
 
 1. **Altosa (una vez / actualizaciones)**: en `/docker/altosa_infrastructure` con `ALTOSA_API_KEY` en `.env` (`openssl rand -hex 32`):
