@@ -53,7 +53,11 @@ Regla de oro: **el frontend habla SOLO con el backend del ERP** (patrón BFF). E
 - Flujo: el usuario sube la imagen en el detalle del producto (tab Variantes) → `POST /api/v1/integrations/altosa/uploads/variants` (multipart, JWT del ERP) → el ERP lo reenvía a `altosa-api` → el archivo se guarda en el volumen Docker `altosa_uploads_data` (`/data/uploads/variants/<uuid>.<ext>`).
 - `altosa-api` responde con la **URL pública absoluta** (`PUBLIC_URL_BASE` + ruta) que el frontend guarda en `product_variants.imagen_url` (la constraint del cliente exige `http(s)://`).
 - En el VPS, Traefik expone SOLO la ruta `/uploads` de `altosa-api` sobre el dominio de pruebas (`Host(altosa-test...) && PathPrefix('/uploads')`, prioridad 200); el resto del API sigue privado.
-- Límites: JPG/PNG/WEBP/GIF, máx. 5 MB (`multer`, filtro por MIME en el ERP y en altosa-api).
+- Límites: JPG/PNG/WEBP/GIF, máx. 10 MB (`multer`, filtro por MIME en el ERP y en altosa-api).
+- Optimización en dos capas (para que nada pesado llegue a la DB ni a n8n/Kommo/Meta):
+  1. **Navegador** (`lib/compress-image.ts`): redimensiona a máx. 1600px y re-codifica a JPEG q0.82 antes de subir (GIF y archivos ya óptimos se dejan intactos).
+  2. **Servidor** (`altosa-api`, sharp): corrige orientación EXIF, redimensiona a 1600px, re-codifica a JPEG y descarta metadatos como garantía final; conserva el original si el resultado no es mejor. Medido: 6.59 MB → 627 KB.
+- Validación de contenido: además del MIME, se verifica la **firma binaria real** (magic bytes de JPG/PNG/WEBP/GIF); un archivo falso se rechaza y se elimina del disco.
 - Variables: `UPLOAD_DIR` (default `uploads` local, `/data/uploads` en Docker), `PUBLIC_URL_BASE` (local `http://localhost:4100`; VPS `https://altosa-test.erp.unyxsolutions.com`).
 - Para limpiar una imagen: guardar `imageUrl` vacío en la variante (el API lo convierte a `NULL`).
 
