@@ -1,6 +1,8 @@
 import 'dotenv/config';
 import { z } from 'zod';
 
+const emptyToUndefined = (value: unknown) => (value === '' ? undefined : value);
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
@@ -14,6 +16,11 @@ const envSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((value) => value === 'true'),
+  ALTOSA_API_URL: z.preprocess(
+    emptyToUndefined,
+    z.string().url().default('http://localhost:4100')
+  ),
+  ALTOSA_API_KEY: z.preprocess(emptyToUndefined, z.string().min(16).optional()),
 });
 
 const parsed = envSchema.safeParse(process.env);

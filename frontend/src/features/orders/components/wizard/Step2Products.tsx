@@ -3,7 +3,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Plus, Minus, ShoppingCart, ArrowLeft, Info, Trash } from 'lucide-react';
+import { Search, Plus, Minus, ShoppingCart, ArrowLeft, Info, Trash, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,6 +47,8 @@ const ITEM_COLUMNS = [
   'Acción',
 ];
 
+const DISCOUNT_OPTIONS = [0, 5, 10, 15, 20, 25, 30];
+
 export function Step2Products() {
   const {
     customer,
@@ -69,8 +71,10 @@ export function Step2Products() {
 
   const t = totals();
 
+  const products = [...MOCK_PRODUCTS];
+
   const normalizedQuery = search.trim().toLowerCase();
-  const results = normalizedQuery
+  const visibleProducts = normalizedQuery
     ? MOCK_PRODUCTS.filter(
         (p) =>
           p.name.toLowerCase().includes(normalizedQuery) ||
@@ -82,7 +86,7 @@ export function Step2Products() {
               v.sku.toLowerCase().includes(normalizedQuery)
           )
       )
-    : [];
+    : MOCK_PRODUCTS.slice(0, 5);
 
   const addVariantToOrder = (
     product: ProductCatalogItem,
@@ -184,11 +188,16 @@ export function Step2Products() {
               />
             </div>
 
-            {open && normalizedQuery.length > 0 && (
+            {open && (
               <div className="absolute z-10 mt-2 w-full overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
-                {results.length > 0 ? (
+                {!normalizedQuery && (
+                  <p className="px-4 pb-0.5 pt-3 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-slate-500">
+                    Recientes
+                  </p>
+                )}
+                {visibleProducts.length > 0 ? (
                   <ul className="max-h-72 overflow-auto">
-                    {results.map((p) => (
+                    {visibleProducts.map((p) => (
                       <li key={p.id}>
                         <button
                           type="button"
@@ -231,7 +240,7 @@ export function Step2Products() {
           </div>
         ) : (
           <>
-            <Table>
+            <Table className="min-w-[760px]">
               <TableHeader>
                 <TableRow className="bg-gray-50 hover:bg-gray-50 dark:bg-slate-800/50 dark:hover:bg-slate-800/50">
                   {ITEM_COLUMNS.map((column) => (
@@ -304,8 +313,19 @@ export function Step2Products() {
                     <TableCell className="px-3 py-3 text-sm text-gray-900 dark:text-slate-100">
                       ${item.price.toFixed(2)}
                     </TableCell>
-                    <TableCell className="px-3 py-3 text-sm text-gray-700 dark:text-slate-300">
-                      {item.discount > 0 ? `${item.discount}%` : '—'}
+                    <TableCell className="px-3 py-3">
+                      <select
+                        value={item.discount}
+                        onChange={(e) => updateItem(item.id, { discount: Number(e.target.value) })}
+                        aria-label={`Descuento para ${item.productName}`}
+                        className="h-8 cursor-pointer rounded-md border border-gray-200 bg-white px-2 text-xs text-gray-700 transition-colors hover:border-gray-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600"
+                      >
+                        {DISCOUNT_OPTIONS.map((discount) => (
+                          <option key={discount} value={discount}>
+                            {discount}%
+                          </option>
+                        ))}
+                      </select>
                     </TableCell>
                     <TableCell className="px-3 py-3 text-sm font-medium text-gray-900 dark:text-slate-100">
                       ${item.subtotal.toFixed(2)}
@@ -328,7 +348,7 @@ export function Step2Products() {
 
             {/* Totales */}
             <div className="flex justify-end border-t border-gray-200 p-6 dark:border-slate-700">
-              <div className="w-72 rounded-md border border-gray-200 bg-gray-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+              <div className="w-full rounded-md border border-gray-200 bg-gray-50 p-4 sm:w-72 dark:border-slate-700 dark:bg-slate-800/50">
                 <OrderTotalsSummary totals={t} />
               </div>
             </div>
@@ -344,7 +364,7 @@ export function Step2Products() {
       )}
 
       {/* Footer */}
-      <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
         <Button variant="ghost" onClick={prevStep} className="gap-2">
           <ArrowLeft className="h-4 w-4" />
           Volver a cliente
@@ -354,8 +374,17 @@ export function Step2Products() {
           onClick={nextStep}
           className="gap-2 bg-blue-600 hover:bg-blue-700 text-gray-50 dark:text-slate-100"
         >
-          Continuar a entrega
-          <span>→</span>
+          {products ? (
+            <>
+            Continuar a Entrega
+              <ArrowRight className="h-4 w-4" />
+            </>
+          ) : (
+            <>
+              <ShoppingCart className="h-4 w-4" />
+              Agregue productos
+            </>
+          )}
         </Button>
       </div>
 

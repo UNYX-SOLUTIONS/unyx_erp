@@ -115,7 +115,8 @@ export interface DeliveryInfo {
   contactName: string;
   contactPhone: string;
   preferredDate: string;
-  preferredTimeSlot: 'MORNING' | 'AFTERNOON' | 'EVENING';
+  preferredTimeFrom: string;
+  preferredTimeTo: string;
   notes: string;
 }
 

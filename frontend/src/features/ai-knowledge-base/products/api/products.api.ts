@@ -1,5 +1,11 @@
 import { apiClient } from '@/lib/api-client';
 import type { ApiResponse } from '@/types/api-types';
+import {
+  mapAltosaProduct,
+  mapAltosaVariant,
+  type AltosaProductDto,
+  type AltosaVariantDto,
+} from './altosa.mappers';
 import type {
   CreateProductPayload,
   CreateVariantPayload,
@@ -11,55 +17,232 @@ import type {
   VariantDto,
 } from '../types/product.types';
 
+/**
+ * Capa de datos de la sección "Productos" de la Base de conocimiento.
+ *
+ * Los productos viven en la base de datos del cliente (Altosa) y se acceden
+ * SIEMPRE a través del backend del ERP (patrón BFF):
+ *   frontend -> /api/v1/integrations/altosa/* (ERP) -> altosa-api -> DB Altosa
+ * El navegador nunca llama al API de Altosa directamente.
+ */
+const BASE = '/api/v1/integrations/altosa';
+const PAGE_SIZE = 100;
+
+interface AltosaCategoryDto {
+  id: number;
+  nombre: string;
+  subcategorias: { id: number; nombre: string }[];
+}
+
+function buildMeta(page: number, limit: number, total: number) {
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  return {
+    page,
+    limit,
+    total,
+    totalPages,
+    hasNextPage: page < totalPages,
+    hasPrevPage: page > 1,
+  };
+}
+
+async function fetchAllProducts(): Promise<AltosaProductDto[]> {
+  const all: AltosaProductDto[] = [];
+  let page = 1;
+
+  for (;;) {
+    const response = await apiClient.get<ApiResponse<AltosaProductDto[]>>(`${BASE}/products`, {
+      params: { page, pageSize: PAGE_SIZE, withVariants: 'true', active: 'true' },
+    });
+
+    all.push(...response.data.data);
+
+    const totalPages = response.data.meta?.totalPages ?? 1;
+    if (page >= totalPages) {
+      break;
+    }
+    page += 1;
+  }
+
+  return all;
+}
+
+function matchesFilters(product: ProductDto, params: ProductListParams): boolean {
+  if (params.validation && product.validation !== params.validation) {
+    return false;
+  }
+  if (params.syncStatus && product.syncStatus !== params.syncStatus) {
+    return false;
+  }
+  if (params.line) {
+    const line = params.line.toLowerCase();
+    const candidates = [product.line, product.category, product.subcategory]
+      .filter((value): value is string => Boolean(value))
+      .map((value) => value.toLowerCase());
+    if (!candidates.includes(line)) {
+      return false;
+    }
+  }
+  if (params.search) {
+    const query = params.search.toLowerCase();
+    const haystack = [
+      product.name,
+      product.sku,
+      product.category,
+      product.subcategory,
+      ...product.keywords,
+    ]
+      .filter((value): value is string => Boolean(value))
+      .join(' ')
+      .toLowerCase();
+    if (!haystack.includes(query)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function toProductDetail(dto: AltosaProductDto): ProductDetailDto {
+  const productId = String(dto.id);
+  return {
+    ...mapAltosaProduct(dto),
+    variants: (dto.variantes ?? []).map((variante, index) =>
+      mapAltosaVariant(variante, productId, index)
+    ),
+  };
+}
+
 export async function listProducts(params: ProductListParams): Promise<ApiResponse<ProductDto[]>> {
-  const response = await apiClient.get<ApiResponse<ProductDto[]>>('/api/v1/products', { params });
-  return response.data;
+  const products = (await fetchAllProducts()).map(mapAltosaProduct);
+  const filtered = products.filter((product) => matchesFilters(product, params));
+
+  const page = params.page ?? 1;
+  const limit = params.limit ?? 20;
+  const start = (page - 1) * limit;
+
+  return {
+    success: true,
+    data: filtered.slice(start, start + limit),
+    meta: buildMeta(page, limit, filtered.length),
+  };
 }
 
 export async function getProductById(id: string): Promise<ApiResponse<ProductDetailDto>> {
-  const response = await apiClient.get<ApiResponse<ProductDetailDto>>(`/api/v1/products/${id}`);
-  return response.data;
+  const response = await apiClient.get<ApiResponse<AltosaProductDto>>(`${BASE}/products/${id}`);
+  return { success: true, data: toProductDetail(response.data.data) };
+}
+
+async function resolveSubcategoryId(payload: CreateProductPayload): Promise<number> {
+  const target = (payload.subcategory ?? payload.category ?? payload.line ?? '').trim().toLowerCase();
+  if (!target) {
+    throw new Error('Indica la subcategoría para crear el producto en Altosa.');
+  }
+
+  const response = await apiClient.get<ApiResponse<AltosaCategoryDto[]>>(`${BASE}/categories`);
+  const subcategorias = response.data.data.flatMap((categoria) => categoria.subcategorias);
+
+  const match =
+    subcategorias.find((subcategoria) => subcategoria.nombre.toLowerCase() === target) ??
+    subcategorias.find((subcategoria) => subcategoria.nombre.toLowerCase().includes(target));
+
+  if (!match) {
+    throw new Error(
+      `No existe la subcategoría "${target}" en el catálogo de Altosa. Créala primero en Altosa.`
+    );
+  }
+  return match.id;
+}
+
+function variantCreateBody(payload: CreateVariantPayload) {
+  return {
+    sku: payload.sku || undefined,
+    color: payload.color || payload.name || undefined,
+    descripcion: payload.description || undefined,
+    precioUsd: payload.price ?? undefined,
+    imagenUrl: payload.imageUrl || undefined,
+  };
+}
+
+function variantUpdateBody(payload: UpdateVariantPayload) {
+  const body: Record<string, unknown> = {};
+  if (payload.sku !== undefined) {
+    body.sku = payload.sku || undefined;
+  }
+  if (payload.color !== undefined || payload.name !== undefined) {
+    body.color = payload.color || payload.name || undefined;
+  }
+  if (payload.description !== undefined) {
+    body.descripcion = payload.description || undefined;
+  }
+  if (payload.price !== undefined) {
+    body.precioUsd = payload.price ?? undefined;
+  }
+  if (payload.imageUrl !== undefined) {
+    body.imagenUrl = payload.imageUrl;
+  }
+  if (payload.isActive !== undefined) {
+    body.isActive = payload.isActive;
+  }
+  return body;
 }
 
 export async function createProduct(
   payload: CreateProductPayload
 ): Promise<ApiResponse<ProductDetailDto>> {
-  const response = await apiClient.post<ApiResponse<ProductDetailDto>>('/api/v1/products', payload);
-  return response.data;
+  const subcategoryId = await resolveSubcategoryId(payload);
+
+  const response = await apiClient.post<ApiResponse<AltosaProductDto>>(`${BASE}/products`, {
+    nombre: payload.name,
+    descripcion: payload.commercialDescription || undefined,
+    usoRecomendado: payload.description || undefined,
+    subcategoryId,
+    variantes: (payload.variants ?? []).map(variantCreateBody),
+  });
+
+  return { success: true, data: toProductDetail(response.data.data) };
 }
 
 export async function updateProduct(
   id: string,
   payload: UpdateProductPayload
 ): Promise<ApiResponse<ProductDetailDto>> {
-  const response = await apiClient.patch<ApiResponse<ProductDetailDto>>(
-    `/api/v1/products/${id}`,
-    payload
-  );
-  return response.data;
+  const body: Record<string, unknown> = {};
+  if (payload.name !== undefined) {
+    body.nombre = payload.name;
+  }
+  if (payload.commercialDescription !== undefined) {
+    body.descripcion = payload.commercialDescription;
+  }
+  if (payload.description !== undefined) {
+    body.usoRecomendado = payload.description;
+  }
+  if (payload.isActive !== undefined) {
+    body.isActive = payload.isActive;
+  }
+
+  await apiClient.patch(`${BASE}/products/${id}`, body);
+  return getProductById(id);
 }
 
 export async function deleteProduct(id: string): Promise<ApiResponse<ProductDto>> {
-  const response = await apiClient.delete<ApiResponse<ProductDto>>(`/api/v1/products/${id}`);
-  return response.data;
+  const response = await apiClient.delete<ApiResponse<AltosaProductDto>>(`${BASE}/products/${id}`);
+  return { success: true, data: mapAltosaProduct(response.data.data) };
 }
 
 export async function listVariants(productId: string): Promise<ApiResponse<VariantDto[]>> {
-  const response = await apiClient.get<ApiResponse<VariantDto[]>>(
-    `/api/v1/products/${productId}/variants`
-  );
-  return response.data;
+  const detail = await getProductById(productId);
+  return { success: true, data: detail.data.variants };
 }
 
 export async function addVariant(
   productId: string,
   payload: CreateVariantPayload
 ): Promise<ApiResponse<VariantDto>> {
-  const response = await apiClient.post<ApiResponse<VariantDto>>(
-    `/api/v1/products/${productId}/variants`,
-    payload
+  const response = await apiClient.post<ApiResponse<AltosaVariantDto>>(
+    `${BASE}/products/${productId}/variants`,
+    variantCreateBody(payload)
   );
-  return response.data;
+  return { success: true, data: mapAltosaVariant(response.data.data, productId, 0) };
 }
 
 export async function updateVariant(
@@ -67,19 +250,35 @@ export async function updateVariant(
   variantId: string,
   payload: UpdateVariantPayload
 ): Promise<ApiResponse<VariantDto>> {
-  const response = await apiClient.patch<ApiResponse<VariantDto>>(
-    `/api/v1/products/${productId}/variants/${variantId}`,
-    payload
+  const response = await apiClient.patch<ApiResponse<AltosaVariantDto>>(
+    `${BASE}/variants/${variantId}`,
+    variantUpdateBody(payload)
   );
-  return response.data;
+  return { success: true, data: mapAltosaVariant(response.data.data, productId, 0) };
 }
 
 export async function deleteVariant(
   productId: string,
   variantId: string
 ): Promise<ApiResponse<VariantDto>> {
-  const response = await apiClient.delete<ApiResponse<VariantDto>>(
-    `/api/v1/products/${productId}/variants/${variantId}`
+  const response = await apiClient.delete<ApiResponse<AltosaVariantDto>>(
+    `${BASE}/variants/${variantId}`
+  );
+  return { success: true, data: mapAltosaVariant(response.data.data, productId, 0) };
+}
+
+export async function uploadVariantImage(
+  file: File
+): Promise<ApiResponse<{ url: string; path: string }>> {
+  const formData = new FormData();
+  formData.append('file', file);
+  // Content-Type null para que axios NO serialice el FormData a JSON
+  // (el default del apiClient es application/json) y el navegador envíe
+  // multipart/form-data con su boundary automáticamente.
+  const response = await apiClient.post<ApiResponse<{ url: string; path: string }>>(
+    `${BASE}/uploads/variants`,
+    formData,
+    { headers: { 'Content-Type': null } }
   );
   return response.data;
 }

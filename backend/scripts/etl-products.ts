@@ -1,3 +1,9 @@
+/**
+ * DEPRECADO: este ETL lee la DB de Altosa por conexión directa (client-altosa)
+ * contra una tabla plana legacy. Usar en su lugar: `pnpm etl:products:api`
+ * (scripts/etl-products-api.ts) que consume altosa-api vía HTTP.
+ * Se eliminará junto con client-altosa tras validar el nuevo flujo en el VPS.
+ */
 import 'dotenv/config';
 import { PrismaClient, type KbSyncStatus, type KbValidationStatus, type Prisma } from '@prisma/client';
 import type { ProductoPlano } from 'client-altosa';

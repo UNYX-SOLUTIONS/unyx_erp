@@ -102,13 +102,18 @@ NEXT_PUBLIC_API_URL=
 FRONTEND_PORT=${FRONTEND_PORT}
 TRAEFIK_NETWORK=${TRAEFIK_NETWORK}
 SEED_ADMIN_PASSWORD=Admin123!
+ALTOSA_API_URL=https://api.altosamobiliario.com
+ALTOSA_API_KEY=
 EOF
   echo "Creado .env.deploy con secretos nuevos"
+  echo "IMPORTANTE: setea ALTOSA_API_KEY en .env.deploy con la MISMA clave de altosa_infrastructure/.env"
 else
   set_env_value PUBLIC_ORIGIN "$PUBLIC_ORIGIN"
   set_env_value PUBLIC_DOMAIN "$PUBLIC_DOMAIN"
   set_env_value TRAEFIK_NETWORK "$TRAEFIK_NETWORK"
   set_env_value FRONTEND_PORT "$FRONTEND_PORT"
+  grep -q '^ALTOSA_API_URL=' "$ENV_FILE" || printf 'ALTOSA_API_URL=https://api.altosamobiliario.com\n' >> "$ENV_FILE"
+  grep -q '^ALTOSA_API_KEY=' "$ENV_FILE" || printf 'ALTOSA_API_KEY=\n' >> "$ENV_FILE"
   echo "Reutilizando .env.deploy existente (dominio y red de Traefik actualizados)"
 fi
 

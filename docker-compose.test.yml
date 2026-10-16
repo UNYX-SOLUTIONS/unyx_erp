@@ -47,6 +47,8 @@ services:
       CORS_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:3000}
       TRUST_PROXY: "true"
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-Admin123!}
+      ALTOSA_API_URL: ${ALTOSA_API_URL:-https://api.altosamobiliario.com}
+      ALTOSA_API_KEY: ${ALTOSA_API_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy

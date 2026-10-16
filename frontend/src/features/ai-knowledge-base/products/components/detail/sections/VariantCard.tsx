@@ -1,7 +1,9 @@
 'use client';
 
+import { useRef } from 'react';
+import Image from 'next/image';
 import { Controller, type UseFormReturn } from 'react-hook-form';
-import { MoreVertical } from 'lucide-react';
+import { ImageIcon, Loader2, MoreVertical, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -11,6 +13,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Textarea } from '@/components/ui/textarea';
+import { useUploadVariantImage } from '../../../hooks/useUploadVariantImage';
+import { compressImage } from '../../../lib/compress-image';
 import { ColorInput } from '../ColorInput';
 import { CurrencyInput } from '../CurrencyInput';
 import { FormField, detailInputClassName } from '../FormField';
@@ -33,10 +37,28 @@ export function VariantCard({
   onRemove,
   onToggleActive,
 }: VariantCardProps) {
-  const { register, control, watch, formState } = form;
+  const { register, control, watch, setValue, formState } = form;
   const variant = watch(`variants.${index}`);
   const errors = formState.errors.variants?.[index];
   const variantNumber = String(index + 1).padStart(2, '0');
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadImage = useUploadVariantImage();
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    event.target.value = '';
+    if (!file) {
+      return;
+    }
+    try {
+      const optimized = await compressImage(file);
+      const response = await uploadImage.mutateAsync(optimized);
+      setValue(`variants.${index}.imageUrl`, response.data.url, { shouldDirty: true });
+    } catch {
+      // El toast de error lo maneja el hook.
+    }
+  };
 
   return (
     <div className="rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
@@ -82,6 +104,67 @@ export function VariantCard({
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FormField
+          label="Imagen de la variante"
+          className="sm:col-span-2"
+          error={errors?.imageUrl?.message}
+        >
+          <div className="flex items-start gap-4">
+            <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-md border border-gray-200 bg-gray-50 dark:border-slate-800 dark:bg-slate-800">
+              {variant?.imageUrl ? (
+                <Image
+                  src={variant.imageUrl}
+                  alt={`Imagen de ${variant.name || 'la variante'}`}
+                  fill
+                  sizes="96px"
+                  className="object-cover"
+                />
+              ) : (
+                <ImageIcon className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 text-gray-300 dark:text-slate-600" />
+              )}
+            </div>
+            <div className="flex flex-col items-start gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isBusy || uploadImage.isPending}
+                onClick={() => fileInputRef.current?.click()}
+                className="gap-1.5 border-gray-300 text-gray-700 dark:text-slate-300"
+              >
+                {uploadImage.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Upload className="h-3.5 w-3.5" />
+                )}
+                {variant?.imageUrl ? 'Cambiar imagen' : 'Subir imagen'}
+              </Button>
+              {variant?.imageUrl && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={isBusy || uploadImage.isPending}
+                  onClick={() => setValue(`variants.${index}.imageUrl`, '', { shouldDirty: true })}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  Quitar imagen
+                </Button>
+              )}
+              <p className="text-xs text-gray-500 dark:text-slate-400">
+                JPG, PNG, WEBP o GIF · máx. 10 MB (se optimiza automáticamente)
+              </p>
+            </div>
+          </div>
+        </FormField>
+
         <FormField
           label="Nombre de variante"
           required

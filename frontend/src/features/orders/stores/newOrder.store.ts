@@ -15,6 +15,7 @@ interface NewOrderState {
   customer: OrderCustomer | null;
   customers: OrderCustomer[];
   lead: OrderLead | null;
+  leads: OrderLead[];
   items: OrderItem[];
   delivery: DeliveryInfo;
 
@@ -25,6 +26,7 @@ interface NewOrderState {
   setCustomer: (customer: OrderCustomer | null) => void;
   addCustomer: (customer: OrderCustomer) => void;
   setLead: (lead: OrderLead | null) => void;
+  addLead: (lead: OrderLead) => void;
   addItem: (item: OrderItem) => void;
   updateItem: (id: string, patch: Partial<OrderItem>) => void;
   removeItem: (id: string) => void;
@@ -51,6 +53,7 @@ export const useNewOrderStore = create<NewOrderState>((set, get) => ({
   customer: null,
   customers: [],
   lead: null,
+  leads: [],
   items: [],
   delivery: { ...DEFAULT_DELIVERY },
 
@@ -61,6 +64,7 @@ export const useNewOrderStore = create<NewOrderState>((set, get) => ({
   setCustomer: (customer) => set({ customer }),
   addCustomer: (customer) => set((s) => ({ customers: [customer, ...s.customers] })),
   setLead: (lead) => set({ lead }),
+  addLead: (lead) => set((s) => ({ leads: [lead, ...s.leads] })),
 
   addItem: (item) =>
     set((s) => {
@@ -99,6 +103,7 @@ export const useNewOrderStore = create<NewOrderState>((set, get) => ({
       customer: null,
       customers: [],
       lead: null,
+      leads: [],
       items: [],
       delivery: { ...DEFAULT_DELIVERY },
     }),
