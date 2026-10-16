@@ -1,8 +1,12 @@
-import { altosaGet } from './altosa-client';
+import { altosaGet, altosaRequest } from './altosa-client';
 import type {
   AltosaActiveQuery,
+  AltosaCreateProductBody,
   AltosaDocumentsQuery,
   AltosaProductsQuery,
+  AltosaUpdateProductBody,
+  AltosaUpdateVariantBody,
+  AltosaVariantBody,
 } from './altosa-schema';
 
 export async function listProducts(query: AltosaProductsQuery) {
@@ -50,4 +54,34 @@ export async function listDocuments(query: AltosaDocumentsQuery) {
     active: true,
     includeContent: query.includeContent,
   });
+}
+
+// ---------------------------------------------------------------------------
+// Escritura (CRUD a través del API de Altosa)
+// ---------------------------------------------------------------------------
+
+export async function createProduct(input: AltosaCreateProductBody) {
+  return altosaRequest<unknown>('POST', '/api/v1/products', { body: input });
+}
+
+export async function updateProduct(id: number, input: AltosaUpdateProductBody) {
+  return altosaRequest<unknown>('PATCH', `/api/v1/products/${id}`, { body: input });
+}
+
+export async function deleteProduct(id: number) {
+  return altosaRequest<unknown>('DELETE', `/api/v1/products/${id}`);
+}
+
+export async function createVariant(productId: number, input: AltosaVariantBody) {
+  return altosaRequest<unknown>('POST', `/api/v1/products/${productId}/variants`, {
+    body: input,
+  });
+}
+
+export async function updateVariant(variantId: number, input: AltosaUpdateVariantBody) {
+  return altosaRequest<unknown>('PATCH', `/api/v1/variants/${variantId}`, { body: input });
+}
+
+export async function deleteVariant(variantId: number) {
+  return altosaRequest<unknown>('DELETE', `/api/v1/variants/${variantId}`);
 }

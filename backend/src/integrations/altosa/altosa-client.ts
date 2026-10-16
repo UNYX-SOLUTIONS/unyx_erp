@@ -27,15 +27,19 @@ function requireApiKey(): string {
  * Cliente HTTP hacia el API interno de Altosa (servicio-a-servicio).
  * Nunca se expone al frontend: el navegador solo habla con el ERP.
  */
-export async function altosaGet<T>(
+export async function altosaRequest<T>(
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
   path: string,
-  query?: Record<string, string | number | boolean | undefined>
+  options?: {
+    query?: Record<string, string | number | boolean | undefined>;
+    body?: unknown;
+  }
 ): Promise<{ data: T; meta?: PaginationMeta }> {
   const apiKey = requireApiKey();
 
   const url = new URL(path, env.ALTOSA_API_URL);
-  if (query) {
-    for (const [key, value] of Object.entries(query)) {
+  if (options?.query) {
+    for (const [key, value] of Object.entries(options.query)) {
       if (value !== undefined && value !== '') {
         url.searchParams.set(key, String(value));
       }
@@ -47,7 +51,12 @@ export async function altosaGet<T>(
 
   try {
     const response = await fetch(url, {
-      headers: { 'x-api-key': apiKey },
+      method,
+      headers: {
+        'x-api-key': apiKey,
+        ...(options?.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      },
+      ...(options?.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
       signal: controller.signal,
     });
 
@@ -73,4 +82,11 @@ export async function altosaGet<T>(
   } finally {
     clearTimeout(timeout);
   }
+}
+
+export async function altosaGet<T>(
+  path: string,
+  query?: Record<string, string | number | boolean | undefined>
+): Promise<{ data: T; meta?: PaginationMeta }> {
+  return altosaRequest<T>('GET', path, { query });
 }
