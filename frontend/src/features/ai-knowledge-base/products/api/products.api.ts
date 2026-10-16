@@ -272,9 +272,13 @@ export async function uploadVariantImage(
 ): Promise<ApiResponse<{ url: string; path: string }>> {
   const formData = new FormData();
   formData.append('file', file);
+  // Content-Type null para que axios NO serialice el FormData a JSON
+  // (el default del apiClient es application/json) y el navegador envíe
+  // multipart/form-data con su boundary automáticamente.
   const response = await apiClient.post<ApiResponse<{ url: string; path: string }>>(
     `${BASE}/uploads/variants`,
-    formData
+    formData,
+    { headers: { 'Content-Type': null } }
   );
   return response.data;
 }

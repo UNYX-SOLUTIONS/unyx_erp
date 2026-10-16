@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Textarea } from '@/components/ui/textarea';
 import { useUploadVariantImage } from '../../../hooks/useUploadVariantImage';
+import { compressImage } from '../../../lib/compress-image';
 import { ColorInput } from '../ColorInput';
 import { CurrencyInput } from '../CurrencyInput';
 import { FormField, detailInputClassName } from '../FormField';
@@ -51,7 +52,8 @@ export function VariantCard({
       return;
     }
     try {
-      const response = await uploadImage.mutateAsync(file);
+      const optimized = await compressImage(file);
+      const response = await uploadImage.mutateAsync(optimized);
       setValue(`variants.${index}.imageUrl`, response.data.url, { shouldDirty: true });
     } catch {
       // El toast de error lo maneja el hook.
@@ -157,7 +159,7 @@ export function VariantCard({
                 </Button>
               )}
               <p className="text-xs text-gray-500 dark:text-slate-400">
-                JPG, PNG, WEBP o GIF · máx. 5 MB
+                JPG, PNG, WEBP o GIF · máx. 10 MB (se optimiza automáticamente)
               </p>
             </div>
           </div>

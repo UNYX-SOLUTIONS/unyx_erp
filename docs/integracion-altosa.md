@@ -57,6 +57,49 @@ Regla de oro: **el frontend habla SOLO con el backend del ERP** (patrón BFF). E
 - Variables: `UPLOAD_DIR` (default `uploads` local, `/data/uploads` en Docker), `PUBLIC_URL_BASE` (local `http://localhost:4100`; VPS `https://altosa-test.erp.unyxsolutions.com`).
 - Para limpiar una imagen: guardar `imageUrl` vacío en la variante (el API lo convierte a `NULL`).
 
+#### ¿Y MinIO / S3 / Cloudinary?
+
+Hoy NO se usa almacenamiento de objetos: `altosa-api` guarda los archivos en el volumen Docker
+`altosa_uploads_data` (multer, disco) y los sirve como estáticos en `/uploads` vía Traefik; la
+"URL pública" se compone con `PUBLIC_URL_BASE`. Esto es suficiente porque:
+
+- Un solo cliente por backend, una sola instancia (sin réplicas que compartan storage).
+- Volumen pequeño (imágenes de variantes, cientos-miles) y ya respaldado por `backup.sh`.
+- Cero servicios extra: sin credenciales, consola ni políticas de bucket que mantener.
+
+Cuándo migrar a MinIO (S3-compatible) o Cloudinary:
+
+- Si el backend escala a varias réplicas y el storage local deja de ser compartible.
+- Si se necesitan buckets públicos/privados con URLs firmadas, versionado o lifecycle.
+- Si el equipo estandariza object storage para todos los clientes.
+
+El cambio está aislado en `src/modules/uploads/uploads-routes.ts` (y el BFF del ERP): al ser S3
+API-compatible, migrar es reemplazar el storage de multer por el SDK de MinIO/S3 y cambiar
+`PUBLIC_URL_BASE` por el dominio/endpoint del bucket; las URLs guardadas en la DB siguen siendo
+absolutas, por lo que la UI no cambia.
+
+#### ¿Es seguro exponer la URL pública? (y por qué las URLs firmadas no aplican)
+
+Las imágenes se envían a terceros (campo de Kommo, Meta, WooCommerce, catálogos, n8n), que las
+**descargan por Internet sin credenciales**. Por eso la URL debe ser pública y permanente: una URL
+firmada/tokenizada (MinIO presigned, Cloudinary signed) EXPIRA y rompería esos links guardados.
+Conclusión: MinIO/Cloudinary no cambian el hecho de que el archivo es público; cambian dónde vive.
+
+Análisis de riesgos del enfoque actual (dominio del ERP + `/uploads` estático):
+
+| Riesgo | Exposición real | Mitigación actual |
+| --- | --- | --- |
+| Descubrir el backend/arquitectura | El URL solo revela el dominio público (el mismo que ya compartes) y un nombre UUID; NO expone el API, puertos internos ni credenciales | `altosa-api` sin puertos públicos; solo la ruta `/uploads` pasa por Traefik; API key nunca viaja en URLs |
+| Enumerar/descargar imágenes ajenas | Nombres UUID v4 (no secuenciales, no adivinables) | Renombrado con `randomUUID()` en el servidor |
+| Scraping/hotlinking/abuso de ancho de banda | Bajo (es un catálogo destinado a verse) | Rate limit en Traefik sobre `/uploads` (100 req/s, burst 200) |
+| Subir archivos maliciosos | Solo usuarios autenticados del ERP pueden subir | JWT del ERP + filtro MIME (JPG/PNG/WEBP/GIF) + máx 10 MB + nombres generados por el servidor (sin path traversal) |
+| Link roto si cambia el dominio | **El riesgo práctico más real**: las URLs quedan guardadas en la DB y en sistemas externos (Kommo, WooCommerce) | Usar un `PUBLIC_URL_BASE` **estable** antes de empezar a guardar links en terceros (ver abajo) |
+
+Recomendación de dominios: para pruebas está bien `https://altosa-test.erp.unyxsolutions.com`. Antes
+de guardar URLs definitivas en Kommo/catálogos, apuntar `ALTOSA_PUBLIC_URL_BASE` a un dominio estable
+dedicado a archivos (ej. `https://files.unyxsolutions.com` o el dominio del cliente) manteniendo la
+misma ruta `/uploads` en Traefik; así la ERP puede mudarse de dominio sin romper links ya enviados.
+
 ## Despliegue (VPS)
 
 1. **Altosa (una vez / actualizaciones)**: en `/docker/altosa_infrastructure` con `ALTOSA_API_KEY` en `.env` (`openssl rand -hex 32`):
