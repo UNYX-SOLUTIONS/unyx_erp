@@ -19,6 +19,7 @@ export const variantSchema = z.object({
   colorLabel: z.string().trim().optional().or(z.literal('')),
   price: z.coerce.number().min(0, 'El precio debe ser mayor o igual a 0'),
   description: z.string().trim().optional().or(z.literal('')),
+  imageUrl: z.string().trim().optional().or(z.literal('')),
   isActive: z.boolean(),
 });
 

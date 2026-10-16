@@ -41,6 +41,7 @@ export function VariantsTab({
       colorHex: current.color || undefined,
       price: current.price,
       description: current.description || undefined,
+      imageUrl: current.imageUrl || undefined,
     });
   };
 

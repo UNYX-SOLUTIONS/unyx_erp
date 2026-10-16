@@ -46,6 +46,7 @@ function buildVariantsDefaults(product: ProductDetailDto): VariantsFormValues {
       colorLabel: variant.color ?? variant.name,
       price: variant.price ?? 0,
       description: variant.description ?? '',
+      imageUrl: variant.imageUrl ?? '',
       isActive: variant.isActive,
     })),
   };

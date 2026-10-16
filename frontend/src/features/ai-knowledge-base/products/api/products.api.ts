@@ -178,7 +178,7 @@ function variantUpdateBody(payload: UpdateVariantPayload) {
     body.precioUsd = payload.price ?? undefined;
   }
   if (payload.imageUrl !== undefined) {
-    body.imagenUrl = payload.imageUrl || undefined;
+    body.imagenUrl = payload.imageUrl;
   }
   if (payload.isActive !== undefined) {
     body.isActive = payload.isActive;
@@ -265,4 +265,16 @@ export async function deleteVariant(
     `${BASE}/variants/${variantId}`
   );
   return { success: true, data: mapAltosaVariant(response.data.data, productId, 0) };
+}
+
+export async function uploadVariantImage(
+  file: File
+): Promise<ApiResponse<{ url: string; path: string }>> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await apiClient.post<ApiResponse<{ url: string; path: string }>>(
+    `${BASE}/uploads/variants`,
+    formData
+  );
+  return response.data;
 }

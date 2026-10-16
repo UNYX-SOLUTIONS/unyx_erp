@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
+import multer from 'multer';
 import { Prisma } from '@prisma/client';
 import { ZodError } from 'zod';
 import { ApiError } from '../utils/api-error';
@@ -14,6 +15,14 @@ export function errorHandler(
 ): void {
   if (err instanceof ApiError) {
     sendError(res, err.statusCode, err.message, err.code, err.details);
+    return;
+  }
+  if (err instanceof multer.MulterError) {
+    const message =
+      err.code === 'LIMIT_FILE_SIZE'
+        ? 'La imagen supera el tamaño máximo permitido (5 MB).'
+        : `Error al subir el archivo: ${err.message}`;
+    sendError(res, StatusCodes.BAD_REQUEST, message, 'UPLOAD_ERROR');
     return;
   }
   if (err instanceof ZodError) {

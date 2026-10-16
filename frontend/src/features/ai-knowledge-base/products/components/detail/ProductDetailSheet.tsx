@@ -115,6 +115,7 @@ export function ProductDetailSheet() {
             colorHex: variant.color || undefined,
             price: variant.price,
             description: variant.description || undefined,
+            imageUrl: variant.imageUrl ?? '',
           },
         })
       )

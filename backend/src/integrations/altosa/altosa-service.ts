@@ -1,4 +1,4 @@
-import { altosaGet, altosaRequest } from './altosa-client';
+import { altosaGet, altosaRequest, altosaUpload, type AltosaUploadFile } from './altosa-client';
 import type {
   AltosaActiveQuery,
   AltosaCreateProductBody,
@@ -84,4 +84,8 @@ export async function updateVariant(variantId: number, input: AltosaUpdateVarian
 
 export async function deleteVariant(variantId: number) {
   return altosaRequest<unknown>('DELETE', `/api/v1/variants/${variantId}`);
+}
+
+export async function uploadVariantImage(file: AltosaUploadFile) {
+  return altosaUpload<unknown>('/api/v1/uploads/variants', file);
 }

@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
+import { ApiError } from '../../utils/api-error';
 import { asyncHandler } from '../../utils/async-handler';
 import { sendSuccess } from '../../utils/api-response';
 import * as altosaService from './altosa-service';
@@ -94,4 +95,12 @@ export const updateVariant = asyncHandler(async (req: Request, res: Response) =>
 export const deleteVariant = asyncHandler(async (req: Request, res: Response) => {
   const { data } = await altosaService.deleteVariant(Number(req.params.id));
   sendSuccess(res, data);
+});
+
+export const uploadVariantImage = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.file) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Archivo requerido (campo "file").', 'UPLOAD_MISSING_FILE');
+  }
+  const { data } = await altosaService.uploadVariantImage(req.file);
+  sendSuccess(res, data, undefined, StatusCodes.CREATED);
 });
