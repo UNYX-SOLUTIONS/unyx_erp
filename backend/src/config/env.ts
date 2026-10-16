@@ -14,6 +14,11 @@ const envSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((value) => value === 'true'),
+  ALTOSA_API_URL: z.string().url().default('http://localhost:4100'),
+  ALTOSA_API_KEY: z.preprocess(
+    (value) => (value === '' || value === undefined ? undefined : value),
+    z.string().min(16).optional()
+  ),
 });
 
 const parsed = envSchema.safeParse(process.env);

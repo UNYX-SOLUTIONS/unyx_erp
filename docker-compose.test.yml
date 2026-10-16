@@ -47,11 +47,14 @@ services:
       CORS_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:3000}
       TRUST_PROXY: "true"
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-Admin123!}
+      ALTOSA_API_URL: ${ALTOSA_API_URL:-http://altosa-api:4100}
+      ALTOSA_API_KEY: ${ALTOSA_API_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - unyx-test
+      - altosa-backend
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4000/api/v1/health > /dev/null 2>&1 || exit 1"]
       interval: 15s
@@ -96,6 +99,11 @@ networks:
     driver: bridge
   erp-front:
     name: ${TRAEFIK_NETWORK:-unyx-workspace-front}
+    external: true
+  # Red compartida con la infraestructura del cliente Altosa (altosa-api, n8n, postgres).
+  # El backend del ERP la necesita para resolver http://altosa-api:4100.
+  altosa-backend:
+    name: altosa_backend
     external: true
 
 volumes:
