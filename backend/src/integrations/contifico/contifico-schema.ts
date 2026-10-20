@@ -5,6 +5,7 @@ export const contificoSyncBodySchema = z.object({
   pushToAltosa: z.boolean().optional().default(true),
   onlySku: z.string().trim().min(1).max(80).optional(),
   matchByName: z.boolean().optional().default(false),
+  prune: z.boolean().optional().default(false),
 });
 
 export const contificoProductIdParamSchema = z.object({

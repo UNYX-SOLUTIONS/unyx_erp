@@ -7,7 +7,12 @@
  *   pnpm sync:contifico -- --skip-altosa
  *   pnpm sync:contifico -- --only 613
  *   pnpm sync:contifico -- --match-by-name   (migración inicial desde el ETL)
+ *   pnpm sync:contifico -- --prune           (desactiva lo que ya no está en Contifico)
+ *   pnpm sync:contifico -- --dry-run --match-by-name --prune
  *   pnpm sync:contifico -- --export ../altosa_infrastructure/backend/data/contifico-products.json
+ *
+ * --prune no borra filas: marca isActive=false en la DB local y desactiva
+ * los SKUs en Altosa. Úsalo primero con --dry-run.
  */
 import 'dotenv/config';
 import { disconnectDatabase } from '../src/config/database';
@@ -42,20 +47,32 @@ async function main(): Promise<void> {
     onlySku: readOption('only'),
     exportPath: readOption('export'),
     matchByName: process.argv.includes('--match-by-name'),
+    prune: process.argv.includes('--prune'),
   });
 
   console.log(JSON.stringify(counters, null, 2));
   console.log(
     `\nContifico -> ERP: ${counters.products.created} creados, ${counters.products.updated} actualizados, ` +
-      `${counters.products.skipped} omitidos (${counters.products.fetched} leídos).`
+      `${counters.products.skipped} omitidos, ${counters.products.pruned} desactivados por reconciliación ` +
+      `(${counters.products.fetched} leídos).`
   );
   if (counters.altosa.configured) {
     console.log(
-      `ERP -> Altosa: ${counters.altosa.pushed} enviados, ${counters.altosa.failed} fallidos.` +
+      `ERP -> Altosa: ${counters.altosa.pushed} enviados, ${counters.altosa.failed} fallidos, ` +
+        `${counters.altosa.deactivatedVariants} variantes y ${counters.altosa.deactivatedProducts} productos desactivados, ` +
+        `${counters.altosa.deactivationFailed} SKUs no desactivados.` +
         (counters.altosa.error ? ` Detalle: ${counters.altosa.error}` : '')
     );
   } else {
     console.log('Altosa no está configurado (ALTOSA_API_KEY); se omitió el push.');
+  }
+  if (counters.dryRun && counters.products.pruned > 0) {
+    console.log(
+      'Dry-run: no se modificó nada. Si el conteo de desactivados es correcto, ejecuta sin --dry-run.'
+    );
+  }
+  if (counters.prunedSkuSample?.length) {
+    console.log(`Muestra de SKUs a desactivar: ${counters.prunedSkuSample.join(', ')}`);
   }
   if (counters.exportedTo) {
     console.log(`Payload de Altosa exportado en: ${counters.exportedTo}`);

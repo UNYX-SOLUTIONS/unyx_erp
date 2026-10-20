@@ -26,6 +26,7 @@ export const sync = asyncHandler(async (req: Request, res: Response) => {
     pushToAltosa: body.pushToAltosa,
     onlySku: body.onlySku,
     matchByName: body.matchByName,
+    prune: body.prune,
   });
   sendSuccess(res, counters);
 });

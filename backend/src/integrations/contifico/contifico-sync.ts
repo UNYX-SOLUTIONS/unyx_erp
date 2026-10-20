@@ -10,7 +10,11 @@ import type {
 import { prisma } from '../../config/database';
 import { env } from '../../config/env';
 import { logger } from '../../config/logger';
-import { syncProducts as syncAltosaProducts } from '../altosa/altosa-sync-client';
+import { ApiError } from '../../utils/api-error';
+import {
+  deactivateProductsBySku as deactivateAltosaProductsBySku,
+  syncProducts as syncAltosaProducts,
+} from '../altosa/altosa-sync-client';
 import type { AltosaSyncProduct } from '../altosa/altosa-schema';
 import { fetchAllContificoProducts, fetchContificoCategories } from './contifico-catalog';
 import { mapContificoProduct } from './contifico-mappers';
@@ -23,6 +27,7 @@ import type {
 
 const DEFAULT_COMPANY_TAX_ID = '0000000000001';
 const ALTOSA_BATCH_SIZE = 50;
+const ALTOSA_DEACTIVATE_BATCH_SIZE = 200;
 
 type LocalProductWithVariants = KbProduct & { variants: KbProductVariant[] };
 
@@ -310,6 +315,33 @@ async function pushToAltosa(
   }
 }
 
+async function deactivateAltosaSkus(
+  skus: string[],
+  counters: ContificoSyncCounters
+): Promise<void> {
+  if (!env.ALTOSA_API_KEY || skus.length === 0) {
+    return;
+  }
+
+  const unique = Array.from(new Set(skus.filter((sku) => sku.trim().length > 0)));
+  for (let index = 0; index < unique.length; index += ALTOSA_DEACTIVATE_BATCH_SIZE) {
+    const batch = unique.slice(index, index + ALTOSA_DEACTIVATE_BATCH_SIZE);
+    try {
+      const response = await deactivateAltosaProductsBySku(batch);
+      counters.altosa.deactivatedVariants += response.data.variantsDeactivated ?? 0;
+      counters.altosa.deactivatedProducts += response.data.productsDeactivated ?? 0;
+    } catch (error) {
+      counters.altosa.deactivationFailed += batch.length;
+      counters.altosa.error =
+        error instanceof Error ? error.message : 'Error desconocido desactivando Altosa';
+      logger.warn(
+        { err: error, batchSize: batch.length },
+        'No se pudo desactivar un lote de SKUs en Altosa'
+      );
+    }
+  }
+}
+
 /**
  * Sincroniza un producto local (después de un CRUD del ERP) hacia Altosa.
  * Es best-effort: si Altosa falla, el producto local queda marcado como
@@ -358,14 +390,31 @@ export async function syncContificoCatalog(
   const dryRun = options.dryRun ?? false;
   const shouldPushToAltosa = options.pushToAltosa ?? true;
   const matchByName = options.matchByName ?? false;
+  const prune = options.prune ?? false;
+
+  if (prune && options.onlySku) {
+    throw new ApiError(
+      400,
+      'No se puede combinar --prune con --only. La reconciliación debe correr sobre el catálogo completo.',
+      'CONTIFICO_PRUNE_ONLY_CONFLICT'
+    );
+  }
+
   const counters: ContificoSyncCounters = {
     source: 'contifico',
     dryRun,
     durationMs: 0,
     categoriesFetched: 0,
-    products: { fetched: 0, created: 0, updated: 0, skipped: 0 },
+    products: { fetched: 0, created: 0, updated: 0, skipped: 0, pruned: 0 },
     variants: { created: 0, updated: 0, skipped: 0 },
-    altosa: { configured: Boolean(env.ALTOSA_API_KEY), pushed: 0, failed: 0 },
+    altosa: {
+      configured: Boolean(env.ALTOSA_API_KEY),
+      pushed: 0,
+      failed: 0,
+      deactivatedVariants: 0,
+      deactivatedProducts: 0,
+      deactivationFailed: 0,
+    },
   };
 
   const companyId = await resolveSyncCompanyId();
@@ -388,6 +437,8 @@ export async function syncContificoCatalog(
   counters.products.fetched = products.length;
 
   const altosaItems: AltosaSyncProduct[] = [];
+  const touchedProductIds = new Set<string>();
+  const deactivateSkus = new Set<string>();
 
   for (const product of products) {
     try {
@@ -398,6 +449,9 @@ export async function syncContificoCatalog(
         dryRun,
         matchByName
       );
+      if (local) {
+        touchedProductIds.add(local.id);
+      }
       altosaItems.push(
         dryRun || !local
           ? buildAltosaPayloadFromCanonical(product)
@@ -412,12 +466,80 @@ export async function syncContificoCatalog(
     }
   }
 
+  if (prune) {
+    if (products.length === 0) {
+      logger.warn('Se omitió la reconciliación: Contifico devolvió 0 productos.');
+    } else if (counters.products.skipped > 0) {
+      logger.warn(
+        { skipped: counters.products.skipped },
+        'Se omitió la reconciliación para no desactivar productos por errores de sincronización.'
+      );
+    } else {
+      const touched = Array.from(touchedProductIds);
+      const candidates = await prisma.kbProduct.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          ...(touched.length > 0 ? { id: { notIn: touched } } : {}),
+        },
+        include: { variants: { where: { deletedAt: null } } },
+      });
+
+      counters.products.pruned = candidates.length;
+
+      for (const candidate of candidates) {
+        const candidateSkus =
+          candidate.variants.length > 0
+            ? candidate.variants.map((variant) => variant.sku)
+            : [candidate.sku];
+        for (const sku of candidateSkus) {
+          deactivateSkus.add(sku);
+        }
+
+        if (!dryRun) {
+          await prisma.$transaction([
+            prisma.kbProductVariant.updateMany({
+              where: { productId: candidate.id, deletedAt: null },
+              data: { isActive: false },
+            }),
+            prisma.kbProduct.update({
+              where: { id: candidate.id },
+              data: {
+                isActive: false,
+                syncStatus: 'SIN_SINCRONIZAR' as KbSyncStatus,
+                lastSyncedAt: new Date(),
+              },
+            }),
+          ]);
+        }
+      }
+
+      counters.prunedSkuSample = Array.from(deactivateSkus).slice(0, 20);
+      logger.info(
+        {
+          pruned: counters.products.pruned,
+          sampleSkus: counters.prunedSkuSample,
+          dryRun,
+        },
+        'Reconciliación de productos que ya no están en Contifico'
+      );
+    }
+  }
+
   if (!dryRun && shouldPushToAltosa && altosaItems.length > 0) {
     await pushToAltosa(altosaItems, counters, matchByName);
   }
 
+  if (!dryRun && shouldPushToAltosa && deactivateSkus.size > 0) {
+    await deactivateAltosaSkus(Array.from(deactivateSkus), counters);
+  }
+
   if (options.exportPath) {
-    const payload = { generatedAt: new Date().toISOString(), items: altosaItems };
+    const payload = {
+      generatedAt: new Date().toISOString(),
+      items: altosaItems,
+      deactivateSkus: Array.from(deactivateSkus),
+    };
     await mkdir(dirname(options.exportPath), { recursive: true });
     await writeFile(options.exportPath, JSON.stringify(payload, null, 2), 'utf8');
     counters.exportedTo = options.exportPath;

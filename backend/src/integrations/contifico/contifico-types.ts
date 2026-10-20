@@ -162,6 +162,11 @@ export interface ContificoSyncOptions {
    * el catálogo que ya venía del ETL de Altosa.
    */
   matchByName?: boolean;
+  /**
+   * Reconciliación: desactiva en la DB local y en Altosa los productos que
+   * ya no vinieron en el catálogo de Contifico. No borra filas.
+   */
+  prune?: boolean;
 }
 
 export interface ContificoSyncCounters {
@@ -174,6 +179,7 @@ export interface ContificoSyncCounters {
     created: number;
     updated: number;
     skipped: number;
+    pruned: number;
   };
   variants: {
     created: number;
@@ -184,7 +190,11 @@ export interface ContificoSyncCounters {
     configured: boolean;
     pushed: number;
     failed: number;
+    deactivatedVariants: number;
+    deactivatedProducts: number;
+    deactivationFailed: number;
     error?: string;
   };
+  prunedSkuSample?: string[];
   exportedTo?: string;
 }

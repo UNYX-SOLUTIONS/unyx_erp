@@ -17,3 +17,17 @@ export async function syncProducts(
     timeoutMs: 60_000,
   });
 }
+
+export interface AltosaDeactivateResult {
+  variantsDeactivated: number;
+  productsDeactivated: number;
+}
+
+export async function deactivateProductsBySku(
+  skus: string[]
+): Promise<{ data: AltosaDeactivateResult }> {
+  return altosaRequest<AltosaDeactivateResult>('POST', '/api/v1/sync/products/deactivate', {
+    body: { skus },
+    timeoutMs: 60_000,
+  });
+}

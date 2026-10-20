@@ -94,16 +94,19 @@ Sin cambios nuevos: usa el `API_KEY` existente para autenticar al ERP.
    pnpm --dir backend sync:contifico -- --skip-altosa
    pnpm --dir backend sync:contifico -- --only 613
    pnpm --dir backend sync:contifico -- --match-by-name
+   pnpm --dir backend sync:contifico -- --match-by-name --prune
    ```
 
-   > **Migración inicial:** si la DB local ya tiene productos del ETL de Altosa
-   > (`ALT-<id>`) y quieres conservar sus descripciones comerciales/keywords,
-   > corre la primera sincronización con `--match-by-name`. Así se enlazan por
-   > nombre en lugar de crear duplicados y la variante principal adopta el
-   > código real de Contifico. Después puedes sincronizar sin el flag.
+   > **Migración inicial recomendada** (DB con catálogo viejo del ETL):
    >
-   > Los productos heredados que no se enlacen por nombre quedan visibles con
-   > SKU `ALT-*`; puedes buscarlos y desactivarlos desde la UI si ya no aplican.
+   > ```bash
+   > pnpm --dir backend sync:contifico -- --dry-run --match-by-name --prune
+   > pnpm --dir backend sync:contifico -- --match-by-name --prune
+   > ```
+   >
+   > Así se enlazan por nombre los productos existentes, la variante principal
+   > adopta el `codigo` real de Contifico y lo que ya no existe se desactiva en
+   > lugar de quedar duplicado o viejo.
 
 3. El frontend no cambia: sigue leyendo el BFF de Altosa. Cuando termine la
    sincronización, los productos aparecerán en **Bodega → Inventario** y en
@@ -125,7 +128,56 @@ pnpm seed:products -- data/contifico-products.json
 pnpm seed:products -- data/contifico-products.json --match-by-name
 ```
 
-El seed procesa el JSON en lotes de 100 y es idempotente por SKU.
+El seed procesa el JSON en lotes de 100 y es idempotente por SKU. Si el export
+incluye `deactivateSkus`, el seed también desactiva esos SKUs en Altosa.
+
+## Productos existentes, duplicados y productos viejos
+
+**No se recomienda borrar y reinsertar todo.** Un `TRUNCATE`/delete masivo:
+
+- pierde `commercialDescription`, `keywords`, validación y demás enriquecimiento
+  del ERP/IA;
+- cambia los IDs de producto y variante, rompiendo referencias de Altosa,
+  embeddings y enlaces internos;
+- no es atómico: si falla a mitad del proceso, deja el catálogo incompleto.
+
+La estrategia implementada es **upsert + reconciliación**, que es el equivalente
+seguro a "reemplazar el catálogo":
+
+1. **Enlazar** lo existente:
+   - primero por `sourceRowKey = contifico:<id>`;
+   - luego por SKU (`codigo`);
+   - con `--match-by-name`, por nombre (migración inicial desde el ETL).
+
+2. **Actualizar/crear** los productos que vienen de Contifico.
+
+3. **Reconciliar** con `--prune`:
+   - los productos locales que no vinieron en el catálogo de Contifico se marcan
+     `isActive = false` (no se borran);
+   - sus SKUs se envían a `POST /api/v1/sync/products/deactivate` de Altosa,
+     que desactiva las variantes y el producto si se queda sin variantes activas;
+   - la UI de Altosa filtra `active=true`, así que los productos viejos
+     desaparecen de la vista sin perder la fila ni el historial.
+
+Seguridades de `--prune`:
+
+- Se niega a combinarse con `--only`.
+- No hace nada si Contifico devuelve 0 productos.
+- No hace nada si hubo productos omitidos por error durante el upsert.
+- `--dry-run --prune` muestra cuántos se desactivarían y una muestra de SKUs.
+  Para la lista completa, usa `--export`; el JSON incluye `deactivateSkus`.
+- Si un producto reaparece en Contifico, la siguiente sincronización lo vuelve a
+  activar con sus datos actuales.
+
+Después de la migración inicial:
+
+```bash
+# Reconciliación normal (recomendada si Contifico es la única fuente):
+pnpm --dir backend sync:contifico -- --prune
+
+# Solo actualizar/crear, sin desactivar nada:
+pnpm --dir backend sync:contifico
+```
 
 ## Endpoints
 
@@ -133,7 +185,7 @@ El seed procesa el JSON en lotes de 100 y es idempotente por SKU.
 
 | Método | Ruta | Uso |
 |---|---|---|
-| `POST` | `/api/v1/integrations/contifico/sync` | Importa Contifico → DB local → Altosa. Body opcional: `{ "dryRun": false, "pushToAltosa": true, "onlySku": "613", "matchByName": false }` |
+| `POST` | `/api/v1/integrations/contifico/sync` | Importa Contifico → DB local → Altosa. Body opcional: `{ "dryRun": false, "pushToAltosa": true, "onlySku": "613", "matchByName": false, "prune": false }` |
 | `GET` | `/api/v1/integrations/contifico/status` | Indica si la API key está configurada (sin exponerla) |
 | `GET` | `/api/v1/integrations/contifico/products?search=&limit=` | Diagnóstico: lee productos directo de Contifico |
 | `GET` | `/api/v1/integrations/contifico/products/:id` | Diagnóstico: un producto de Contifico |
@@ -144,6 +196,7 @@ El seed procesa el JSON en lotes de 100 y es idempotente por SKU.
 | Método | Ruta | Uso |
 |---|---|---|
 | `POST` | `/api/v1/sync/products` | Upsert masivo idempotente por SKU de variante. Body: `{ "items": [...] }`, máx. 100 ítems |
+| `POST` | `/api/v1/sync/products/deactivate` | Desactiva variantes/productos por SKU (reconciliación). Body: `{ "skus": ["..."] }`, máx. 500 SKUs |
 
 Ejemplo de ítem:
 
