@@ -15,6 +15,7 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatLastUpdate } from '@/lib/formatters';
 import { useAddVariant } from '../../hooks/useAddVariant';
+import { useCreateProduct } from '../../hooks/useCreateProduct';
 import { useDeleteVariant } from '../../hooks/useDeleteVariant';
 import { useProduct } from '../../hooks/useProduct';
 import { useProductDetail } from '../../hooks/useProductDetail';
@@ -31,27 +32,33 @@ import { ProductDetailTabs, type DetailTab } from './ProductDetailTabs';
 
 export function ProductDetailSheet() {
   const isOpen = useProductDetailStore((state) => state.isOpen);
+  const mode = useProductDetailStore((state) => state.mode);
   const productId = useProductDetailStore((state) => state.productId);
   const close = useProductDetailStore((state) => state.close);
+  const isCreate = mode === 'create';
+
   const [activeTab, setActiveTab] = useState<DetailTab>('general');
   const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
 
-  const { data, isLoading } = useProduct(isOpen ? productId : null);
-  const product = data?.data ?? null;
+  const { data, isLoading } = useProduct(isOpen && !isCreate ? productId : null);
+  const product = isCreate ? null : (data?.data ?? null);
 
+  const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct(productId ?? '');
   const addVariantMutation = useAddVariant(productId ?? '');
   const updateVariantMutation = useUpdateVariant(productId ?? '');
   const deleteVariantMutation = useDeleteVariant(productId ?? '');
 
-  const { generalForm, variantsForm, variantsArray, isDirty, resetAll } =
-    useProductDetail(product);
+  const { generalForm, variantsForm, variantsArray, isDirty, resetAll } = useProductDetail(
+    product,
+    isCreate
+  );
 
   useEffect(() => {
     if (isOpen) {
       setActiveTab('general');
     }
-  }, [isOpen, productId]);
+  }, [isOpen, productId, mode]);
 
   const activeTabIsDirty =
     activeTab === 'general'
@@ -60,8 +67,11 @@ export function ProductDetailSheet() {
         ? variantsForm.formState.isDirty
         : false;
 
-  const isSaving =
-    activeTab === 'variants' ? updateVariantMutation.isPending : updateProduct.isPending;
+  const isSaving = isCreate
+    ? createProduct.isPending
+    : activeTab === 'variants'
+      ? updateVariantMutation.isPending
+      : updateProduct.isPending;
 
   const requestClose = () => {
     if (isDirty) {
@@ -76,6 +86,27 @@ export function ProductDetailSheet() {
     setConfirmDiscardOpen(false);
     close();
   };
+
+  const handleCreate = generalForm.handleSubmit((values) => {
+    createProduct.mutate(
+      {
+        name: values.name,
+        sku: values.sku,
+        line: values.line,
+        category: values.category,
+        subcategory: values.subcategory,
+        commercialDescription: values.commercialDescription,
+        keywords: values.keywords,
+        isActive: values.isActive,
+      },
+      {
+        onSuccess: () => {
+          resetAll();
+          close();
+        },
+      }
+    );
+  });
 
   const handleSaveGeneral = generalForm.handleSubmit((values) => {
     if (!productId) {
@@ -127,6 +158,10 @@ export function ProductDetailSheet() {
   });
 
   const handleSave = () => {
+    if (isCreate) {
+      void handleCreate();
+      return;
+    }
     if (activeTab === 'variants') {
       void handleSaveVariants();
       return;
@@ -150,7 +185,21 @@ export function ProductDetailSheet() {
           aria-describedby={undefined}
           className="w-full gap-0 p-0 sm:max-w-3xl"
         >
-          {isLoading && !product ? (
+          {isCreate ? (
+            <>
+              <ProductDetailHeader product={null} onClose={requestClose} />
+              <div className="flex-1 overflow-y-auto bg-white dark:bg-slate-900 px-6 py-6">
+                <GeneralTab form={generalForm} />
+              </div>
+              <ProductDetailFooter
+                canSave
+                isSaving={isSaving}
+                saveLabel="Crear producto"
+                onCancel={requestClose}
+                onSave={handleSave}
+              />
+            </>
+          ) : isLoading && !product ? (
             <div className="flex-1 space-y-4 px-6 py-6">
               <Skeleton className="h-7 w-1/3" />
               <Skeleton className="h-4 w-1/2" />

@@ -11,6 +11,25 @@ const REQUIRED_PATHS = [
   'backend/node_modules/express/package.json',
 ];
 
+// Next dev en Windows falla con EPERM si quedó un `.next/standalone` de un
+// build previo (contiene node_modules enlazados que bloquean el borrado de
+// `.next`). Best-effort: se elimina antes de dev/build; los builds lo regeneran.
+function cleanStaleNextStandalone() {
+  const standalone = 'frontend/.next/standalone';
+  if (!existsSync(standalone)) {
+    return;
+  }
+  try {
+    rmSync(standalone, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+    console.log('[ensure-deps] Limpiado frontend/.next/standalone (residuo de un build previo)');
+  } catch (error) {
+    console.warn(`[ensure-deps] No se pudo limpiar frontend/.next/standalone: ${error.message}`);
+    console.warn('[ensure-deps] Si next dev falla con EPERM, renombra o elimina frontend/.next manualmente.');
+  }
+}
+
+cleanStaleNextStandalone();
+
 function isDirectory(path) {
   try {
     return statSync(path).isDirectory();
