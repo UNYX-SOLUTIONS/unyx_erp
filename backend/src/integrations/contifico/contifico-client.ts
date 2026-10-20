@@ -119,3 +119,7 @@ export function contificoPost<T>(path: string, body: unknown): Promise<T> {
 export function contificoPatch<T>(path: string, body: unknown): Promise<T> {
   return contificoRequest<T>('PATCH', path, { body });
 }
+
+export function contificoPut<T>(path: string, body: unknown): Promise<T> {
+  return contificoRequest<T>('PUT', path, { body });
+}

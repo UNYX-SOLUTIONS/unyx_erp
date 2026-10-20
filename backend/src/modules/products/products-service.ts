@@ -12,7 +12,11 @@ import {
   updateContificoProductFromErp,
 } from '../../integrations/contifico/contifico-service';
 import { syncLocalProductToAltosa } from '../../integrations/contifico/contifico-sync';
-import { resolveContificoSku, toNumber } from '../../integrations/contifico/contifico-mappers';
+import {
+  extractContificoImageUrl,
+  resolveContificoSku,
+  toNumber,
+} from '../../integrations/contifico/contifico-mappers';
 import type {
   CreateProductInput,
   CreateVariantInput,
@@ -239,7 +243,7 @@ export async function createProduct(input: CreateProductInput): Promise<ProductD
   const contificoStock = contificoProduct
     ? Math.round(toNumber(contificoProduct.cantidad_stock) ?? 0)
     : 0;
-  const contificoImage = contificoProduct?.imagen?.trim() || null;
+  const contificoImage = extractContificoImageUrl(contificoProduct?.imagen);
 
   const product = await prisma.$transaction(async (tx) => {
     const created = await tx.kbProduct.create({
@@ -596,7 +600,6 @@ export async function updateVariant(
     await updateContificoProductFromErp(contificoId, {
       price: input.price,
       description: input.description,
-      imageUrl: input.imageUrl,
       isActive: input.isActive,
     });
   }

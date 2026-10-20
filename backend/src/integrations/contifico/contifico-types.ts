@@ -40,7 +40,7 @@ export interface ContificoProductDto {
   cantidad_stock: string | number | null;
   estado: string | null;
   pvp_manual: boolean | null;
-  imagen: string | null;
+  imagen: unknown;
   tipo: string | null;
   tipo_producto: string | null;
   fecha_creacion: string | null;
@@ -149,7 +149,6 @@ export interface ContificoUpdateProductInput {
   codigoBarra?: string | null;
   porcentajeIva?: number | null;
   minimo?: number | null;
-  imagen?: string | null;
 }
 
 export interface ContificoSyncOptions {

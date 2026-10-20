@@ -6,9 +6,12 @@
 relacional local y replica el catálogo hacia la base de conocimiento de Altosa
 (usada por el asistente IA).
 
+Referencia usada para el CRUD: [Contifico API v2](https://api.contifico.com/sistema/api/v2/documentacion/),
+tag **Producto** (`POST`, `GET`, `PUT`; no hay `DELETE`).
+
 ```
                         ┌──────────────────────────────┐
-                        │ Contifico (API v1)           │
+                        │ Contifico (API v2)           │
                         │ productos + stock + precios  │
                         └──────────────┬───────────────┘
                                        │ GET /producto, /categoria
@@ -51,7 +54,7 @@ Reglas:
 ### ERP (`unyx_erp/backend/.env`)
 
 ```env
-CONTIFICO_API_URL=https://api.contifico.com/sistema/api/v1
+CONTIFICO_API_URL=https://api.contifico.com/sistema/api/v2
 CONTIFICO_API_KEY=<api key de Contifico>
 CONTIFICO_API_TOKEN=<pos token opcional>
 
@@ -207,22 +210,43 @@ ahora es el orquestador: usa el servicio de productos del ERP para escribir
 primero en Contifico, luego en la DB local y finalmente en Altosa. Cada
 operación se propaga en este orden:
 
-1. **Crear** → se crea en Contifico (código, nombre, categoría, `pvp1` inicial),
-   luego en la DB local y en Altosa.
-2. **Editar producto** → nombre, descripción/categoría, estado e imagen se
-   actualizan en Contifico; después en la DB local y Altosa. Los campos
-   `keywords` y `subcategory` son enriquecimiento del ERP/IA.
-3. **Editar variante principal** → precio, descripción e imagen se actualizan en
-   Contifico (`pvp1`, `descripcion`, `imagen`). El stock **no** se edita desde el
-   ERP: viene de Contifico.
-4. **Eliminar** → se desactiva en Contifico (`estado = I`), se marca inactivo en
-   local y en Altosa. Contifico no expone borrado físico de productos.
+1. **Crear** → `POST /producto/` en Contifico (código, nombre, categoría,
+   `pvp1` inicial), luego en la DB local y en Altosa.
+2. **Editar producto** → `PUT /producto/{id}` en Contifico (nombre, descripción,
+   categoría y estado); después en la DB local y Altosa. Los campos `keywords`
+   y `subcategory` son enriquecimiento del ERP/IA.
+3. **Editar variante principal** → precio y descripción se actualizan en
+   Contifico (`pvp1`, `descripcion`). El stock **no** se edita desde el ERP:
+   viene de Contifico.
+4. **Eliminar** → no existe `DELETE` en Contifico v2: se desactiva con
+   `PUT /producto/{id}` y `estado = I`; se marca inactivo en local y Altosa.
+
+### Detalles del CRUD v2
+
+- `POST /api/v2/producto/`: crea. Campos obligatorios: `codigo`, `nombre`,
+  `minimo`, `pvp1`, `estado`. Se envía además `pvp_manual: true` cuando
+  `pvp1 = 0`.
+- `GET /api/v2/producto/{id}`: obtiene un producto.
+- `PUT /api/v2/producto/{id}`: actualiza. Es un reemplazo completo, así que el
+  cliente primero lee el producto actual y reenvía los campos mínimos más los
+  cambios; no borra precios 2-4, cuentas, marca, costo máximo, lead time, etc.
+- `GET /api/v2/producto/`: lista paginada de 100. Se consultan estados `A` e
+  `I` para propagar desactivaciones.
+- La imagen se mantiene en la DB local y Altosa; no se actualiza desde el ERP
+  porque su API v2 espera un objeto `Foto`, no una URL plana. En el `PUT` se
+  reenvían la imagen y `cantidad_stock` actuales tal como los devolvió Contifico
+  para que el reemplazo completo no los borre. El stock se mueve con
+  movimientos de inventario, no desde la edición del producto.
+- Si se configura `CONTIFICO_API_URL` con `/api/v1`, el cliente usa `PATCH`
+  parcial para actualizar (compatibilidad).
 
 ### Límites conocidos (fase 1)
 
 - Un producto de Contifico se representa como **un producto + una variante
   principal "Estándar"**. `detalle_variantes` de Contifico todavía no se expande
-  a variantes múltiples.
+  a variantes múltiples; el `PUT` v2 no reenvía `variantes`/`detalle_variantes`,
+  así que editar desde el ERP un producto que ya tenga variantes en Contifico
+  queda pendiente.
 - Las variantes adicionales creadas en el ERP se guardan en local/Altosa, pero
   no se crean en Contifico (su API de variantes es de atributos, no de SKUs
   vendibles). La variante principal no se puede borrar ni cambiar de SKU desde

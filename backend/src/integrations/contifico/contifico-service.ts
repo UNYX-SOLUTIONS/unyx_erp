@@ -32,7 +32,6 @@ export interface ErpProductToContifico {
   line?: string | null;
   isActive?: boolean;
   price?: number | null;
-  imageUrl?: string | null;
 }
 
 function resolveCategoryName(input: ErpProductToContifico): string | undefined {
@@ -77,7 +76,8 @@ export async function updateContificoProductFromErp(
     ...(input.price !== undefined
       ? { pvp1: input.price ?? 0, pvpManual: (input.price ?? 0) <= 0 }
       : {}),
-    ...(input.imageUrl !== undefined ? { imagen: input.imageUrl || null } : {}),
+    // La imagen se mantiene en la DB local y Altosa. No se envía a Contifico
+    // porque su API v2 espera un objeto Foto, no una URL plana.
   });
 }
 

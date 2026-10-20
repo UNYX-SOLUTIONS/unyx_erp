@@ -35,7 +35,7 @@ services:
       TRUST_PROXY: "false"
       ALTOSA_API_URL: ${ALTOSA_API_URL:-http://host.docker.internal:4199}
       ALTOSA_API_KEY: ${ALTOSA_API_KEY:-}
-      CONTIFICO_API_URL: ${CONTIFICO_API_URL:-https://api.contifico.com/sistema/api/v1}
+      CONTIFICO_API_URL: ${CONTIFICO_API_URL:-https://api.contifico.com/sistema/api/v2}
       CONTIFICO_API_KEY: ${CONTIFICO_API_KEY:-}
       CONTIFICO_API_TOKEN: ${CONTIFICO_API_TOKEN:-}
     ports:

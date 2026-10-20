@@ -16,9 +16,30 @@ export function toNumber(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function clean(value: string | null | undefined): string | null {
-  const trimmed = (value ?? '').trim();
+function clean(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+/**
+ * v2 documenta `imagen` como objeto Foto, pero en la práctica también
+ * devuelve string/URL vacío. Soportamos ambos formatos.
+ */
+export function extractContificoImageUrl(value: unknown): string | null {
+  if (typeof value === 'string') {
+    return isValidUrl(value.trim() || null);
+  }
+  if (value && typeof value === 'object') {
+    const candidate = value as { url?: unknown; foto?: unknown };
+    const raw = candidate.url ?? candidate.foto;
+    if (typeof raw === 'string') {
+      return isValidUrl(raw.trim() || null);
+    }
+  }
+  return null;
 }
 
 function isValidUrl(value: string | null): string | null {
@@ -64,7 +85,7 @@ export function mapContificoProduct(
     colorHex: null,
     price,
     stock,
-    imageUrl: isValidUrl(clean(product.imagen)),
+    imageUrl: extractContificoImageUrl(product.imagen),
     description,
     isActive: product.estado !== 'I',
     sortOrder: 0,
