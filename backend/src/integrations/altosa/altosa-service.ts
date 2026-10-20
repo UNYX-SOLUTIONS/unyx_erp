@@ -89,3 +89,4 @@ export async function deleteVariant(variantId: number) {
 export async function uploadVariantImage(file: AltosaUploadFile) {
   return altosaUpload<unknown>('/api/v1/uploads/variants', file);
 }
+

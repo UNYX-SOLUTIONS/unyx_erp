@@ -33,6 +33,7 @@ export async function altosaRequest<T>(
   options?: {
     query?: Record<string, string | number | boolean | undefined>;
     body?: unknown;
+    timeoutMs?: number;
   }
 ): Promise<{ data: T; meta?: PaginationMeta }> {
   const apiKey = requireApiKey();
@@ -47,7 +48,7 @@ export async function altosaRequest<T>(
   }
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), options?.timeoutMs ?? TIMEOUT_MS);
 
   try {
     const response = await fetch(url, {

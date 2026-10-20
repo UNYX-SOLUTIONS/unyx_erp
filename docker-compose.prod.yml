@@ -31,6 +31,11 @@ services:
       JWT_REFRESH_EXPIRES: ${JWT_REFRESH_EXPIRES:-7d}
       CORS_ORIGIN: https://${UNYX_DOMAIN}
       TRUST_PROXY: "true"
+      ALTOSA_API_URL: ${ALTOSA_API_URL}
+      ALTOSA_API_KEY: ${ALTOSA_API_KEY}
+      CONTIFICO_API_URL: ${CONTIFICO_API_URL:-https://api.contifico.com/sistema/api/v1}
+      CONTIFICO_API_KEY: ${CONTIFICO_API_KEY}
+      CONTIFICO_API_TOKEN: ${CONTIFICO_API_TOKEN:-}
     networks:
       - unyx-internal
       - traefik-public

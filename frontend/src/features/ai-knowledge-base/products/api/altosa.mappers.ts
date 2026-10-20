@@ -150,7 +150,7 @@ export function mapAltosaProduct(product: AltosaProductDto): ProductDto {
 
   return {
     id: String(product.id),
-    sku: `ALT-${product.id}`,
+    sku: product.variantes?.[0]?.sku ?? `ALT-${product.id}`,
     name: product.nombre,
     line: product.categoria.nombre,
     category: product.categoria.nombre,

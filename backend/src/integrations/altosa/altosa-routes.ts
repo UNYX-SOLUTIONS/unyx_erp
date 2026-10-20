@@ -15,6 +15,7 @@ import {
   altosaUpdateProductBodySchema,
   altosaUpdateVariantBodySchema,
   altosaVariantBodySchema,
+  altosaVariantProductQuerySchema,
 } from './altosa-schema';
 
 export const altosaRoutes = Router();
@@ -83,12 +84,14 @@ altosaRoutes.post(
 altosaRoutes.patch(
   '/variants/:id',
   validate(altosaIdParamSchema, 'params'),
+  validate(altosaVariantProductQuerySchema, 'query'),
   validate(altosaUpdateVariantBodySchema),
   altosaController.updateVariant
 );
 altosaRoutes.delete(
   '/variants/:id',
   validate(altosaIdParamSchema, 'params'),
+  validate(altosaVariantProductQuerySchema, 'query'),
   altosaController.deleteVariant
 );
 

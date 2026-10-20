@@ -4,6 +4,15 @@ import { prisma } from '../../config/database';
 import { ApiError } from '../../utils/api-error';
 import { writeAudit } from '../../utils/audit';
 import { buildPaginationMeta, getPagination } from '../../utils/pagination';
+import {
+  contificoIdFromSourceRowKey,
+  createContificoProductFromErp,
+  deactivateContificoProductFromErp,
+  isContificoConfigured,
+  updateContificoProductFromErp,
+} from '../../integrations/contifico/contifico-service';
+import { syncLocalProductToAltosa } from '../../integrations/contifico/contifico-sync';
+import { resolveContificoSku, toNumber } from '../../integrations/contifico/contifico-mappers';
 import type {
   CreateProductInput,
   CreateVariantInput,
@@ -78,6 +87,7 @@ function toProductDto(product: KbProduct, variants: KbProductVariant[]): Product
     price: prices.length > 0 ? Math.min(...prices) : null,
     priceFrom: activeVariants.length > 1,
     primaryColor: activeVariants[0]?.color ?? null,
+    stock: activeVariants.reduce((sum, variant) => sum + variant.stock, 0),
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
   };
@@ -90,8 +100,8 @@ function buildVariantData(input: {
   colorHex?: string;
   price?: number | null;
   stock?: number;
-  imageUrl?: string;
-  description?: string;
+  imageUrl?: string | null;
+  description?: string | null;
   isActive?: boolean;
   sortOrder?: number;
 }) {
@@ -211,6 +221,26 @@ export async function createProduct(input: CreateProductInput): Promise<ProductD
     );
   }
 
+  const firstVariant = input.variants?.[0];
+  const contificoProduct = await createContificoProductFromErp({
+    sku: input.sku,
+    name: input.name,
+    description: input.description,
+    commercialDescription: input.commercialDescription,
+    category: input.category,
+    line: input.line,
+    isActive: input.isActive,
+    price: firstVariant?.price ?? null,
+  });
+
+  const contificoSourceKey = contificoProduct ? `contifico:${contificoProduct.id}` : null;
+  const contificoCreated = Boolean(contificoProduct);
+  const contificoPrice = contificoProduct ? toNumber(contificoProduct.pvp1) : null;
+  const contificoStock = contificoProduct
+    ? Math.round(toNumber(contificoProduct.cantidad_stock) ?? 0)
+    : 0;
+  const contificoImage = contificoProduct?.imagen?.trim() || null;
+
   const product = await prisma.$transaction(async (tx) => {
     const created = await tx.kbProduct.create({
       data: {
@@ -223,24 +253,69 @@ export async function createProduct(input: CreateProductInput): Promise<ProductD
         description: input.description || null,
         commercialDescription: input.commercialDescription || null,
         keywords: input.keywords ?? [],
-        thumbnailUrl: input.thumbnailUrl || null,
+        thumbnailUrl: input.thumbnailUrl || contificoImage,
         sourceUrl: input.sourceUrl || null,
         ...(input.validation ? { validation: input.validation } : {}),
-        ...(input.syncStatus ? { syncStatus: input.syncStatus } : {}),
+        syncStatus: contificoCreated ? 'SINCRONIZADO' : input.syncStatus ?? 'SIN_SINCRONIZAR',
         ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+        sourceRowKey: contificoSourceKey,
+        lastSyncedAt: contificoProduct ? new Date() : null,
       },
     });
 
     if (input.variants?.length) {
       for (const [index, variant] of input.variants.entries()) {
         const sku = variant.sku ?? (await generateVariantSku(tx, created.sku, index + 1));
+        const isPrimary = index === 0 && contificoSourceKey !== null;
         await tx.kbProductVariant.create({
           data: {
             productId: created.id,
-            ...buildVariantData({ ...variant, sku, sortOrder: variant.sortOrder ?? index }),
+            ...buildVariantData({
+              ...variant,
+              sku,
+              price: isPrimary && contificoPrice !== null ? contificoPrice : variant.price,
+              stock: isPrimary ? contificoStock : variant.stock,
+              imageUrl: isPrimary && contificoImage ? contificoImage : variant.imageUrl,
+              sortOrder: variant.sortOrder ?? index,
+            }),
+            ...(isPrimary
+              ? {
+                  sourceRowKey: contificoSourceKey,
+                  especificaciones: {
+                    contifico_id: contificoProduct?.id,
+                    stock: contificoStock,
+                  },
+                }
+              : {}),
           },
         });
       }
+    } else {
+      // Todo producto debe tener al menos su variante principal para que el
+      // panel de detalle y Altosa muestren SKU/precio/stock.
+      await tx.kbProductVariant.create({
+        data: {
+          productId: created.id,
+          sku: contificoProduct ? resolveContificoSku(contificoProduct) : created.sku,
+          name: 'Estándar',
+          price: contificoPrice,
+          stock: contificoStock,
+          imageUrl: contificoImage ?? input.thumbnailUrl ?? null,
+          description: contificoProduct?.descripcion || input.description || null,
+          sortOrder: 0,
+          sourceRowKey: contificoSourceKey,
+          especificaciones: contificoProduct
+            ? {
+                contifico_id: contificoProduct.id,
+                contifico_codigo: resolveContificoSku(contificoProduct),
+                codigo_barra: contificoProduct.codigo_barra || null,
+                porcentaje_iva: toNumber(contificoProduct.porcentaje_iva),
+                minimo: toNumber(contificoProduct.minimo),
+                stock: contificoStock,
+              }
+            : {},
+        },
+      });
     }
 
     return tx.kbProduct.findUniqueOrThrow({
@@ -257,7 +332,8 @@ export async function createProduct(input: CreateProductInput): Promise<ProductD
     newValues: toProductDto(product, product.variants),
   });
 
-  return { ...toProductDto(product, product.variants), variants: product.variants.map(toVariantDto) };
+  await syncLocalProductToAltosa(product.id);
+  return getProductById(product.id);
 }
 
 export async function updateProduct(id: string, input: UpdateProductInput): Promise<ProductDetailDto> {
@@ -284,6 +360,32 @@ export async function updateProduct(id: string, input: UpdateProductInput): Prom
     }
   }
 
+  const contificoId = contificoIdFromSourceRowKey(existing.sourceRowKey);
+  if (contificoId && !isContificoConfigured()) {
+    throw new ApiError(
+      StatusCodes.SERVICE_UNAVAILABLE,
+      'Este producto está vinculado a Contifico. Configura CONTIFICO_API_KEY para editarlo y mantener la sincronización.',
+      'CONTIFICO_NOT_CONFIGURED'
+    );
+  }
+  if (contificoId && input.sku && input.sku !== existing.sku) {
+    throw new ApiError(
+      StatusCodes.CONFLICT,
+      'El SKU de un producto sincronizado con Contifico no se puede cambiar desde el ERP. Cámbialo en Contifico y vuelve a sincronizar.',
+      'CONTIFICO_PRODUCT_SKU_LOCKED'
+    );
+  }
+  if (contificoId && isContificoConfigured()) {
+    await updateContificoProductFromErp(contificoId, {
+      name: input.name,
+      description: input.description,
+      commercialDescription: input.commercialDescription,
+      category: input.category,
+      line: input.line,
+      isActive: input.isActive,
+    });
+  }
+
   const product = await prisma.kbProduct.update({
     where: { id },
     data: {
@@ -300,7 +402,11 @@ export async function updateProduct(id: string, input: UpdateProductInput): Prom
       ...(input.thumbnailUrl !== undefined ? { thumbnailUrl: input.thumbnailUrl || null } : {}),
       ...(input.sourceUrl !== undefined ? { sourceUrl: input.sourceUrl || null } : {}),
       ...(input.validation !== undefined ? { validation: input.validation } : {}),
-      ...(input.syncStatus !== undefined ? { syncStatus: input.syncStatus } : {}),
+      ...(contificoId && isContificoConfigured()
+        ? { syncStatus: 'SINCRONIZADO' as const, lastSyncedAt: new Date() }
+        : input.syncStatus !== undefined
+          ? { syncStatus: input.syncStatus }
+          : {}),
       ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
     },
     include: { variants: { where: { deletedAt: null }, orderBy: { sortOrder: 'asc' } } },
@@ -315,7 +421,8 @@ export async function updateProduct(id: string, input: UpdateProductInput): Prom
     newValues: toProductDto(product, product.variants),
   });
 
-  return { ...toProductDto(product, product.variants), variants: product.variants.map(toVariantDto) };
+  await syncLocalProductToAltosa(product.id);
+  return getProductById(id);
 }
 
 export async function deleteProduct(id: string): Promise<ProductDto> {
@@ -328,6 +435,29 @@ export async function deleteProduct(id: string): Promise<ProductDto> {
   if (!existing) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Producto no encontrado', 'PRODUCT_NOT_FOUND');
   }
+
+  const contificoId = contificoIdFromSourceRowKey(existing.sourceRowKey);
+  if (contificoId && !isContificoConfigured()) {
+    throw new ApiError(
+      StatusCodes.SERVICE_UNAVAILABLE,
+      'Este producto está vinculado a Contifico. Configura CONTIFICO_API_KEY para eliminarlo y mantener la sincronización.',
+      'CONTIFICO_NOT_CONFIGURED'
+    );
+  }
+  if (contificoId && isContificoConfigured()) {
+    await deactivateContificoProductFromErp(contificoId);
+  }
+
+  await prisma.kbProduct.update({
+    where: { id },
+    data: {
+      isActive: false,
+      ...(contificoId && isContificoConfigured()
+        ? { syncStatus: 'SINCRONIZADO' as const, lastSyncedAt: new Date() }
+        : {}),
+    },
+  });
+  await syncLocalProductToAltosa(id);
 
   const now = new Date();
   const product = await prisma.$transaction(async (tx) => {
@@ -407,6 +537,7 @@ export async function addVariant(productId: string, input: CreateVariantInput): 
     newValues: toVariantDto(variant),
   });
 
+  await syncLocalProductToAltosa(productId);
   return toVariantDto(variant);
 }
 
@@ -418,13 +549,31 @@ export async function updateVariant(
   const companyId = await resolveCompanyId();
   const existing = await prisma.kbProductVariant.findFirst({
     where: { id: variantId, productId, deletedAt: null },
-    include: { product: { select: { companyId: true } } },
+    include: { product: { select: { companyId: true, sourceRowKey: true } } },
   });
   if (!existing || existing.product.companyId !== companyId) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Variante no encontrada', 'VARIANT_NOT_FOUND');
   }
 
+  const isPrimaryContificoVariant = existing.sourceRowKey?.startsWith('contifico:') ?? false;
+  const contificoId = contificoIdFromSourceRowKey(existing.product.sourceRowKey);
+
+  if (isPrimaryContificoVariant && contificoId && !isContificoConfigured()) {
+    throw new ApiError(
+      StatusCodes.SERVICE_UNAVAILABLE,
+      'La variante principal está vinculada a Contifico. Configura CONTIFICO_API_KEY para editarla y mantener la sincronización.',
+      'CONTIFICO_NOT_CONFIGURED'
+    );
+  }
+
   if (input.sku && input.sku !== existing.sku) {
+    if (isPrimaryContificoVariant) {
+      throw new ApiError(
+        StatusCodes.CONFLICT,
+        'No se puede cambiar el SKU de la variante principal desde el ERP. Cámbialo en Contifico y vuelve a sincronizar.',
+        'CONTIFICO_PRIMARY_VARIANT_SKU_LOCKED'
+      );
+    }
     const duplicate = await prisma.kbProductVariant.findUnique({ where: { sku: input.sku } });
     if (duplicate) {
       throw new ApiError(
@@ -433,6 +582,23 @@ export async function updateVariant(
         'VARIANT_SKU_EXISTS'
       );
     }
+  }
+
+  if (
+    isPrimaryContificoVariant &&
+    contificoId &&
+    isContificoConfigured() &&
+    (input.price !== undefined ||
+      input.description !== undefined ||
+      input.imageUrl !== undefined ||
+      input.isActive !== undefined)
+  ) {
+    await updateContificoProductFromErp(contificoId, {
+      price: input.price,
+      description: input.description,
+      imageUrl: input.imageUrl,
+      isActive: input.isActive,
+    });
   }
 
   const variant = await prisma.kbProductVariant.update({
@@ -460,6 +626,7 @@ export async function updateVariant(
     newValues: toVariantDto(variant),
   });
 
+  await syncLocalProductToAltosa(productId);
   return toVariantDto(variant);
 }
 
@@ -471,6 +638,14 @@ export async function deleteVariant(productId: string, variantId: string): Promi
   });
   if (!existing || existing.product.companyId !== companyId) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Variante no encontrada', 'VARIANT_NOT_FOUND');
+  }
+
+  if (existing.sourceRowKey?.startsWith('contifico:')) {
+    throw new ApiError(
+      StatusCodes.CONFLICT,
+      'No se puede eliminar la variante principal de un producto sincronizado con Contifico. Desactiva el producto en su lugar.',
+      'CONTIFICO_PRIMARY_VARIANT_LOCKED'
+    );
   }
 
   const variant = await prisma.kbProductVariant.update({
@@ -486,5 +661,6 @@ export async function deleteVariant(productId: string, variantId: string): Promi
     oldValues: toVariantDto(existing),
   });
 
+  await syncLocalProductToAltosa(productId);
   return toVariantDto(variant);
 }

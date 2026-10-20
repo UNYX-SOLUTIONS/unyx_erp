@@ -1,0 +1,19 @@
+import { altosaRequest } from './altosa-client';
+import type { AltosaSyncProduct } from './altosa-schema';
+
+/**
+ * Cliente del endpoint de sincronización masiva de altosa-api.
+ *
+ * Vive en su propio módulo para que `contifico-sync` no dependa de
+ * `altosa-service` (que a su vez usa el servicio de productos del ERP para
+ * el write-through del CRUD).
+ */
+export async function syncProducts(
+  items: AltosaSyncProduct[],
+  options?: { matchByName?: boolean }
+) {
+  return altosaRequest<unknown>('POST', '/api/v1/sync/products', {
+    body: { items, matchByName: options?.matchByName ?? false },
+    timeoutMs: 60_000,
+  });
+}
