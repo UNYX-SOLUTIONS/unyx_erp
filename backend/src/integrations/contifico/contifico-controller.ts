@@ -8,8 +8,18 @@ import {
   fetchContificoProductById,
 } from './contifico-catalog';
 import { mapContificoProduct } from './contifico-mappers';
-import { isContificoConfigured, syncCatalog } from './contifico-service';
-import type { ContificoProductsQuery, ContificoSyncBody } from './contifico-schema';
+import {
+  isContificoConfigured,
+  searchProductSuggestions,
+  syncCatalog,
+} from './contifico-service';
+import { importContificoProduct } from './contifico-sync';
+import type {
+  ContificoImportBody,
+  ContificoProductsQuery,
+  ContificoSearchQuery,
+  ContificoSyncBody,
+} from './contifico-schema';
 
 export const status = asyncHandler(async (_req: Request, res: Response) => {
   sendSuccess(res, {
@@ -27,8 +37,21 @@ export const sync = asyncHandler(async (req: Request, res: Response) => {
     onlySku: body.onlySku,
     matchByName: body.matchByName,
     prune: body.prune,
+    createMissing: body.createMissing,
   });
   sendSuccess(res, counters);
+});
+
+export const searchProducts = asyncHandler(async (req: Request, res: Response) => {
+  const query = req.query as unknown as ContificoSearchQuery;
+  const suggestions = await searchProductSuggestions(query.q, query.limit);
+  sendSuccess(res, suggestions);
+});
+
+export const importProduct = asyncHandler(async (req: Request, res: Response) => {
+  const input = req.body as ContificoImportBody;
+  const result = await importContificoProduct(input);
+  sendSuccess(res, result, undefined, result.created ? 201 : 200);
 });
 
 export const listProducts = asyncHandler(async (req: Request, res: Response) => {

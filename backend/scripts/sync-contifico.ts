@@ -9,10 +9,14 @@
  *   pnpm sync:contifico -- --match-by-name   (migración inicial desde el ETL)
  *   pnpm sync:contifico -- --prune           (desactiva lo que ya no está en Contifico)
  *   pnpm sync:contifico -- --dry-run --match-by-name --prune
+ *   pnpm sync:contifico -- --create-missing  (importa TODO Contifico, no recomendado)
  *   pnpm sync:contifico -- --export ../altosa_infrastructure/backend/data/contifico-products.json
  *
- * --prune no borra filas: marca isActive=false en la DB local y desactiva
- * los SKUs en Altosa. Úsalo primero con --dry-run.
+ * Por defecto la sincronización SOLO actualiza productos que ya existen en el
+ * ERP. Los productos nuevos se agregan a demanda desde el buscador de
+ * Contifico del panel de producto. --prune no borra filas: marca
+ * isActive=false en la DB local y desactiva los SKUs en Altosa. Úsalo primero
+ * con --dry-run.
  */
 import 'dotenv/config';
 import { disconnectDatabase } from '../src/config/database';
@@ -48,11 +52,13 @@ async function main(): Promise<void> {
     exportPath: readOption('export'),
     matchByName: process.argv.includes('--match-by-name'),
     prune: process.argv.includes('--prune'),
+    createMissing: process.argv.includes('--create-missing'),
   });
 
   console.log(JSON.stringify(counters, null, 2));
   console.log(
     `\nContifico -> ERP: ${counters.products.created} creados, ${counters.products.updated} actualizados, ` +
+      `${counters.products.ignored} ignorados (no existen en el ERP), ` +
       `${counters.products.skipped} omitidos, ${counters.products.pruned} desactivados por reconciliación ` +
       `(${counters.products.fetched} leídos).`
   );

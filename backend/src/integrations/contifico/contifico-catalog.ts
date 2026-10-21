@@ -90,6 +90,52 @@ export async function fetchContificoProductById(id: string): Promise<ContificoPr
   return contificoGet<ContificoProductDto>(productItemPath(id));
 }
 
+function normalizeSearch(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+/**
+ * Búsqueda puntual para el selector del ERP. Usa el filtro de Contifico
+ * (nombre/código) y vuelve a filtrar localmente para soportar mayúsculas,
+ * acentos y código de barra.
+ */
+export async function searchContificoProducts(
+  query: string,
+  limit = 8
+): Promise<ContificoProductDto[]> {
+  const term = query.trim();
+  if (!term) {
+    return [];
+  }
+
+  const items = await contificoGet<ContificoProductDto[]>('/producto/', {
+    filtro: term,
+    page: 1,
+    estado: 'A',
+  });
+  if (!Array.isArray(items)) {
+    return [];
+  }
+
+  const normalized = normalizeSearch(term);
+  return items
+    .filter((product) => {
+      const sku = normalizeSearch(product.codigo ?? '');
+      const name = normalizeSearch(product.nombre ?? '');
+      const barcode = normalizeSearch(product.codigo_barra ?? '');
+      return (
+        sku.includes(normalized) ||
+        name.includes(normalized) ||
+        barcode.includes(normalized)
+      );
+    })
+    .slice(0, limit);
+}
+
 export async function fetchContificoCategories(): Promise<ContificoCategoryDto[]> {
   const categories = await contificoGet<ContificoCategoryDto[]>('/categoria/');
   return Array.isArray(categories) ? categories : [];

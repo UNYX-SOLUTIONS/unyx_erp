@@ -270,3 +270,52 @@ export async function uploadVariantImage(
   );
   return response.data;
 }
+
+// ---------------------------------------------------------------------------
+// Contifico: búsqueda e importación a demanda (selector del panel de producto)
+// ---------------------------------------------------------------------------
+
+export interface ContificoProductSuggestion {
+  contificoId: string;
+  sku: string;
+  name: string;
+  category: string | null;
+  price: number | null;
+  stock: number;
+  imageUrl: string | null;
+  barcode: string | null;
+  alreadyAdded: boolean;
+  localProductId: string | null;
+}
+
+export interface ContificoImportResult {
+  localProductId: string;
+  altosaProductId?: number;
+  sku: string;
+  name: string;
+  created: boolean;
+  updated: boolean;
+}
+
+export async function searchContificoProducts(
+  query: string,
+  limit = 8
+): Promise<ApiResponse<ContificoProductSuggestion[]>> {
+  const response = await apiClient.get<ApiResponse<ContificoProductSuggestion[]>>(
+    '/api/v1/integrations/contifico/search',
+    { params: { q: query, limit }, timeout: 30_000 }
+  );
+  return response.data;
+}
+
+export async function importContificoProduct(payload: {
+  contificoId?: string;
+  sku?: string;
+}): Promise<ApiResponse<ContificoImportResult>> {
+  const response = await apiClient.post<ApiResponse<ContificoImportResult>>(
+    '/api/v1/integrations/contifico/import',
+    payload,
+    { timeout: 60_000 }
+  );
+  return response.data;
+}

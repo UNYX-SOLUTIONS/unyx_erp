@@ -1,12 +1,17 @@
+import { prisma } from '../../config/database';
 import { env } from '../../config/env';
 import {
   createContificoProduct,
   deactivateContificoProduct,
+  fetchContificoCategories,
+  searchContificoProducts,
   updateContificoProduct,
 } from './contifico-catalog';
-import { syncContificoCatalog } from './contifico-sync';
+import { mapContificoProduct } from './contifico-mappers';
+import { resolveSyncCompanyId, syncContificoCatalog } from './contifico-sync';
 import type {
   ContificoProductDto,
+  ContificoProductSuggestion,
   ContificoSyncCounters,
   ContificoSyncOptions,
 } from './contifico-types';
@@ -94,4 +99,48 @@ export async function syncCatalog(
   options: ContificoSyncOptions = {}
 ): Promise<ContificoSyncCounters> {
   return syncContificoCatalog(options);
+}
+
+/**
+ * Sugerencias para el buscador del panel de producto: consulta Contifico y
+ * marca cuáles ya existen en el catálogo local del ERP.
+ */
+export async function searchProductSuggestions(
+  query: string,
+  limit = 8
+): Promise<ContificoProductSuggestion[]> {
+  const raw = await searchContificoProducts(query, limit);
+  if (raw.length === 0) {
+    return [];
+  }
+
+  const categories = await fetchContificoCategories();
+  const categoryById = new Map(categories.map((category) => [category.id, category.nombre]));
+  const products = raw.map((product) =>
+    mapContificoProduct(
+      product,
+      product.categoria_id ? categoryById.get(product.categoria_id) ?? null : null
+    )
+  );
+
+  const companyId = await resolveSyncCompanyId();
+  const skus = products.map((product) => product.sku);
+  const localProducts = await prisma.kbProduct.findMany({
+    where: { companyId, sku: { in: skus }, deletedAt: null },
+    select: { id: true, sku: true },
+  });
+  const localBySku = new Map(localProducts.map((product) => [product.sku, product.id]));
+
+  return products.map((product) => ({
+    contificoId: product.externalId,
+    sku: product.sku,
+    name: product.name,
+    category: product.category,
+    price: product.price,
+    stock: product.stock,
+    imageUrl: product.thumbnailUrl,
+    barcode: product.barcode,
+    alreadyAdded: localBySku.has(product.sku),
+    localProductId: localBySku.get(product.sku) ?? null,
+  }));
 }

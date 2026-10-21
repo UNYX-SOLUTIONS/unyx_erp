@@ -37,7 +37,7 @@ tag **Producto** (`POST`, `GET`, `PUT`; no hay `DELETE`).
                                                │ lectura BFF
                               ┌────────────────┴───────────────────┐
                               │ Frontend (Inventario + KB IA)      │
-                              │ sin cambios de UI                  │
+                              │ + buscador Contifico en alta       │
                               └────────────────────────────────────┘
 ```
 
@@ -94,25 +94,32 @@ Sin cambios nuevos: usa el `API_KEY` existente para autenticar al ERP.
    pnpm --dir backend sync:contifico -- --skip-altosa
    pnpm --dir backend sync:contifico -- --only 613
    pnpm --dir backend sync:contifico -- --match-by-name
-   pnpm --dir backend sync:contifico -- --match-by-name --prune
+   pnpm --dir backend sync:contifico -- --prune
    ```
 
+   > **Importante:** por defecto la sincronización **solo actualiza productos
+   > que ya existen en el ERP**. Los ~1000 productos de Contifico que no estén
+   > en tu base **no se importan**: quedan como `ignored` y se agregan a demanda
+   > desde el buscador del panel de producto.
+   >
    > **Migración inicial recomendada** (DB con catálogo viejo del ETL):
    >
    > ```bash
-   > pnpm --dir backend sync:contifico -- --dry-run --match-by-name --prune
-   > pnpm --dir backend sync:contifico -- --match-by-name --prune
+   > pnpm --dir backend sync:contifico -- --dry-run --match-by-name
+   > pnpm --dir backend sync:contifico -- --match-by-name
    > ```
    >
-   > Así se enlazan por nombre los productos existentes, la variante principal
-   > adopta el `codigo` real de Contifico y lo que ya no existe se desactiva en
-   > lugar de quedar duplicado o viejo.
+   > Así se enlazan por nombre los productos existentes y la variante principal
+   > adopta el `codigo` real de Contifico. Los que no están en tu base se
+   > ignoran, no se crean.
+   >
+   > Solo si quieres importar **todo** Contifico de una vez (no recomendado):
+   > `--create-missing`.
 
-3. El frontend no cambia: sigue leyendo el BFF de Altosa. Cuando termine la
-   sincronización, los productos aparecerán en **Bodega → Inventario** y en
-   **IA → Base de conocimiento → Productos**. Para sincronizaciones manuales
-   desde la UI se puede llamar `POST /api/v1/integrations/contifico/sync`
-   (requiere JWT); el botón no se agregó para no modificar la interfaz.
+3. En el frontend, al abrir **Nuevo producto**, aparece el buscador
+   **“Buscar en Contifico”**. Al escribir un nombre o SKU se muestran
+   sugerencias; al elegir una, se confirma y se importa **solo ese producto**.
+   El resto del frontend sigue leyendo el BFF de Altosa.
 
 ### Si altosa-api no está accesible en ese momento
 
@@ -149,9 +156,20 @@ seguro a "reemplazar el catálogo":
    - luego por SKU (`codigo`);
    - con `--match-by-name`, por nombre (migración inicial desde el ETL).
 
-2. **Actualizar/crear** los productos que vienen de Contifico.
+2. **Actualizar los existentes.** Por defecto `createMissing = false`: los
+   productos de Contifico que no están en el ERP se cuentan como `ignored` y
+   **no se importan**. Solo se crean nuevos con `--create-missing` (no
+   recomendado) o, mejor, a demanda desde el buscador.
 
-3. **Reconciliar** con `--prune`:
+3. **Agregar nuevos a demanda.** En el panel **Nuevo producto**, el buscador
+   “Buscar en Contifico” consulta por nombre o SKU y muestra solo los que aún
+   no están en el catálogo. Al confirmar “Agregar producto”, el backend:
+   - lee ese producto puntual de Contifico;
+   - hace upsert en `kb_products`/`kb_product_variants`;
+   - lo replica a Altosa;
+   - devuelve el ID de Altosa para abrir el panel de edición.
+
+4. **Reconciliar** con `--prune`:
    - los productos locales que no vinieron en el catálogo de Contifico se marcan
      `isActive = false` (no se borran);
    - sus SKUs se envían a `POST /api/v1/sync/products/deactivate` de Altosa,
@@ -172,11 +190,14 @@ Seguridades de `--prune`:
 Después de la migración inicial:
 
 ```bash
-# Reconciliación normal (recomendada si Contifico es la única fuente):
+# Solo actualizar los productos que ya existen en el ERP:
+pnpm --dir backend sync:contifico
+
+# Actualizar y desactivar los locales que ya no estén en Contifico:
 pnpm --dir backend sync:contifico -- --prune
 
-# Solo actualizar/crear, sin desactivar nada:
-pnpm --dir backend sync:contifico
+# Importar TODO Contifico de golpe (no recomendado):
+pnpm --dir backend sync:contifico -- --create-missing
 ```
 
 ## Endpoints
@@ -185,7 +206,9 @@ pnpm --dir backend sync:contifico
 
 | Método | Ruta | Uso |
 |---|---|---|
-| `POST` | `/api/v1/integrations/contifico/sync` | Importa Contifico → DB local → Altosa. Body opcional: `{ "dryRun": false, "pushToAltosa": true, "onlySku": "613", "matchByName": false, "prune": false }` |
+| `POST` | `/api/v1/integrations/contifico/sync` | Actualiza productos existentes → DB local → Altosa. Body opcional: `{ "dryRun": false, "pushToAltosa": true, "onlySku": "613", "matchByName": false, "prune": false, "createMissing": false }` |
+| `GET` | `/api/v1/integrations/contifico/search?q=&limit=` | Buscador del panel de producto: sugiere productos de Contifico y marca `alreadyAdded` |
+| `POST` | `/api/v1/integrations/contifico/import` | Importa un producto puntual: `{ "contificoId": "..." }` o `{ "sku": "..." }` → DB local → Altosa. Devuelve `altosaProductId` |
 | `GET` | `/api/v1/integrations/contifico/status` | Indica si la API key está configurada (sin exponerla) |
 | `GET` | `/api/v1/integrations/contifico/products?search=&limit=` | Diagnóstico: lee productos directo de Contifico |
 | `GET` | `/api/v1/integrations/contifico/products/:id` | Diagnóstico: un producto de Contifico |
@@ -252,26 +275,31 @@ imagen y estado, pero no mueve productos entre subcategorías (salvo un edit
 explícito desde el ERP, que envía `updateTaxonomy`).
 
 El SKU visible en la UI ahora es el `codigo` real de Contifico (se toma del SKU
-de la variante principal); antes el mapper mostraba `ALT-<id>`. No se cambiaron
-componentes ni el layout.
+de la variante principal); antes el mapper mostraba `ALT-<id>`. El listado y el
+panel de edición no cambiaron; el único cambio de UI es el buscador de Contifico
+en el panel de **Nuevo producto**.
 
 ## CRUD desde el ERP
 
-El frontend de productos (Inventario y Base de conocimiento IA) **no cambió**:
-sigue leyendo y escribiendo contra el BFF `/api/v1/integrations/altosa`. Ese BFF
-ahora es el orquestador: usa el servicio de productos del ERP para escribir
-primero en Contifico, luego en la DB local y finalmente en Altosa. Cada
-operación se propaga en este orden:
+El listado y el panel de edición se mantienen. El panel **Nuevo producto** ahora
+incluye el buscador **“Buscar en Contifico”**; el listado sigue leyendo y
+escribiendo contra el BFF `/api/v1/integrations/altosa`. Ese BFF es el
+orquestador: usa el servicio de productos del ERP para escribir primero en
+Contifico, luego en la DB local y finalmente en Altosa.
 
-1. **Crear** → `POST /producto/` en Contifico (código, nombre, categoría,
-   `pvp1` inicial), luego en la DB local y en Altosa.
-2. **Editar producto** → `PUT /producto/{id}` en Contifico (nombre, descripción,
+1. **Agregar una sugerencia de Contifico** → se lee ese producto puntual de
+   Contifico (no se crea nada nuevo en Contifico), se hace upsert en la DB local
+   y se replica a Altosa. Es el flujo para sumar productos de los ~1000 de
+   Contifico sin importarlos todos.
+2. **Crear manualmente** → `POST /producto/` en Contifico (código, nombre,
+   categoría, `pvp1` inicial), luego en la DB local y en Altosa.
+3. **Editar producto** → `PUT /producto/{id}` en Contifico (nombre, descripción,
    categoría y estado); después en la DB local y Altosa. Los campos `keywords`
    y `subcategory` son enriquecimiento del ERP/IA.
-3. **Editar variante principal** → precio y descripción se actualizan en
+4. **Editar variante principal** → precio y descripción se actualizan en
    Contifico (`pvp1`, `descripcion`). El stock **no** se edita desde el ERP:
    viene de Contifico.
-4. **Eliminar** → no existe `DELETE` en Contifico v2: se desactiva con
+5. **Eliminar** → no existe `DELETE` en Contifico v2: se desactiva con
    `PUT /producto/{id}` y `estado = I`; se marca inactivo en local y Altosa.
 
 ### Detalles del CRUD v2
@@ -312,6 +340,9 @@ operación se propaga en este orden:
   explícito. El stock sí queda en `kb_product_variants.stock` y en
   `especificacionesAdicionales.stock` de Altosa, listo para exponerlo cuando se
   autorice un cambio de interfaz.
+- Los productos agregados desde el buscador usan la misma regla de validación
+  que la sincronización: `APROBADO` si `pvp1 > 0`, `SIN_PRECIO` si no. No se
+  importan los ~1000 de Contifico: solo el que el usuario elige.
 - La sincronización es **pull** (manual o por script). Para automatizarla se
   puede programar `pnpm sync:contifico` por cron o agregar un job. Contifico
   limita a 100 solicitudes/minuto por empresa; la paginación actual es de 100

@@ -167,6 +167,12 @@ export interface ContificoSyncOptions {
    * ya no vinieron en el catálogo de Contifico. No borra filas.
    */
   prune?: boolean;
+  /**
+   * Si es false (default), la sincronización solo actualiza productos que ya
+   * existen en el ERP. Los productos nuevos se agregan a demanda desde el
+   * buscador de Contifico del panel de producto.
+   */
+  createMissing?: boolean;
 }
 
 export interface ContificoSyncCounters {
@@ -179,6 +185,7 @@ export interface ContificoSyncCounters {
     created: number;
     updated: number;
     skipped: number;
+    ignored: number;
     pruned: number;
   };
   variants: {
@@ -197,4 +204,26 @@ export interface ContificoSyncCounters {
   };
   prunedSkuSample?: string[];
   exportedTo?: string;
+}
+
+export interface ContificoProductSuggestion {
+  contificoId: string;
+  sku: string;
+  name: string;
+  category: string | null;
+  price: number | null;
+  stock: number;
+  imageUrl: string | null;
+  barcode: string | null;
+  alreadyAdded: boolean;
+  localProductId: string | null;
+}
+
+export interface ContificoImportResult {
+  localProductId: string;
+  altosaProductId?: number;
+  sku: string;
+  name: string;
+  created: boolean;
+  updated: boolean;
 }

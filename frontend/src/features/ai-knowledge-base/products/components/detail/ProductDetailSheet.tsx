@@ -29,6 +29,7 @@ import { WarrantyTab } from './tabs/WarrantyTab';
 import { ProductDetailFooter } from './ProductDetailFooter';
 import { ProductDetailHeader } from './ProductDetailHeader';
 import { ProductDetailTabs, type DetailTab } from './ProductDetailTabs';
+import { ContificoProductSearch } from './ContificoProductSearch';
 
 export function ProductDetailSheet() {
   const isOpen = useProductDetailStore((state) => state.isOpen);
@@ -189,7 +190,17 @@ export function ProductDetailSheet() {
             <>
               <ProductDetailHeader product={null} onClose={requestClose} />
               <div className="flex-1 overflow-y-auto bg-white dark:bg-slate-900 px-6 py-6">
-                <GeneralTab form={generalForm} />
+                <div className="space-y-6">
+                  <ContificoProductSearch />
+                  <div className="flex items-center gap-3">
+                    <div className="h-px flex-1 bg-gray-200 dark:bg-slate-800" />
+                    <span className="whitespace-nowrap text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-slate-500">
+                      O registra un producto manualmente
+                    </span>
+                    <div className="h-px flex-1 bg-gray-200 dark:bg-slate-800" />
+                  </div>
+                  <GeneralTab form={generalForm} />
+                </div>
               </div>
               <ProductDetailFooter
                 canSave

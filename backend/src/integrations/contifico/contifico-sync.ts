@@ -16,11 +16,19 @@ import {
   syncProducts as syncAltosaProducts,
 } from '../altosa/altosa-sync-client';
 import type { AltosaSyncProduct } from '../altosa/altosa-schema';
-import { fetchAllContificoProducts, fetchContificoCategories } from './contifico-catalog';
-import { mapContificoProduct } from './contifico-mappers';
+import * as altosaService from '../altosa/altosa-service';
+import {
+  fetchAllContificoProducts,
+  fetchContificoCategories,
+  fetchContificoProductById,
+  searchContificoProducts,
+} from './contifico-catalog';
+import { mapContificoProduct, resolveContificoSku } from './contifico-mappers';
 import type {
   ContificoCanonicalProduct,
   ContificoCanonicalVariant,
+  ContificoImportResult,
+  ContificoProductDto,
   ContificoSyncCounters,
   ContificoSyncOptions,
 } from './contifico-types';
@@ -30,6 +38,25 @@ const ALTOSA_BATCH_SIZE = 50;
 const ALTOSA_DEACTIVATE_BATCH_SIZE = 200;
 
 type LocalProductWithVariants = KbProduct & { variants: KbProductVariant[] };
+
+function createEmptyCounters(dryRun: boolean): ContificoSyncCounters {
+  return {
+    source: 'contifico',
+    dryRun,
+    durationMs: 0,
+    categoriesFetched: 0,
+    products: { fetched: 0, created: 0, updated: 0, skipped: 0, ignored: 0, pruned: 0 },
+    variants: { created: 0, updated: 0, skipped: 0 },
+    altosa: {
+      configured: Boolean(env.ALTOSA_API_KEY),
+      pushed: 0,
+      failed: 0,
+      deactivatedVariants: 0,
+      deactivatedProducts: 0,
+      deactivationFailed: 0,
+    },
+  };
+}
 
 export async function resolveSyncCompanyId(): Promise<string> {
   const company =
@@ -183,7 +210,8 @@ async function upsertCanonicalProduct(
   canonical: ContificoCanonicalProduct,
   counters: ContificoSyncCounters,
   dryRun: boolean,
-  matchByName: boolean
+  matchByName: boolean,
+  createMissing: boolean
 ): Promise<LocalProductWithVariants | null> {
   const sourceRowKey = `contifico:${canonical.externalId}`;
   const existingBySku = await prisma.kbProduct.findUnique({
@@ -252,6 +280,11 @@ async function upsertCanonicalProduct(
       where: { id: updated.id },
       include: { variants: { where: { deletedAt: null } } },
     });
+  }
+
+  if (!createMissing) {
+    counters.products.ignored += 1;
+    return null;
   }
 
   counters.products.created += 1;
@@ -349,7 +382,7 @@ async function deactivateAltosaSkus(
  */
 export async function syncLocalProductToAltosa(
   productId: string,
-  options: { updateTaxonomy?: boolean } = {}
+  options: { updateTaxonomy?: boolean; matchByName?: boolean } = {}
 ): Promise<boolean> {
   if (!env.ALTOSA_API_KEY) {
     return false;
@@ -365,9 +398,10 @@ export async function syncLocalProductToAltosa(
 
   try {
     const payload = buildAltosaPayloadFromLocal(product);
-    await syncAltosaProducts([
-      options.updateTaxonomy ? { ...payload, updateTaxonomy: true } : payload,
-    ]);
+    await syncAltosaProducts(
+      [options.updateTaxonomy ? { ...payload, updateTaxonomy: true } : payload],
+      { matchByName: options.matchByName ?? false }
+    );
     await prisma.kbProduct.update({
       where: { id: productId },
       data: { syncStatus: 'SINCRONIZADO' as KbSyncStatus },
@@ -391,6 +425,7 @@ export async function syncContificoCatalog(
   const shouldPushToAltosa = options.pushToAltosa ?? true;
   const matchByName = options.matchByName ?? false;
   const prune = options.prune ?? false;
+  const createMissing = options.createMissing ?? false;
 
   if (prune && options.onlySku) {
     throw new ApiError(
@@ -400,22 +435,7 @@ export async function syncContificoCatalog(
     );
   }
 
-  const counters: ContificoSyncCounters = {
-    source: 'contifico',
-    dryRun,
-    durationMs: 0,
-    categoriesFetched: 0,
-    products: { fetched: 0, created: 0, updated: 0, skipped: 0, pruned: 0 },
-    variants: { created: 0, updated: 0, skipped: 0 },
-    altosa: {
-      configured: Boolean(env.ALTOSA_API_KEY),
-      pushed: 0,
-      failed: 0,
-      deactivatedVariants: 0,
-      deactivatedProducts: 0,
-      deactivationFailed: 0,
-    },
-  };
+  const counters = createEmptyCounters(dryRun);
 
   const companyId = await resolveSyncCompanyId();
   const categories = await fetchContificoCategories();
@@ -447,16 +467,19 @@ export async function syncContificoCatalog(
         product,
         counters,
         dryRun,
-        matchByName
+        matchByName,
+        createMissing
       );
       if (local) {
         touchedProductIds.add(local.id);
+        altosaItems.push(
+          dryRun ? buildAltosaPayloadFromCanonical(product) : buildAltosaPayloadFromLocal(local)
+        );
+      } else if (createMissing) {
+        // Dry-run: el producto se crearía.
+        altosaItems.push(buildAltosaPayloadFromCanonical(product));
       }
-      altosaItems.push(
-        dryRun || !local
-          ? buildAltosaPayloadFromCanonical(product)
-          : buildAltosaPayloadFromLocal(local)
-      );
+      // Si createMissing=false y no existe, se ignora: no se agrega a Altosa.
     } catch (error) {
       counters.products.skipped += 1;
       logger.warn(
@@ -547,4 +570,105 @@ export async function syncContificoCatalog(
 
   counters.durationMs = Date.now() - startedAt;
   return counters;
+}
+
+/**
+ * Importa un único producto de Contifico a demanda (buscador del ERP).
+ * Crea/actualiza en la DB local, lo replica a Altosa y devuelve el ID de
+ * Altosa para que la UI pueda abrir el panel de detalle.
+ */
+export async function importContificoProduct(input: {
+  contificoId?: string;
+  sku?: string;
+}): Promise<ContificoImportResult> {
+  let raw: ContificoProductDto | null = null;
+
+  if (input.contificoId) {
+    raw = await fetchContificoProductById(input.contificoId);
+  } else if (input.sku) {
+    const sku = input.sku;
+    const matches = await searchContificoProducts(sku, 20);
+    raw =
+      matches.find(
+        (product) => resolveContificoSku(product).toLowerCase() === sku.toLowerCase()
+      ) ?? null;
+  }
+
+  if (!raw) {
+    throw new ApiError(
+      404,
+      'Producto no encontrado en Contifico.',
+      'CONTIFICO_PRODUCT_NOT_FOUND'
+    );
+  }
+
+  const categories = await fetchContificoCategories();
+  const categoryById = new Map(categories.map((category) => [category.id, category.nombre]));
+  const canonical = mapContificoProduct(
+    raw,
+    raw.categoria_id ? categoryById.get(raw.categoria_id) ?? null : null
+  );
+
+  const companyId = await resolveSyncCompanyId();
+  const counters = createEmptyCounters(false);
+  const local = await upsertCanonicalProduct(
+    companyId,
+    canonical,
+    counters,
+    false,
+    true,
+    true
+  );
+
+  if (!local) {
+    throw new ApiError(
+      500,
+      'No se pudo importar el producto de Contifico.',
+      'CONTIFICO_IMPORT_FAILED'
+    );
+  }
+
+  // Un producto agregado a demanda se reactiva si estaba soft-deleted.
+  // La validación se calcula igual que en el sync (precio > 0 => aprobado).
+  await prisma.$transaction([
+    prisma.kbProduct.update({
+      where: { id: local.id },
+      data: {
+        deletedAt: null,
+        isActive: canonical.isActive,
+      },
+    }),
+    prisma.kbProductVariant.updateMany({
+      where: { productId: local.id },
+      data: { deletedAt: null },
+    }),
+  ]);
+
+  await syncLocalProductToAltosa(local.id, { matchByName: true });
+
+  let altosaProductId: number | undefined;
+  if (env.ALTOSA_API_KEY) {
+    try {
+      const lookupSku = local.variants[0]?.sku ?? local.sku;
+      const lookup = await altosaService.getProductByVariantSku(lookupSku);
+      const lookupData = lookup.data as
+        | { producto?: { id?: number }; id?: number }
+        | undefined;
+      altosaProductId = lookupData?.producto?.id ?? lookupData?.id;
+    } catch (error) {
+      logger.warn(
+        { err: error, productId: local.id },
+        'No se pudo obtener el ID de Altosa del producto importado'
+      );
+    }
+  }
+
+  return {
+    localProductId: local.id,
+    altosaProductId,
+    sku: canonical.sku,
+    name: canonical.name,
+    created: counters.products.created > 0,
+    updated: counters.products.updated > 0,
+  };
 }
