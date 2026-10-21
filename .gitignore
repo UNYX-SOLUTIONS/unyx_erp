@@ -8,6 +8,9 @@ out/
 .env.local
 .env.*.local
 .env.deploy
+.env.production
+.env.production.*
+!.env.production.example
 *.log
 *.tsbuildinfo
 .DS_Store
