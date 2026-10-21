@@ -74,6 +74,14 @@ ALTOSA_API_URL=https://api.altosamobiliario.com
 ALTOSA_API_KEY=<key generada>
 ```
 
+Si vas a usar las **plantillas de Kommo**, agrega también en el `.env` de
+Altosa y ejecuta `sudo bash update.sh`:
+
+```env
+KOMMO_API_URL=https://altosa.kommo.com
+KOMMO_API_KEY=<token de larga duración>
+```
+
 **Paso 2 — ERP (su VPS).** En `/opt/unyx-erp`, crea `.env.production` desde
 `.env.production.example` y completa:
 

@@ -114,6 +114,12 @@ export async function createProduct(input: AltosaCreateProductBody): Promise<unk
     throw new Error(`Altosa no devolvió el producto creado para el SKU ${lookupSku}.`);
   }
 
+  if (input.kommoTemplateId) {
+    await altosaService.updateProduct(productId, {
+      kommoTemplateId: input.kommoTemplateId,
+    });
+  }
+
   const { data } = await altosaService.getProductById(productId);
   return data;
 }
@@ -149,10 +155,17 @@ export async function updateProduct(
   // Un update explícito desde el ERP sí puede cambiar la taxonomía de Altosa.
   await syncLocalProductToAltosa(local.id, { updateTaxonomy: true });
 
-  if (input.subcategoryId !== undefined || input.estadoId !== undefined) {
+  if (
+    input.subcategoryId !== undefined ||
+    input.estadoId !== undefined ||
+    input.kommoTemplateId !== undefined
+  ) {
     await altosaService.updateProduct(altosaId, {
       ...(input.subcategoryId !== undefined ? { subcategoryId: input.subcategoryId } : {}),
       ...(input.estadoId !== undefined ? { estadoId: input.estadoId } : {}),
+      ...(input.kommoTemplateId !== undefined
+        ? { kommoTemplateId: input.kommoTemplateId }
+        : {}),
     });
   }
 
@@ -230,6 +243,12 @@ export async function updateVariant(
     ...(input.imagenUrl !== undefined ? { imageUrl: input.imagenUrl } : {}),
     ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
   });
+
+  if (input.kommoTemplateId !== undefined) {
+    await altosaService.updateVariant(variantId, {
+      kommoTemplateId: input.kommoTemplateId,
+    });
+  }
 
   const refreshed = await getAltosaProduct(productId);
   return (

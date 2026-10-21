@@ -149,6 +149,7 @@ export function ProductDetailSheet() {
             price: variant.price,
             description: variant.description || undefined,
             imageUrl: variant.imageUrl ?? '',
+            kommoTemplateId: variant.kommoTemplateId ?? null,
           },
         })
       )

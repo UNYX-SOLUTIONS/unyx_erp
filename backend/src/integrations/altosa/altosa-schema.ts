@@ -68,6 +68,7 @@ export const altosaVariantBodySchema = z.object({
   garantiaId: z.coerce.number().int().positive().optional(),
   catalogoId: z.coerce.number().int().positive().optional(),
   estadoId: z.coerce.number().int().positive().max(32767).optional(),
+  kommoTemplateId: z.string().trim().min(1).max(80).nullable().optional(),
 });
 
 export const altosaUpdateVariantBodySchema = altosaVariantBodySchema.partial().extend({
@@ -84,6 +85,7 @@ export const altosaCreateProductBodySchema = z.object({
   usoRecomendado: z.string().trim().max(500).optional(),
   subcategoryId: z.coerce.number().int().positive().optional(),
   estadoId: z.coerce.number().int().positive().max(32767).optional(),
+  kommoTemplateId: z.string().trim().min(1).max(80).nullable().optional(),
   variantes: z.array(altosaVariantBodySchema).max(100).optional(),
 });
 
@@ -98,6 +100,7 @@ export const altosaUpdateProductBodySchema = z.object({
   subcategoryId: z.coerce.number().int().positive().optional(),
   estadoId: z.coerce.number().int().positive().max(32767).optional(),
   isActive: z.boolean().optional(),
+  kommoTemplateId: z.string().trim().min(1).max(80).nullable().optional(),
 });
 
 export const altosaVariantProductQuerySchema = z.object({

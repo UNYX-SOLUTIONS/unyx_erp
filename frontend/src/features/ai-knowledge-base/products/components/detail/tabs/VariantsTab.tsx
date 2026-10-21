@@ -20,6 +20,7 @@ interface VariantsTabProps {
 }
 
 export function VariantsTab({
+  product,
   form,
   variantsArray,
   addVariant,
@@ -106,6 +107,7 @@ export function VariantsTab({
               form={form}
               index={index}
               isBusy={isBusy}
+              initialTemplate={product.variants[index]?.kommoTemplate ?? null}
               onDuplicate={handleDuplicate}
               onRemove={handleRemove}
               onToggleActive={handleToggleActive}

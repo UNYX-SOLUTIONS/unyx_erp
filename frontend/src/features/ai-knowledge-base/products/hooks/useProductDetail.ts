@@ -52,6 +52,7 @@ function buildVariantsDefaults(product: ProductDetailDto): VariantsFormValues {
       description: variant.description ?? '',
       imageUrl: variant.imageUrl ?? '',
       isActive: variant.isActive,
+      kommoTemplateId: variant.kommoTemplateId ?? null,
     })),
   };
 }

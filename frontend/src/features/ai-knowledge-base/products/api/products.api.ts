@@ -9,6 +9,7 @@ import {
 import type {
   CreateProductPayload,
   CreateVariantPayload,
+  KommoTemplateDto,
   ProductDetailDto,
   ProductDto,
   ProductListParams,
@@ -103,6 +104,7 @@ function toProductDetail(dto: AltosaProductDto): ProductDetailDto {
     variants: (dto.variantes ?? []).map((variante, index) =>
       mapAltosaVariant(variante, productId, index)
     ),
+    kommoTemplate: dto.kommoTemplate ?? null,
   };
 }
 
@@ -133,6 +135,7 @@ function variantCreateBody(payload: CreateVariantPayload) {
     descripcion: payload.description || undefined,
     precioUsd: payload.price ?? undefined,
     imagenUrl: payload.imageUrl || undefined,
+    kommoTemplateId: payload.kommoTemplateId ?? undefined,
   };
 }
 
@@ -155,6 +158,9 @@ function variantUpdateBody(payload: UpdateVariantPayload) {
   }
   if (payload.isActive !== undefined) {
     body.isActive = payload.isActive;
+  }
+  if (payload.kommoTemplateId !== undefined) {
+    body.kommoTemplateId = payload.kommoTemplateId;
   }
   return body;
 }
@@ -315,6 +321,36 @@ export async function importContificoProduct(payload: {
   const response = await apiClient.post<ApiResponse<ContificoImportResult>>(
     '/api/v1/integrations/contifico/import',
     payload,
+    { timeout: 60_000 }
+  );
+  return response.data;
+}
+
+// ---------------------------------------------------------------------------
+// Kommo: plantillas de chat
+// ---------------------------------------------------------------------------
+
+export interface KommoSyncResult {
+  fetched: number;
+  created: number;
+  updated: number;
+  deactivated: number;
+}
+
+export async function searchKommoTemplates(
+  search?: string
+): Promise<ApiResponse<KommoTemplateDto[]>> {
+  const response = await apiClient.get<ApiResponse<KommoTemplateDto[]>>(
+    '/api/v1/integrations/kommo/templates',
+    { params: search ? { search } : undefined, timeout: 30_000 }
+  );
+  return response.data;
+}
+
+export async function syncKommoTemplates(): Promise<ApiResponse<KommoSyncResult>> {
+  const response = await apiClient.post<ApiResponse<KommoSyncResult>>(
+    '/api/v1/integrations/kommo/sync-templates',
+    {},
     { timeout: 60_000 }
   );
   return response.data;
