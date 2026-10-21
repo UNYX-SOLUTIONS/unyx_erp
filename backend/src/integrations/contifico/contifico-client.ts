@@ -18,10 +18,13 @@ function requireApiKey(): string {
   return env.CONTIFICO_API_KEY;
 }
 
-function buildUrl(path: string, query?: Record<string, string | number | boolean | undefined>): URL {
-  const base = env.CONTIFICO_API_URL.endsWith('/')
-    ? env.CONTIFICO_API_URL
-    : `${env.CONTIFICO_API_URL}/`;
+function buildUrl(
+  path: string,
+  query?: Record<string, string | number | boolean | undefined>,
+  baseUrl?: string
+): URL {
+  const configuredBase = baseUrl ?? env.CONTIFICO_API_URL;
+  const base = configuredBase.endsWith('/') ? configuredBase : `${configuredBase}/`;
   const url = new URL(path.replace(/^\/+/, ''), base);
   if (query) {
     for (const [key, value] of Object.entries(query)) {
@@ -55,6 +58,7 @@ export async function contificoRequest<T>(
     query?: Record<string, string | number | boolean | undefined>;
     body?: unknown;
     includePosToken?: boolean;
+    baseUrl?: string;
   }
 ): Promise<T> {
   const apiKey = requireApiKey();
@@ -63,7 +67,7 @@ export async function contificoRequest<T>(
     query.pos = env.CONTIFICO_API_TOKEN;
   }
 
-  const url = buildUrl(path, query);
+  const url = buildUrl(path, query, options?.baseUrl);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
 
@@ -107,9 +111,10 @@ export async function contificoRequest<T>(
 
 export function contificoGet<T>(
   path: string,
-  query?: Record<string, string | number | boolean | undefined>
+  query?: Record<string, string | number | boolean | undefined>,
+  baseUrl?: string
 ): Promise<T> {
-  return contificoRequest<T>('GET', path, { query });
+  return contificoRequest<T>('GET', path, { query, baseUrl });
 }
 
 export function contificoPost<T>(path: string, body: unknown): Promise<T> {

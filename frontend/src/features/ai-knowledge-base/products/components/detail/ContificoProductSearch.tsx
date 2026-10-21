@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, PackageSearch, Plus, Search } from 'lucide-react';
+import { Loader2, PackageSearch, Plus, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -46,6 +46,7 @@ export function ContificoProductSearch() {
     queryFn: () => searchContificoProducts(debouncedQuery),
     enabled: debouncedQuery.length >= 2,
     staleTime: 30_000,
+    placeholderData: (previousData) => previousData,
   });
 
   const suggestions = useMemo(() => search.data?.data ?? [], [search.data]);
@@ -83,10 +84,13 @@ export function ContificoProductSearch() {
     );
   };
 
-  const showEmpty = debouncedQuery.length >= 2 && !search.isFetching && available.length === 0;
+  const hasQuery = query.trim().length >= 2;
+  const showDropdown =
+    hasQuery && (search.isFetching || search.isError || search.data !== undefined);
+  const showSkeleton = search.isFetching && suggestions.length === 0;
 
   return (
-    <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4 dark:border-blue-900/60 dark:bg-blue-950/20">
+    <div className="relative rounded-xl border border-blue-200 bg-blue-50/50 p-4 dark:border-blue-900/60 dark:bg-blue-950/20">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-slate-100">
@@ -99,79 +103,101 @@ export function ContificoProductSearch() {
         </div>
       </div>
 
-      <div className="relative mt-3">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+      <div className="relative mt-3 h-10">
+        <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+          <Search className="h-4 w-4" />
+        </div>
         <Input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Buscar en Contifico por nombre o SKU…"
-          className="bg-white pl-9 pr-9 dark:bg-slate-900"
+          className="h-10 bg-white pl-9 pr-10 dark:bg-slate-900"
           autoFocus
         />
-        {search.isFetching && (
-          <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-blue-600" />
-        )}
+        {search.isFetching ? (
+          <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+            <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+          </div>
+        ) : query ? (
+          <button
+            type="button"
+            onClick={() => setQuery('')}
+            className="absolute right-1 top-0 flex h-10 w-8 items-center justify-center rounded-md text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-slate-200"
+            aria-label="Limpiar búsqueda"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        ) : null}
       </div>
 
-      {debouncedQuery.length < 2 ? (
-        <p className="mt-3 text-xs text-gray-500 dark:text-slate-400">
-          Escribe al menos 2 caracteres para buscar una sugerencia.
-        </p>
-      ) : search.isError ? (
-        <p className="mt-3 text-xs text-red-600 dark:text-red-400">
-          {getApiErrorMessage(search.error, 'No se pudo consultar Contifico.')}
-        </p>
-      ) : showEmpty ? (
-        <p className="mt-3 text-xs text-gray-500 dark:text-slate-400">
-          {alreadyAdded.length > 0
-            ? 'Ese producto ya está en tu catálogo.'
-            : 'No se encontraron productos en Contifico con ese nombre o SKU.'}
-        </p>
-      ) : available.length > 0 ? (
-        <div className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1">
-          {available.map((suggestion) => (
-            <div
-              key={suggestion.contificoId}
-              className="flex items-start justify-between gap-3 rounded-lg border border-blue-100 bg-white p-3 dark:border-slate-800 dark:bg-slate-900"
-            >
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="truncate text-sm font-medium text-gray-900 dark:text-slate-100">
-                    {suggestion.name}
-                  </span>
-                  <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
-                    Sugerencia Contifico
-                  </span>
-                </div>
-                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-slate-400">
-                  <span className="font-mono font-medium text-blue-600 dark:text-blue-400">
-                    {suggestion.sku}
-                  </span>
-                  {suggestion.category && <span>{suggestion.category}</span>}
-                  <span>Stock: {suggestion.stock.toLocaleString('es-EC')}</span>
-                  {suggestion.price !== null && (
-                    <span>${suggestion.price.toFixed(2)}</span>
-                  )}
-                </div>
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => setSelected(suggestion)}
-                className="shrink-0 gap-1.5 bg-blue-600 text-white hover:bg-blue-700"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Agregar
-              </Button>
-            </div>
-          ))}
-        </div>
-      ) : null}
+      {/* Altura estable: evita que el formulario manual salte al buscar. */}
+      <p className="mt-2 min-h-[1rem] text-xs text-gray-500 dark:text-slate-400">
+        {hasQuery ? ' ' : 'Escribe al menos 2 caracteres para buscar una sugerencia.'}
+      </p>
 
-      {available.length > 0 && alreadyAdded.length > 0 && (
-        <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">
-          {alreadyAdded.length} resultado(s) ya están en tu catálogo y se omitieron.
-        </p>
+      {showDropdown && (
+        <div className="absolute left-4 right-4 top-full z-30 mt-2 max-h-80 overflow-y-auto rounded-xl border border-blue-100 bg-white p-2 shadow-xl animate-in fade-in-0 slide-in-from-top-1 duration-150 dark:border-slate-800 dark:bg-slate-900">
+          {showSkeleton ? (
+            <div className="space-y-2 p-1">
+              <div className="h-16 animate-pulse rounded-lg bg-blue-50 dark:bg-slate-800" />
+              <div className="h-16 animate-pulse rounded-lg bg-blue-50 dark:bg-slate-800" />
+            </div>
+          ) : search.isError ? (
+            <p className="px-2 py-3 text-xs text-red-600 dark:text-red-400">
+              {getApiErrorMessage(search.error, 'No se pudo consultar Contifico.')}
+            </p>
+          ) : available.length === 0 ? (
+            <p className="px-2 py-3 text-xs text-gray-500 dark:text-slate-400">
+              {alreadyAdded.length > 0
+                ? 'Ese producto ya está en tu catálogo.'
+                : 'No se encontraron productos en Contifico con ese nombre o SKU.'}
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {available.map((suggestion) => (
+                <div
+                  key={suggestion.contificoId}
+                  className="flex items-start justify-between gap-3 rounded-lg border border-blue-100 bg-white p-3 dark:border-slate-800 dark:bg-slate-900"
+                >
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="truncate text-sm font-medium text-gray-900 dark:text-slate-100">
+                        {suggestion.name}
+                      </span>
+                      <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                        Sugerencia Contifico
+                      </span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-slate-400">
+                      <span className="font-mono font-medium text-blue-600 dark:text-blue-400">
+                        {suggestion.sku}
+                      </span>
+                      {suggestion.category && <span>{suggestion.category}</span>}
+                      <span>Stock: {suggestion.stock.toLocaleString('es-EC')}</span>
+                      {suggestion.price !== null && (
+                        <span>${suggestion.price.toFixed(2)}</span>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setSelected(suggestion)}
+                    className="shrink-0 gap-1.5 bg-blue-600 text-white hover:bg-blue-700"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Agregar
+                  </Button>
+                </div>
+              ))}
+              {alreadyAdded.length > 0 && (
+                <p className="px-1 pb-1 pt-0.5 text-xs text-gray-500 dark:text-slate-400">
+                  {alreadyAdded.length} resultado(s) ya están en tu catálogo y se omitieron.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       <Dialog

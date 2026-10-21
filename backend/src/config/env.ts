@@ -23,7 +23,7 @@ const envSchema = z.object({
   ALTOSA_API_KEY: z.preprocess(emptyToUndefined, z.string().min(16).optional()),
   CONTIFICO_API_URL: z.preprocess(
     emptyToUndefined,
-    z.string().url().default('https://api.contifico.com/sistema/api/v2')
+    z.string().url().default('https://api.contifico.com/sistema/api/v1')
   ),
   CONTIFICO_API_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   CONTIFICO_API_TOKEN: z.preprocess(emptyToUndefined, z.string().min(1).optional()),

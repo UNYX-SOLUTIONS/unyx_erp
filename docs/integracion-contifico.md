@@ -6,12 +6,19 @@
 relacional local y replica el catálogo hacia la base de conocimiento de Altosa
 (usada por el asistente IA).
 
-Referencia usada para el CRUD: [Contifico API v2](https://api.contifico.com/sistema/api/v2/documentacion/),
-tag **Producto** (`POST`, `GET`, `PUT`; no hay `DELETE`).
+Referencia usada: [Contifico API v1](https://api.contifico.com/sistema/api/v1/documentacion/),
+tag **Producto** (`POST`, `GET`, `PATCH`; no hay `DELETE`).
+
+> **¿Por qué v1 y no v2?** En la práctica, el listado v2 devuelve un objeto
+> paginado (`{ count, next, results }`) con IDs distintos a los de v1 e **ignora
+> el parámetro `filtro`**. El listado/búsqueda/get de v1 devuelve arrays, filtra
+> correctamente por nombre/código y usa los IDs que sí funcionan en el CRUD. El
+> código conserva el camino v2 para cuando se necesite, pero el default y el
+> flujo probado son v1.
 
 ```
                         ┌──────────────────────────────┐
-                        │ Contifico (API v2)           │
+                        │ Contifico (API v1)           │
                         │ productos + stock + precios  │
                         └──────────────┬───────────────┘
                                        │ GET /producto, /categoria
@@ -54,7 +61,7 @@ Reglas:
 ### ERP (`unyx_erp/backend/.env`)
 
 ```env
-CONTIFICO_API_URL=https://api.contifico.com/sistema/api/v2
+CONTIFICO_API_URL=https://api.contifico.com/sistema/api/v1
 CONTIFICO_API_KEY=<api key de Contifico>
 CONTIFICO_API_TOKEN=<pos token opcional>
 
@@ -67,8 +74,8 @@ ALTOSA_API_KEY=<misma clave que altosa_infrastructure/.env>
   `Bearer`), como indica la documentación de Contifico.
 - `CONTIFICO_API_TOKEN` es el token de POS. No se usa para los endpoints de
   producto; queda disponible para futuras integraciones POS.
-- `CONTIFICO_API_URL` es configurable para cambiar entre `v1` y `v2` sin tocar
-  código.
+- `CONTIFICO_API_URL` debe quedar en `v1`. El código tiene un camino v2, pero el
+  listado/búsqueda de v2 devuelve otro formato e IDs y no filtra por `filtro`.
 - Si el backend corre en Docker, define las mismas variables en el `.env` raíz
   o `.env.production`; `docker-compose*.yml` ya las inyecta al contenedor.
   Después reinicia `unyx-backend`.
@@ -293,45 +300,80 @@ Contifico, luego en la DB local y finalmente en Altosa.
    Contifico sin importarlos todos.
 2. **Crear manualmente** → `POST /producto/` en Contifico (código, nombre,
    categoría, `pvp1` inicial), luego en la DB local y en Altosa.
-3. **Editar producto** → `PUT /producto/{id}` en Contifico (nombre, descripción,
-   categoría y estado); después en la DB local y Altosa. Los campos `keywords`
-   y `subcategory` son enriquecimiento del ERP/IA.
+3. **Editar producto** → `PATCH /producto/{id}/` en Contifico (nombre,
+   descripción, categoría y estado); después en la DB local y Altosa. Los campos
+   `keywords` y `subcategory` son enriquecimiento del ERP/IA.
 4. **Editar variante principal** → precio y descripción se actualizan en
    Contifico (`pvp1`, `descripcion`). El stock **no** se edita desde el ERP:
    viene de Contifico.
-5. **Eliminar** → no existe `DELETE` en Contifico v2: se desactiva con
-   `PUT /producto/{id}` y `estado = I`; se marca inactivo en local y Altosa.
+5. **Eliminar** → no existe `DELETE` en Contifico: se desactiva con
+   `PATCH /producto/{id}/` y `estado = I`; se marca inactivo en local y Altosa.
 
-### Detalles del CRUD v2
+### Detalles del CRUD (v1)
 
-- `POST /api/v2/producto/`: crea. Campos obligatorios: `codigo`, `nombre`,
-  `minimo`, `pvp1`, `estado`. Se envía además `pvp_manual: true` cuando
-  `pvp1 = 0`.
-- `GET /api/v2/producto/{id}`: obtiene un producto.
-- `PUT /api/v2/producto/{id}`: actualiza. Es un reemplazo completo, así que el
-  cliente primero lee el producto actual y reenvía los campos mínimos más los
-  cambios; no borra precios 2-4, cuentas, marca, costo máximo, lead time, etc.
-- `GET /api/v2/producto/`: lista paginada de 100. Se consultan estados `A` e
-  `I` para propagar desactivaciones.
-- La imagen se mantiene en la DB local y Altosa; no se actualiza desde el ERP
-  porque su API v2 espera un objeto `Foto`, no una URL plana. En el `PUT` se
-  reenvían la imagen y `cantidad_stock` actuales tal como los devolvió Contifico
-  para que el reemplazo completo no los borre. El stock se mueve con
-  movimientos de inventario, no desde la edición del producto.
-- Si se configura `CONTIFICO_API_URL` con `/api/v1`, el cliente usa `PATCH`
-  parcial para actualizar (compatibilidad).
+- `POST /api/v1/producto/`: crea. Campos obligatorios: `codigo`, `nombre`,
+  `minimo`, `pvp1`, `estado`. Se envía `pvp_manual: true` cuando `pvp1 = 0`.
+- `GET /api/v1/producto/{id}/`: obtiene un producto. **Requiere el slash final**
+  (sin slash la API responde 401 en este tenant).
+- `PATCH /api/v1/producto/{id}/`: actualiza de forma parcial y responde `204`;
+  el cliente vuelve a leer el producto para devolver el detalle actualizado.
+- `GET /api/v1/producto/`: lista en array. Se consultan estados `A` e `I` para
+  propagar desactivaciones. El parámetro `filtro` funciona para nombre/código y
+  es el que usa el buscador del panel.
+- La imagen se mantiene en la DB local y Altosa; el `PATCH` no la envía. El
+  stock se mueve con movimientos de inventario, no desde la edición del producto.
+- **Validación de imagen (2026-10-21):** se creó el producto inactivo
+  `ZZ-IMG-TEST-001` y se probaron `PATCH` con `imagen` como string plano,
+  `{ "url": ... }`, `{ "src": ... }`, `{ "path": ... }`, `{ "foto": ... }`,
+  `[{ "url": ... }]` y `{ "nombre": ..., "url": ... }`. Todos respondieron
+  `204`, pero el `GET` posterior siguió devolviendo `imagen: ""`: el campo se
+  ignora y es efectivamente read-only. El producto de prueba quedó inactivo con
+  código `ZZ-IMG-TEST-001`; se puede borrar desde la UI de Contifico (la API no
+  expone `DELETE`).
+- El cliente conserva un camino v2 (`PUT` con reconstrucción del producto) para
+  quien configure `CONTIFICO_API_URL` con `/v2`, pero no es el default probado.
+
+### Flujo del trabajador (ERP ↔ Altosa ↔ Contifico)
+
+Prerrequisito: ejecutar una vez el enlace del catálogo existente:
+
+```bash
+pnpm --dir backend sync:contifico -- --dry-run --match-by-name
+pnpm --dir backend sync:contifico -- --match-by-name
+```
+
+Eso deja `sourceRowKey = contifico:<id>` en los productos enlazados. A partir de
+ahí:
+
+| Acción en el ERP | Altosa / Kommo | Contifico |
+|---|---|---|
+| Ver productos | Lee Altosa (la misma base que alimenta Kommo) | Solo lectura, vía sync |
+| Editar nombre, descripción, categoría o estado | Se actualiza Altosa; Kommo lo toma en su siguiente sync | `PATCH /producto/{id}/` |
+| Editar precio/descripción de la variante principal | Se actualiza Altosa; Kommo lo toma en su siguiente sync | `PATCH /producto/{id}/` (`pvp1`, `descripcion`) |
+| Agregar desde “Buscar en Contifico” | Upsert local + Altosa; se abre el panel de edición | Se importa/lee el producto existente; no se duplica |
+| Subir imagen | Se guarda en Altosa/local; Kommo la usa | **No se actualiza**: `imagen` es read-only en la API de Contifico |
+| Editar stock | Se refleja desde Contifico | Solo lectura desde Contifico |
+| Eliminar producto | Se desactiva en Altosa | `PATCH` con `estado = I` |
+| Agregar una variante extra | Altosa/local | No se crea en Contifico (limitación de fase 1) |
+
+Kommo no se llama desde este código: se actualiza por el flujo existente
+Altosa → Kommo. El ERP escribe en Altosa, que es la fuente de ese flujo.
 
 ### Límites conocidos (fase 1)
 
 - Un producto de Contifico se representa como **un producto + una variante
   principal "Estándar"**. `detalle_variantes` de Contifico todavía no se expande
-  a variantes múltiples; el `PUT` v2 no reenvía `variantes`/`detalle_variantes`,
-  así que editar desde el ERP un producto que ya tenga variantes en Contifico
-  queda pendiente.
+  a variantes múltiples; la actualización desde el ERP no reenvía
+  `variantes`/`detalle_variantes`, así que editar un producto que ya tenga
+  variantes en Contifico queda pendiente.
 - Las variantes adicionales creadas en el ERP se guardan en local/Altosa, pero
   no se crean en Contifico (su API de variantes es de atributos, no de SKUs
   vendibles). La variante principal no se puede borrar ni cambiar de SKU desde
   el ERP: se cambia en Contifico y se vuelve a sincronizar.
+- `imagen` es **read-only** en el esquema de producto de Contifico. Las imágenes
+  subidas desde el ERP se guardan en Altosa/local y las usa Kommo, pero no se
+  escriben en Contifico. Si Contifico ya tiene una imagen, el sync la importa a
+  Altosa/local; la imagen del ERP no reemplaza la de Contifico.
 - El SKU de un producto ya sincronizado está bloqueado en el ERP por la misma
   razón: es la llave natural con Contifico.
 - La subida de imágenes sigue pasando por altosa-api (URLs públicas). Si

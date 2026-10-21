@@ -36,6 +36,7 @@ export function ProductDetailSheet() {
   const mode = useProductDetailStore((state) => state.mode);
   const productId = useProductDetailStore((state) => state.productId);
   const close = useProductDetailStore((state) => state.close);
+  const openProduct = useProductDetailStore((state) => state.open);
   const isCreate = mode === 'create';
 
   const [activeTab, setActiveTab] = useState<DetailTab>('general');
@@ -101,9 +102,9 @@ export function ProductDetailSheet() {
         isActive: values.isActive,
       },
       {
-        onSuccess: () => {
+        onSuccess: (response) => {
           resetAll();
-          close();
+          openProduct(String(response.data.id));
         },
       }
     );

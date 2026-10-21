@@ -23,8 +23,6 @@ interface AltosaProductRaw {
   variantes?: AltosaVariantRaw[];
 }
 
-type LocalProduct = Awaited<ReturnType<typeof findLocalProductBySku>>;
-
 function asProduct(data: unknown): AltosaProductRaw {
   return data as AltosaProductRaw;
 }
@@ -216,7 +214,7 @@ export async function updateVariant(
   const current = await getAltosaProduct(productId);
   const rawVariant = current.variantes?.find((variant) => variant.id === variantId);
   const sku = rawVariant?.sku ?? primarySku(current);
-  const local: LocalProduct = sku ? await findLocalProductBySku(sku) : null;
+  const local = sku ? await findLocalProductBySku(sku) : null;
   const localVariant = local?.variants.find((variant) => variant.sku === (rawVariant?.sku ?? sku));
 
   if (!local || !localVariant) {

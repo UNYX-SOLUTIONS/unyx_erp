@@ -30,6 +30,17 @@ function productItemPath(id: string): string {
   return isV2() ? `/producto/${encoded}` : `/producto/${encoded}/`;
 }
 
+/**
+ * v2 devuelve listas paginadas como objeto ({ count, next, results }) e ignora
+ * el parámetro `filtro`; v1 devuelve arrays y sí filtra por nombre/código.
+ * Para listar, buscar y leer categorías usamos v1. El CRUD (GET/POST/PUT)
+ * sigue usando la versión configurada en CONTIFICO_API_URL.
+ */
+function v1BaseUrl(): string {
+  const configured = env.CONTIFICO_API_URL.replace(/\/+$/, '');
+  return /\/v2$/i.test(configured) ? configured.replace(/\/v2$/i, '/v1') : configured;
+}
+
 function mergePages(pages: ContificoProductDto[][]): ContificoProductDto[] {
   const byId = new Map<string, ContificoProductDto>();
   for (const page of pages) {
@@ -45,10 +56,14 @@ async function fetchProductPages(estado?: 'A' | 'I'): Promise<ContificoProductDt
   const seen = new Set<string>();
 
   for (let page = 1; page <= MAX_PAGES; page += 1) {
-    const items = await contificoGet<ContificoProductDto[]>('/producto/', {
-      page,
-      ...(estado ? { estado } : {}),
-    });
+    const items = await contificoGet<ContificoProductDto[]>(
+      '/producto/',
+      {
+        page,
+        ...(estado ? { estado } : {}),
+      },
+      v1BaseUrl()
+    );
 
     if (!Array.isArray(items) || items.length === 0) {
       break;
@@ -112,11 +127,15 @@ export async function searchContificoProducts(
     return [];
   }
 
-  const items = await contificoGet<ContificoProductDto[]>('/producto/', {
-    filtro: term,
-    page: 1,
-    estado: 'A',
-  });
+  const items = await contificoGet<ContificoProductDto[]>(
+    '/producto/',
+    {
+      filtro: term,
+      page: 1,
+      estado: 'A',
+    },
+    v1BaseUrl()
+  );
   if (!Array.isArray(items)) {
     return [];
   }
@@ -137,7 +156,11 @@ export async function searchContificoProducts(
 }
 
 export async function fetchContificoCategories(): Promise<ContificoCategoryDto[]> {
-  const categories = await contificoGet<ContificoCategoryDto[]>('/categoria/');
+  const categories = await contificoGet<ContificoCategoryDto[]>(
+    '/categoria/',
+    undefined,
+    v1BaseUrl()
+  );
   return Array.isArray(categories) ? categories : [];
 }
 
