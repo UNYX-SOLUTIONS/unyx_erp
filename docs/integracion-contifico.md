@@ -2,9 +2,11 @@
 
 ## Objetivo y dirección del flujo
 
-**Contifico es la fuente de verdad del inventario.** El ERP mantiene un espejo
-relacional local y replica el catálogo hacia la base de conocimiento de Altosa
-(usada por el asistente IA).
+**Contifico conserva el histórico y el stock.** El ERP Unyx es la consola de
+administración: escribe de vuelta a Contifico los campos que su API permite
+(nombre, descripción, categoría, estado, precio/descripción de la variante
+principal), mantiene el espejo local y replica el catálogo aprobado hacia la
+base de conocimiento de Altosa (usada por el asistente IA).
 
 Referencia usada: [Contifico API v1](https://api.contifico.com/sistema/api/v1/documentacion/),
 tag **Producto** (`POST`, `GET`, `PATCH`; no hay `DELETE`).
@@ -53,8 +55,16 @@ Reglas:
 - El navegador **solo** habla con el backend del ERP (patrón BFF).
 - La API key de Contifico y la de altosa-api viven únicamente en los `.env` de
   los backends; nunca se envían al frontend.
-- Contifico manda: si un producto cambia de nombre, precio, stock o estado en
-  Contifico, la siguiente sincronización lo refleja en el ERP y en Altosa.
+- El ERP administra. Para los campos soportados escribe primero en Contifico,
+  luego en la DB local y finalmente en Altosa; el sync vuelve a leer Contifico
+  y refleja los mismos valores.
+- El stock no se edita en el ERP: se lee de Contifico.
+- La imagen no se escribe en Contifico (su API la ignora): vive en local/Altosa
+  y el sync preserva la imagen del ERP si ya existe.
+- La aprobación (`isActive`/`validation`) es del ERP. Los productos nuevos de
+  Contifico entran inactivos y `PENDIENTE`; el equipo los activa.
+- El estado activo de producto y variante se conserva desde el ERP; si
+  Contifico difiere, se registra en el log para revisión.
 
 ## Configuración
 
@@ -108,6 +118,10 @@ Sin cambios nuevos: usa el `API_KEY` existente para autenticar al ERP.
    > que ya existen en el ERP**. Los ~1000 productos de Contifico que no estén
    > en tu base **no se importan**: quedan como `ignored` y se agregan a demanda
    > desde el buscador del panel de producto.
+   >
+   > Los productos que sí se importan (on-demand o con `--create-missing`) nacen
+   > **inactivos y `PENDIENTE`**; el equipo los revisa y activa en el ERP antes
+   > de que se publiquen a Altosa/Meta.
    >
    > **Migración inicial recomendada** (DB con catálogo viejo del ETL):
    >
@@ -191,8 +205,9 @@ Seguridades de `--prune`:
 - No hace nada si hubo productos omitidos por error durante el upsert.
 - `--dry-run --prune` muestra cuántos se desactivarían y una muestra de SKUs.
   Para la lista completa, usa `--export`; el JSON incluye `deactivateSkus`.
-- Si un producto reaparece en Contifico, la siguiente sincronización lo vuelve a
-  activar con sus datos actuales.
+- Si un producto reaparece en Contifico, el sync actualiza sus datos comerciales,
+  pero **no lo reactiva**: el `isActive` del ERP es el que decide; el equipo lo
+  activa cuando corresponda.
 
 Después de la migración inicial:
 
@@ -270,6 +285,11 @@ Ejemplo de ítem:
 | `estado` (`A`/`I`) | `isActive` | `isActive` | `products.is_active` |
 | `codigo_barra`, `porcentaje_iva`, `minimo`, `marca_nombre`, `tipo` | — | `especificaciones` (JSON) | `especificacionesAdicionales` (JSON) |
 | `imagen` | `thumbnailUrl` | `imageUrl` | `product_variants.imagen_url` |
+
+> **Estado activo:** el sync conserva el `isActive` del ERP (producto y
+> variante); si Contifico difiere, lo registra para revisión. El write-back del
+> ERP envía el estado del producto a Contifico. La variante inactiva se propaga
+> a Altosa y n8n no la ofrece.
 
 Notas de stock: `KbProductVariant.stock` es `Int`; el valor decimal exacto de
 Contifico queda en `especificaciones.stock`. Si más adelante se necesita
@@ -351,7 +371,7 @@ ahí:
 | Editar nombre, descripción, categoría o estado | Se actualiza Altosa; Kommo lo toma en su siguiente sync | `PATCH /producto/{id}/` |
 | Editar precio/descripción de la variante principal | Se actualiza Altosa; Kommo lo toma en su siguiente sync | `PATCH /producto/{id}/` (`pvp1`, `descripcion`) |
 | Agregar desde “Buscar en Contifico” | Upsert local + Altosa; se abre el panel de edición | Se importa/lee el producto existente; no se duplica |
-| Subir imagen | Se guarda en Altosa/local; Kommo la usa | **No se actualiza**: `imagen` es read-only en la API de Contifico |
+| Subir imagen | Se guarda en Altosa/local; Kommo la usa | **No se actualiza**: `imagen` es read-only en la API de Contifico. El sync preserva la imagen del ERP si ya existe |
 | Editar stock | Se refleja desde Contifico | Solo lectura desde Contifico |
 | Eliminar producto | Se desactiva en Altosa | `PATCH` con `estado = I` |
 | Agregar una variante extra | Altosa/local | No se crea en Contifico (limitación de fase 1) |
@@ -360,6 +380,14 @@ Kommo no se llama desde este código: se actualiza por el flujo existente
 Altosa → Kommo. El ERP escribe en Altosa, que es la fuente de ese flujo.
 
 ### Límites conocidos (fase 1)
+
+- Los productos nuevos importados desde Contifico quedan inactivos y `PENDIENTE`; la aprobación es manual.
+- El sync conserva el `isActive` del producto y de cada variante del ERP; no reactiva productos desactivados.
+- El estado activo de la variante se propaga a Altosa; n8n no ofrece variantes inactivas.
+- La imagen del ERP se preserva; la de Contifico solo se importa si no hay una.
+- La subcategoría/taxonomía se propaga a Altosa con `updateTaxonomy` cuando cambia en el ERP; el sync masivo no la pisa.
+- `keywords` no está en Altosa; si la IA debe buscar por ellas, hay que mapearlas.
+- El contenido de la tarjeta Meta (precio/imagen/disponibilidad) aún no se escribe desde el ERP.
 
 - Un producto de Contifico se representa como **un producto + una variante
   principal "Estándar"**. `detalle_variantes` de Contifico todavía no se expande
@@ -395,6 +423,7 @@ Altosa → Kommo. El ERP escribe en Altosa, que es la fuente de ese flujo.
 
 ## Próximos pasos sugeridos
 
+- Escribir contenido a Meta (`items_batch` o feed propio) y reconciliación periódica.
 - Programar la sincronización cada N minutos (cron/scheduler) y/o usar webhooks
   si Contifico los habilita para inventario.
 - Mapear `detalle_variantes` de Contifico a variantes múltiples.

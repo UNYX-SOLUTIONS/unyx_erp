@@ -1,4 +1,5 @@
 import { StatusCodes } from 'http-status-codes';
+import type { KbSyncStatus } from '@prisma/client';
 import { prisma } from '../../config/database';
 import { logger } from '../../config/logger';
 import { ApiError } from '../../utils/api-error';
@@ -42,16 +43,13 @@ function normalizeMetaRetailerId(value: string | null | undefined): string | nul
 }
 
 function resolveMetaMappingAction(input: AltosaUpdateVariantBody): MetaMappingAction | null {
-  if (input.metaRetailerId === undefined && input.metaMappingLocked === undefined) {
-    return null;
+  if (input.metaRetailerId !== undefined) {
+    if (normalizeMetaRetailerId(input.metaRetailerId) === null) {
+      return input.metaMappingLocked === false ? 'unlock' : 'clear';
+    }
+    return 'assign';
   }
-  if (input.metaMappingLocked === false) {
-    return 'unlock';
-  }
-  if (normalizeMetaRetailerId(input.metaRetailerId) === null) {
-    return 'clear';
-  }
-  return 'assign';
+  return input.metaMappingLocked === false ? 'unlock' : null;
 }
 
 async function recordMetaMappingAudit(params: {
@@ -294,6 +292,23 @@ export async function deleteVariant(variantId: number, productId?: number): Prom
   return data;
 }
 
+async function markProductUnsynced(productId: string | undefined): Promise<void> {
+  if (!productId) {
+    return;
+  }
+  try {
+    await prisma.kbProduct.update({
+      where: { id: productId },
+      data: { syncStatus: 'SIN_SINCRONIZAR' as KbSyncStatus },
+    });
+  } catch (error) {
+    logger.warn(
+      { err: error, productId },
+      'No se pudo marcar el producto como SIN_SINCRONIZAR'
+    );
+  }
+}
+
 export async function updateVariant(
   variantId: number,
   input: AltosaUpdateVariantBody,
@@ -322,7 +337,15 @@ export async function updateVariant(
     await productsService.updateVariant(local.id, localVariant.id, localUpdate);
   }
 
-  const { data } = await altosaService.updateVariant(variantId, input);
+  let data: unknown;
+  try {
+    ({ data } = await altosaService.updateVariant(variantId, input));
+  } catch (error) {
+    // El update local ya se aplicó; marcamos el producto para que el sync
+    // idempotente de Contifico/Altosa lo reintente y no quede deriva silenciosa.
+    await markProductUnsynced(local?.id);
+    throw error;
+  }
 
   const action = resolveMetaMappingAction(input);
   if (action) {

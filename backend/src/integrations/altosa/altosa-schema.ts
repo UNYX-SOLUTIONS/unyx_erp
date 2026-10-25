@@ -125,6 +125,7 @@ export const altosaSyncVariantSchema = z.object({
   precioUsd: z.number().min(0).max(1_000_000).nullable().optional(),
   imagenUrl: optionalUrl.nullable().optional(),
   especificaciones: z.record(z.unknown()).nullable().optional(),
+  isActive: z.boolean().optional(),
 });
 
 export const altosaSyncProductSchema = z.object({

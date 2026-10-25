@@ -18,6 +18,7 @@ export function useUpdateVariantMetaMapping(productId: string) {
     mutationFn: ({ variantId, payload }: UpdateMetaMappingVariables) =>
       updateVariant(productId, variantId, payload),
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['product', productId] });
       void queryClient.invalidateQueries({ queryKey: ['products'] });
     },
     onError: (error) => {

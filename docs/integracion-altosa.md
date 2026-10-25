@@ -38,13 +38,14 @@ Regla de oro: **el frontend habla SOLO con el backend del ERP** (patrón BFF). E
 ### 2. Backend del ERP — integración (backend/src/integrations/altosa/)
 
 - Vars: `ALTOSA_API_URL` (VPS: `http://altosa-api:4100`; local: `http://localhost:4100` o el puerto elegido) y `ALTOSA_API_KEY` (misma clave que altosa_infrastructure/.env). Si falta la key, los endpoints responden `503 ALTOSA_NOT_CONFIGURED` (el resto del ERP sigue funcionando).
-- Cliente `altosa-client.ts`: fetch con timeout 10s (60s para lotes de sincronización), errores mapeados (502/504/503).
-- BFF (requieren `authenticate` del ERP): `GET /api/v1/integrations/altosa/{products, products/:id, products/sku/:sku, categories, catalogs, locations, warranties, documents}`.
+- Cliente `altosa-client.ts`: fetch con timeout 10s (30s para el catálogo Meta y 60s para lotes de sincronización), errores mapeados (502/504/503).
+- BFF (requieren `authenticate` del ERP): `GET /api/v1/integrations/altosa/{products, products/:id, products/sku/:sku, categories, catalogs, locations, warranties, documents, meta/catalog/search, meta/catalog/item}`.
 - Errores típicos: `502 ALTOSA_API_ERROR`, `502 ALTOSA_UNREACHABLE`, `504 ALTOSA_TIMEOUT`.
 
 ### 3. Productos: Contifico → ERP → Altosa
 
-La fuente de verdad actual del inventario es **Contifico**. El flujo vigente
+Contifico conserva el histórico y el stock; el ERP es la consola de
+administración y escribe de vuelta los campos soportados. El flujo vigente
 está documentado en `docs/integracion-contifico.md`:
 
 - `pnpm --dir backend sync:contifico` hace upsert en

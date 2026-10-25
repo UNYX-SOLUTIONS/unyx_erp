@@ -98,9 +98,10 @@ export async function altosaRequest<T>(
 
 export async function altosaGet<T>(
   path: string,
-  query?: Record<string, string | number | boolean | undefined>
+  query?: Record<string, string | number | boolean | undefined>,
+  options?: { timeoutMs?: number }
 ): Promise<{ data: T; meta?: PaginationMeta }> {
-  return altosaRequest<T>('GET', path, { query });
+  return altosaRequest<T>('GET', path, { query, ...options });
 }
 
 export interface AltosaUploadFile {

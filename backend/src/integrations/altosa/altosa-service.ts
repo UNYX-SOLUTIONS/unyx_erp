@@ -109,14 +109,22 @@ export async function syncKommoTemplates() {
 }
 
 export async function searchMetaCatalog(query: AltosaMetaCatalogSearchQuery) {
-  return altosaGet<unknown>('/api/v1/meta/catalog/search', {
-    q: query.q,
-    limit: query.limit,
-  });
+  return altosaGet<unknown>(
+    '/api/v1/meta/catalog/search',
+    {
+      q: query.q,
+      limit: query.limit,
+    },
+    { timeoutMs: 30_000 }
+  );
 }
 
 export async function getMetaCatalogItem(query: AltosaMetaCatalogItemQuery) {
-  return altosaGet<unknown>('/api/v1/meta/catalog/item', {
-    retailerId: query.retailerId,
-  });
+  return altosaGet<unknown>(
+    '/api/v1/meta/catalog/item',
+    {
+      retailerId: query.retailerId,
+    },
+    { timeoutMs: 30_000 }
+  );
 }
