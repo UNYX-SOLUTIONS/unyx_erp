@@ -18,7 +18,8 @@
     "prisma:studio": "prisma studio",
     "etl:products": "tsx scripts/etl-products.ts",
     "etl:products:api": "tsx scripts/etl-products-api.ts",
-    "seed:demo": "tsx scripts/seed-demo.ts"
+    "seed:demo": "tsx scripts/seed-demo.ts",
+    "sync:contifico": "tsx scripts/sync-contifico.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

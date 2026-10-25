@@ -22,6 +22,10 @@ const EMPTY_GENERAL: GeneralFormValues = {
   keywords: [],
 };
 
+function createGeneralDefaults(): GeneralFormValues {
+  return { ...EMPTY_GENERAL, keywords: [] };
+}
+
 function buildGeneralDefaults(product: ProductDetailDto): GeneralFormValues {
   return {
     ...EMPTY_GENERAL,
@@ -48,11 +52,12 @@ function buildVariantsDefaults(product: ProductDetailDto): VariantsFormValues {
       description: variant.description ?? '',
       imageUrl: variant.imageUrl ?? '',
       isActive: variant.isActive,
+      kommoTemplateId: variant.kommoTemplateId ?? null,
     })),
   };
 }
 
-export function useProductDetail(product: ProductDetailDto | null) {
+export function useProductDetail(product: ProductDetailDto | null, isCreate = false) {
   const generalForm = useForm<GeneralFormValues>({
     resolver: zodResolver(generalSchema),
     defaultValues: EMPTY_GENERAL,
@@ -69,15 +74,22 @@ export function useProductDetail(product: ProductDetailDto | null) {
   });
 
   useEffect(() => {
+    if (isCreate) {
+      generalForm.reset(createGeneralDefaults());
+      variantsForm.reset({ variants: [] });
+      return;
+    }
     if (!product) {
       return;
     }
     generalForm.reset(buildGeneralDefaults(product));
     variantsForm.reset(buildVariantsDefaults(product));
-  }, [product, generalForm, variantsForm]);
+  }, [isCreate, product, generalForm, variantsForm]);
 
   const resetAll = () => {
-    if (!product) {
+    if (isCreate || !product) {
+      generalForm.reset(createGeneralDefaults());
+      variantsForm.reset({ variants: [] });
       return;
     }
     generalForm.reset(buildGeneralDefaults(product));

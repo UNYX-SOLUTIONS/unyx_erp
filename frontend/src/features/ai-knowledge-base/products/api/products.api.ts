@@ -9,6 +9,7 @@ import {
 import type {
   CreateProductPayload,
   CreateVariantPayload,
+  KommoTemplateDto,
   ProductDetailDto,
   ProductDto,
   ProductListParams,
@@ -27,12 +28,6 @@ import type {
  */
 const BASE = '/api/v1/integrations/altosa';
 const PAGE_SIZE = 100;
-
-interface AltosaCategoryDto {
-  id: number;
-  nombre: string;
-  subcategorias: { id: number; nombre: string }[];
-}
 
 function buildMeta(page: number, limit: number, total: number) {
   const totalPages = Math.max(1, Math.ceil(total / limit));
@@ -109,6 +104,7 @@ function toProductDetail(dto: AltosaProductDto): ProductDetailDto {
     variants: (dto.variantes ?? []).map((variante, index) =>
       mapAltosaVariant(variante, productId, index)
     ),
+    kommoTemplate: dto.kommoTemplate ?? null,
   };
 }
 
@@ -132,27 +128,6 @@ export async function getProductById(id: string): Promise<ApiResponse<ProductDet
   return { success: true, data: toProductDetail(response.data.data) };
 }
 
-async function resolveSubcategoryId(payload: CreateProductPayload): Promise<number> {
-  const target = (payload.subcategory ?? payload.category ?? payload.line ?? '').trim().toLowerCase();
-  if (!target) {
-    throw new Error('Indica la subcategoría para crear el producto en Altosa.');
-  }
-
-  const response = await apiClient.get<ApiResponse<AltosaCategoryDto[]>>(`${BASE}/categories`);
-  const subcategorias = response.data.data.flatMap((categoria) => categoria.subcategorias);
-
-  const match =
-    subcategorias.find((subcategoria) => subcategoria.nombre.toLowerCase() === target) ??
-    subcategorias.find((subcategoria) => subcategoria.nombre.toLowerCase().includes(target));
-
-  if (!match) {
-    throw new Error(
-      `No existe la subcategoría "${target}" en el catálogo de Altosa. Créala primero en Altosa.`
-    );
-  }
-  return match.id;
-}
-
 function variantCreateBody(payload: CreateVariantPayload) {
   return {
     sku: payload.sku || undefined,
@@ -160,6 +135,7 @@ function variantCreateBody(payload: CreateVariantPayload) {
     descripcion: payload.description || undefined,
     precioUsd: payload.price ?? undefined,
     imagenUrl: payload.imageUrl || undefined,
+    kommoTemplateId: payload.kommoTemplateId ?? undefined,
   };
 }
 
@@ -183,19 +159,23 @@ function variantUpdateBody(payload: UpdateVariantPayload) {
   if (payload.isActive !== undefined) {
     body.isActive = payload.isActive;
   }
+  if (payload.kommoTemplateId !== undefined) {
+    body.kommoTemplateId = payload.kommoTemplateId;
+  }
   return body;
 }
 
 export async function createProduct(
   payload: CreateProductPayload
 ): Promise<ApiResponse<ProductDetailDto>> {
-  const subcategoryId = await resolveSubcategoryId(payload);
-
   const response = await apiClient.post<ApiResponse<AltosaProductDto>>(`${BASE}/products`, {
+    sku: payload.sku,
     nombre: payload.name,
+    line: payload.line || undefined,
+    category: payload.category || undefined,
+    subcategory: payload.subcategory || undefined,
     descripcion: payload.commercialDescription || undefined,
     usoRecomendado: payload.description || undefined,
-    subcategoryId,
     variantes: (payload.variants ?? []).map(variantCreateBody),
   });
 
@@ -207,8 +187,20 @@ export async function updateProduct(
   payload: UpdateProductPayload
 ): Promise<ApiResponse<ProductDetailDto>> {
   const body: Record<string, unknown> = {};
+  if (payload.sku !== undefined) {
+    body.sku = payload.sku;
+  }
   if (payload.name !== undefined) {
     body.nombre = payload.name;
+  }
+  if (payload.line !== undefined) {
+    body.line = payload.line || undefined;
+  }
+  if (payload.category !== undefined) {
+    body.category = payload.category || undefined;
+  }
+  if (payload.subcategory !== undefined) {
+    body.subcategory = payload.subcategory || undefined;
   }
   if (payload.commercialDescription !== undefined) {
     body.descripcion = payload.commercialDescription;
@@ -252,7 +244,8 @@ export async function updateVariant(
 ): Promise<ApiResponse<VariantDto>> {
   const response = await apiClient.patch<ApiResponse<AltosaVariantDto>>(
     `${BASE}/variants/${variantId}`,
-    variantUpdateBody(payload)
+    variantUpdateBody(payload),
+    { params: { productId } }
   );
   return { success: true, data: mapAltosaVariant(response.data.data, productId, 0) };
 }
@@ -262,7 +255,8 @@ export async function deleteVariant(
   variantId: string
 ): Promise<ApiResponse<VariantDto>> {
   const response = await apiClient.delete<ApiResponse<AltosaVariantDto>>(
-    `${BASE}/variants/${variantId}`
+    `${BASE}/variants/${variantId}`,
+    { params: { productId } }
   );
   return { success: true, data: mapAltosaVariant(response.data.data, productId, 0) };
 }
@@ -279,6 +273,93 @@ export async function uploadVariantImage(
     `${BASE}/uploads/variants`,
     formData,
     { headers: { 'Content-Type': null } }
+  );
+  return response.data;
+}
+
+// ---------------------------------------------------------------------------
+// Contifico: búsqueda e importación a demanda (selector del panel de producto)
+// ---------------------------------------------------------------------------
+
+export interface ContificoProductSuggestion {
+  contificoId: string;
+  sku: string;
+  name: string;
+  category: string | null;
+  price: number | null;
+  stock: number;
+  imageUrl: string | null;
+  barcode: string | null;
+  alreadyAdded: boolean;
+  localProductId: string | null;
+}
+
+export interface ContificoImportResult {
+  localProductId: string;
+  altosaProductId?: number;
+  sku: string;
+  name: string;
+  created: boolean;
+  updated: boolean;
+}
+
+export async function searchContificoProducts(
+  query: string,
+  limit = 8
+): Promise<ApiResponse<ContificoProductSuggestion[]>> {
+  const response = await apiClient.get<ApiResponse<ContificoProductSuggestion[]>>(
+    '/api/v1/integrations/contifico/search',
+    { params: { q: query, limit }, timeout: 30_000 }
+  );
+  return response.data;
+}
+
+export async function importContificoProduct(payload: {
+  contificoId?: string;
+  sku?: string;
+}): Promise<ApiResponse<ContificoImportResult>> {
+  const response = await apiClient.post<ApiResponse<ContificoImportResult>>(
+    '/api/v1/integrations/contifico/import',
+    payload,
+    { timeout: 60_000 }
+  );
+  return response.data;
+}
+
+// ---------------------------------------------------------------------------
+// Kommo: plantillas de chat
+// ---------------------------------------------------------------------------
+
+export interface KommoSyncResult {
+  fetched: number;
+  created: number;
+  updated: number;
+  unchanged: number;
+  deactivated: number;
+}
+
+export async function searchKommoTemplates(
+  search?: string,
+  limit = 50
+): Promise<ApiResponse<KommoTemplateDto[]>> {
+  const response = await apiClient.get<ApiResponse<KommoTemplateDto[]>>(
+    '/api/v1/integrations/kommo/templates',
+    {
+      params: {
+        ...(search ? { search } : {}),
+        limit,
+      },
+      timeout: 30_000,
+    }
+  );
+  return response.data;
+}
+
+export async function syncKommoTemplates(): Promise<ApiResponse<KommoSyncResult>> {
+  const response = await apiClient.post<ApiResponse<KommoSyncResult>>(
+    '/api/v1/integrations/kommo/sync-templates',
+    {},
+    { timeout: 120_000 }
   );
   return response.data;
 }

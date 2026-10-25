@@ -61,6 +61,7 @@ export interface ProductDto {
   price: number | null;
   priceFrom: boolean;
   primaryColor: string | null;
+  stock: number;
   createdAt: string;
   updatedAt: string;
 }

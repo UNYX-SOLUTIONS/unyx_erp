@@ -31,19 +31,33 @@ Regla de oro: **el frontend habla SOLO con el backend del ERP** (patrón BFF). E
   - `GET /api/v1/products/:id` · `GET /api/v1/products/sku/:sku`
   - `GET /api/v1/categories` · `/catalogs?active` · `/locations?active` · `/warranties?active`
   - `GET /api/v1/documents` — metadatos (sin `embedding`); `includeContent=true` para el texto
+  - `POST /api/v1/sync/products` — upsert masivo idempotente por SKU (usado por el ERP para replicar Contifico). Ver `docs/integracion-contifico.md`.
 - Seguridad: sin puertos públicos (solo red `altosa_backend`), API key con comparación en tiempo constante, rate limit 600/15min, helmet, sin CORS, logs con redacción de `x-api-key`.
 - Prisma: `binaryTargets = [native, linux-musl-openssl-3.0.x]`; **no ejecutar `prisma migrate`** (las tablas las administra el pipeline n8n del cliente). La columna `embedding vector(1536)` no está en el modelo (usar SQL raw si se implementa búsqueda semántica).
 
 ### 2. Backend del ERP — integración (backend/src/integrations/altosa/)
 
 - Vars: `ALTOSA_API_URL` (VPS: `http://altosa-api:4100`; local: `http://localhost:4100` o el puerto elegido) y `ALTOSA_API_KEY` (misma clave que altosa_infrastructure/.env). Si falta la key, los endpoints responden `503 ALTOSA_NOT_CONFIGURED` (el resto del ERP sigue funcionando).
-- Cliente `altosa-client.ts`: fetch con timeout 10s, errores mapeados (502/504/503).
+- Cliente `altosa-client.ts`: fetch con timeout 10s (60s para lotes de sincronización), errores mapeados (502/504/503).
 - BFF (requieren `authenticate` del ERP): `GET /api/v1/integrations/altosa/{products, products/:id, products/sku/:sku, categories, catalogs, locations, warranties, documents}`.
 - Errores típicos: `502 ALTOSA_API_ERROR`, `502 ALTOSA_UNREACHABLE`, `504 ALTOSA_TIMEOUT`.
 
-### 3. ETL de productos
+### 3. Productos: Contifico → ERP → Altosa
 
-- **Nuevo (recomendado)**: `pnpm --dir backend etl:products:api` — lee del API (`withVariants=true`, paginado 100) y hace upsert en la KB del ERP (`kb_products` sku `ALT-<id>`, variantes con `especificaciones` enriquecidas: medidas, garantía, catálogo, imagen, url).
+La fuente de verdad actual del inventario es **Contifico**. El flujo vigente
+está documentado en `docs/integracion-contifico.md`:
+
+- `pnpm --dir backend sync:contifico` hace upsert en
+  `kb_products`/`kb_product_variants` y empuja a Altosa.
+- El frontend de productos **no se modificó**: sigue leyendo el BFF de Altosa.
+  El CRUD de la UI pasa por ese BFF, que escribe primero en Contifico, luego en
+  la DB local y finalmente en Altosa.
+- El ETL de Altosa queda como legado para catálogos que aún no existan en
+  Contifico.
+
+#### ETL legado
+
+- **Nuevo (recomendado para el catálogo Altosa)**: `pnpm --dir backend etl:products:api` — lee del API (`withVariants=true`, paginado 100) y hace upsert en la KB del ERP (`kb_products` sku `ALT-<id>`, variantes con `especificaciones` enriquecidas: medidas, garantía, catálogo, imagen, url).
   - Flags: `--dry-run`, `--force`.
   - Idempotente: re-ejecutar no duplica (los registros existentes se saltan salvo `--force`).
 - **Viejo (deprecado)**: `etl:products` + `client-altosa` + `DATABASE_URL_ALTOSA` — conexión directa a la DB del cliente y a una tabla plana legacy. Eliminar junto con `src/config/database-altosa.ts` y `prisma/schema-altosa.prisma` DESPUÉS de validar el nuevo ETL en el VPS.
@@ -134,7 +148,7 @@ misma ruta `/uploads` en Traefik; así la ERP puede mudarse de dominio sin rompe
 
 ## Pendientes / próximos pasos
 
-- CRUD de escritura en `altosa-api` (hoy es solo lectura) con auditoría.
+- CRUD de escritura en `altosa-api` con auditoría (productos/variantes ya operativos; el resto de la KB sigue en lectura).
 - Búsqueda semántica sobre `documents.embedding` (pgvector) vía endpoint dedicado.
 - Caché corta (30–60s) en el ERP para listados que vengan del cliente.
 - Eliminar `client-altosa`/ETL viejo tras validar en VPS.

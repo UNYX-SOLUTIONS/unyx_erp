@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/utils';
 import { createProduct } from '../api/products.api';
 import type { CreateProductPayload } from '../types/product.types';
 
@@ -14,8 +15,8 @@ export function useCreateProduct() {
       void queryClient.invalidateQueries({ queryKey: ['products'] });
       toast.success('Producto creado');
     },
-    onError: () => {
-      toast.error('No se pudo crear el producto');
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, 'No se pudo crear el producto'));
     },
   });
 }

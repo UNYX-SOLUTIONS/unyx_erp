@@ -21,6 +21,12 @@ const envSchema = z.object({
     z.string().url().default('http://localhost:4100')
   ),
   ALTOSA_API_KEY: z.preprocess(emptyToUndefined, z.string().min(16).optional()),
+  CONTIFICO_API_URL: z.preprocess(
+    emptyToUndefined,
+    z.string().url().default('https://api.contifico.com/sistema/api/v1')
+  ),
+  CONTIFICO_API_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  CONTIFICO_API_TOKEN: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
 });
 
 const parsed = envSchema.safeParse(process.env);

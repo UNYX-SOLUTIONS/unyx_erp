@@ -68,6 +68,7 @@ export const altosaVariantBodySchema = z.object({
   garantiaId: z.coerce.number().int().positive().optional(),
   catalogoId: z.coerce.number().int().positive().optional(),
   estadoId: z.coerce.number().int().positive().max(32767).optional(),
+  kommoTemplateId: z.string().trim().min(1).max(80).nullable().optional(),
 });
 
 export const altosaUpdateVariantBodySchema = altosaVariantBodySchema.partial().extend({
@@ -75,22 +76,64 @@ export const altosaUpdateVariantBodySchema = altosaVariantBodySchema.partial().e
 });
 
 export const altosaCreateProductBodySchema = z.object({
+  sku: z.string().trim().min(1).max(80).optional(),
   nombre: z.string().trim().min(1).max(200),
+  line: z.string().trim().max(120).optional(),
+  category: z.string().trim().max(120).optional(),
+  subcategory: z.string().trim().max(160).optional(),
   descripcion: z.string().trim().max(2000).optional(),
   usoRecomendado: z.string().trim().max(500).optional(),
-  subcategoryId: z.coerce.number().int().positive(),
+  subcategoryId: z.coerce.number().int().positive().optional(),
   estadoId: z.coerce.number().int().positive().max(32767).optional(),
+  kommoTemplateId: z.string().trim().min(1).max(80).nullable().optional(),
   variantes: z.array(altosaVariantBodySchema).max(100).optional(),
 });
 
 export const altosaUpdateProductBodySchema = z.object({
+  sku: z.string().trim().min(1).max(80).optional(),
   nombre: z.string().trim().min(1).max(200).optional(),
+  line: z.string().trim().max(120).optional(),
+  category: z.string().trim().max(120).optional(),
+  subcategory: z.string().trim().max(160).optional(),
   descripcion: z.string().trim().max(2000).nullable().optional(),
   usoRecomendado: z.string().trim().max(500).nullable().optional(),
   subcategoryId: z.coerce.number().int().positive().optional(),
   estadoId: z.coerce.number().int().positive().max(32767).optional(),
   isActive: z.boolean().optional(),
+  kommoTemplateId: z.string().trim().min(1).max(80).nullable().optional(),
 });
+
+export const altosaVariantProductQuerySchema = z.object({
+  productId: z.coerce.number().int().positive().optional(),
+});
+
+export const altosaSyncVariantSchema = z.object({
+  sku: z.string().trim().min(1).max(80),
+  color: z.string().trim().max(80).nullable().optional(),
+  descripcion: z.string().trim().max(2000).nullable().optional(),
+  precioUsd: z.number().min(0).max(1_000_000).nullable().optional(),
+  imagenUrl: optionalUrl.nullable().optional(),
+  especificaciones: z.record(z.unknown()).nullable().optional(),
+});
+
+export const altosaSyncProductSchema = z.object({
+  codigo: z.string().trim().min(1).max(80),
+  nombre: z.string().trim().min(1).max(300),
+  descripcion: z.string().trim().max(2000).nullable().optional(),
+  usoRecomendado: z.string().trim().max(500).nullable().optional(),
+  categoria: z.string().trim().min(1).max(300),
+  subcategoria: z.string().trim().max(300).nullable().optional(),
+  estado: z.enum(['A', 'I']).default('A'),
+  updateTaxonomy: z.boolean().optional().default(false),
+  variantes: z.array(altosaSyncVariantSchema).max(100).default([]),
+});
+
+export const altosaSyncProductsBodySchema = z.object({
+  items: z.array(altosaSyncProductSchema).min(1).max(100),
+});
+
+export type AltosaSyncVariant = z.infer<typeof altosaSyncVariantSchema>;
+export type AltosaSyncProduct = z.infer<typeof altosaSyncProductSchema>;
 
 export type AltosaVariantBody = z.infer<typeof altosaVariantBodySchema>;
 export type AltosaUpdateVariantBody = z.infer<typeof altosaUpdateVariantBodySchema>;

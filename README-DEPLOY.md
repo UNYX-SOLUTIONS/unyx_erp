@@ -12,20 +12,24 @@ los del VPS son **bash** (SSH vía PuTTY).
 Internet
    │  https://unyx-erp.example.com
    ▼
-Traefik (VPS, red traefik-public, Let's Encrypt)
-   ├── Host(...)  && PathPrefix(/api)  → unyx-backend:4000   (API Express+Prisma)
-   └── Host(...)                        → unyx-frontend:3000  (Next.js standalone)
-                                             │
-                                             ▼
-                              unyx-postgres:5432 (solo red interna)
-                              volumen: unyx_pgdata
+Traefik (VPS ERP, red traefik-public, Let's Encrypt)
+   ├── Host(...) && PathPrefix(/api) → unyx-backend:4000 (Express + Prisma)
+   └── Host(...)                     → unyx-frontend:3000 (Next.js standalone)
+                                            │
+                                            ▼
+                             unyx-postgres:5432 (solo red interna)
+                             volumen: unyx_pgdata
 
-Base externa Altosa (solo lectura) ←── ETL manual (scripts/etl-products.ts)
+unyx-backend ──► Contifico API v1 (fuente de verdad del inventario)
+unyx-backend ──► altosa-api pública (x-api-key) ──► PostgreSQL Altosa/pgvector
 ```
 
-- El ERP escribe SIEMPRE en su propia base (`unyx_erp`). La base de Altosa solo se
-  lee para importaciones (ETL).
-- `kb_products` (productos padre) + `kb_product_variants` (una por color/variante).
+- Contifico es la fuente de verdad. El ERP actualiza solo los productos que ya
+  existen; los nuevos se agregan a demanda desde el buscador de Contifico.
+- El ERP escribe en su base (`unyx_erp`) **y** en Altosa a través de su API.
+  Kommo consume Altosa por el flujo existente.
+- `DATABASE_URL_ALTOSA` solo se usa para el ETL legado; el sync nuevo usa la API.
+- `kb_products` (productos padre) + `kb_product_variants` (variantes).
 - Postgres y backend NO exponen puertos al exterior: solo Traefik enruta.
 
 ---
@@ -37,7 +41,12 @@ Base externa Altosa (solo lectura) ←── ETL manual (scripts/etl-products.ts
   y entrypoints `web` / `websecure`.
 - Registro DNS del dominio (`unyx-erp.example.com`) apuntando al IP del VPS.
 - Acceso SSH (PuTTY). Firewall (ufw) permitiendo 22, 80 y 443 únicamente.
-- Acceso a la base de datos de Altosa (VPN, túnel SSH o IP whitelisted).
+- **altosa-api desplegada** y accesible desde el ERP (URL pública del subdominio).
+  Su `ALTOSA_API_KEY` debe ser la misma que `ALTOSA_API_KEY` de este `.env.production`.
+- **Credenciales de Contifico**: `CONTIFICO_API_KEY` y, si aplica,
+  `CONTIFICO_API_TOKEN`.
+- `DATABASE_URL_ALTOSA` solo si vas a usar el ETL legado; el sync de inventario
+  usa la API de Altosa.
 
 Si la red no existe todavía, crearla una vez:
 
@@ -49,6 +58,68 @@ docker network create traefik-public
 
 ## 3. Primer despliegue
 
+### 3.0 Despliegue rápido con scripts (recomendado)
+
+**Paso 1 — Altosa (su VPS).** Desde Windows, en el repo de Altosa:
+
+```powershell
+cd "D:\Trabajo\Unyx Solutions\Develop\Backends Clientes\altosa_infrastructure"
+.\deploy.ps1 -VpsHost <ALTOSA_VPS_IP> -PublicDomain api.altosamobiliario.com
+```
+
+Anota los dos valores que imprime al final:
+
+```text
+ALTOSA_API_URL=https://api.altosamobiliario.com
+ALTOSA_API_KEY=<key generada>
+```
+
+Si vas a usar las **plantillas de Kommo**, agrega también en el `.env` de
+Altosa y ejecuta `sudo bash update.sh`:
+
+```env
+KOMMO_API_URL=https://altosa.kommo.com
+KOMMO_API_KEY=<token de larga duración>
+```
+
+**Paso 2 — ERP (su VPS).** En `/opt/unyx-erp`, crea `.env.production` desde
+`.env.production.example` y completa:
+
+- `UNYX_DOMAIN`, `POSTGRES_*`, `JWT_*`
+- `ALTOSA_API_URL` y `ALTOSA_API_KEY` con los valores del paso 1
+- `CONTIFICO_API_KEY` y `CONTIFICO_API_TOKEN`
+- `DATABASE_URL_ALTOSA` solo si usarás el ETL legado
+
+Protege el archivo: `chmod 600 /opt/unyx-erp/.env.production`.
+
+Luego, desde Windows:
+
+```powershell
+cd "D:\Trabajo\Unyx Solutions\Develop\unyx_erp"
+.\deploy\deploy-prod.ps1 -VpsHost <ERP_VPS_IP>
+```
+
+O en el VPS:
+
+```bash
+cd /opt/unyx-erp
+chmod +x deploy/*.sh
+./deploy/deploy-prod.sh
+```
+
+**Paso 3 — Sincronización inicial de Contifico** (solo actualiza los productos
+que ya existen en el ERP):
+
+```bash
+cd /opt/unyx-erp
+./deploy/contifico-sync.sh --dry-run --match-by-name
+./deploy/contifico-sync.sh --apply --match-by-name
+```
+
+Los scripts son idempotentes: para actualizar, vuelve a ejecutar el despliegue.
+
+Los pasos manuales de 3.1 a 3.5 quedan como alternativa/diagnóstico.
+
 ### 3.1 Subir los archivos (desde PowerShell)
 
 ```powershell
@@ -58,6 +129,7 @@ $dest = "$env:TEMP\unyx-deploy"
 Remove-Item -Recurse -Force $dest -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $dest | Out-Null
 Copy-Item docker-compose.prod.yml, .env.production.example $dest
+Copy-Item deploy $dest\deploy -Recurse
 Copy-Item backend $dest\backend -Recurse
 Copy-Item frontend $dest\frontend -Recurse
 Remove-Item -Recurse -Force "$dest\backend\node_modules", "$dest\backend\dist", "$dest\frontend\node_modules", "$dest\frontend\.next" -ErrorAction SilentlyContinue
@@ -78,7 +150,9 @@ nano .env.production
 #   - UNYX_DOMAIN: tu dominio real
 #   - POSTGRES_PASSWORD: clave fuerte
 #   - JWT_ACCESS_SECRET / JWT_REFRESH_SECRET: secretos largos y distintos
-#   - DATABASE_URL_ALTOSA: conexión real a la base de Altosa
+#   - ALTOSA_API_URL / ALTOSA_API_KEY: URL pública y key de altosa-api
+#   - CONTIFICO_API_KEY / CONTIFICO_API_TOKEN
+#   - DATABASE_URL_ALTOSA: solo si usarás el ETL legado
 
 # Construir y levantar
 docker compose --env-file .env.production -f docker-compose.prod.yml build
@@ -93,31 +167,48 @@ Las migraciones de Prisma se aplican automáticamente al arrancar el contenedor
 (`prisma migrate deploy` en el CMD). Esperar a que `unyx-postgres` y `unyx-backend`
 estén `healthy` antes de seguir.
 
-### 3.3 Seed inicial (roles, permisos, empresa demo)
+### 3.3 Seed inicial (roles, permisos, empresa base)
 
 ```bash
-docker compose --env-file .env.production -f docker-compose.prod.yml exec unyx-backend \
-  node dist/scripts/seed-demo.js
+docker compose --env-file .env.production -f docker-compose.prod.yml exec -T \
+  -e NODE_ENV=development -e SEED_ADMIN_PASSWORD='<clave-fuerte>' \
+  unyx-backend node dist/prisma/seed.js
 ```
 
-### 3.4 ETL de importación desde Altosa
+Para cargar el catálogo demo (solo pruebas):
 
 ```bash
-# Simulación (no escribe nada)
+docker compose --env-file .env.production -f docker-compose.prod.yml exec -T \
+  unyx-backend node dist/scripts/seed-demo.js
+```
+
+### 3.4 Sincronización de inventario desde Contifico
+
+El script `deploy/contifico-sync.sh` hace dry-run por defecto:
+
+```bash
+# Revisar qué se actualizaría (no escribe)
+./deploy/contifico-sync.sh --dry-run --match-by-name
+
+# Aplicar: actualiza solo productos existentes y los empuja a Altosa
+./deploy/contifico-sync.sh --apply --match-by-name
+
+# Reconciliación: desactiva en local/Altosa lo que ya no está en Contifico
+./deploy/contifico-sync.sh --dry-run --prune
+./deploy/contifico-sync.sh --apply --prune
+```
+
+- `--match-by-name` enlaza el catálogo heredado por nombre (primera vez).
+- Sin `--create-missing` **no se importan** los productos de Contifico que no
+  existan en el ERP. Para agregarlos, usa el buscador del panel de producto.
+- `--create-missing` importa todo Contifico (no recomendado).
+
+El ETL legado (solo si no usas Contifico como fuente) sigue disponible:
+
+```bash
 docker compose --env-file .env.production -f docker-compose.prod.yml exec unyx-backend \
   node dist/scripts/etl-products.js --dry-run
-
-# Importación real (agrupa por nombre de producto y crea padre + variantes)
-docker compose --env-file .env.production -f docker-compose.prod.yml exec unyx-backend \
-  node dist/scripts/etl-products.js
-
-# Re-importar sobreescribiendo registros existentes (¡cuidado: pisa ediciones manuales!)
-docker compose --env-file .env.production -f docker-compose.prod.yml exec unyx-backend \
-  node dist/scripts/etl-products.js --force
 ```
-
-El ETL es idempotente (upsert por SKU). Sin `--force` no modifica registros ya
-existentes: solo crea los que falten.
 
 ### 3.5 Verificación final
 
@@ -134,18 +225,20 @@ Login inicial: `admin@unyx.erp` / `Admin123!` (cambiar la clave después).
 ## 4. Actualizaciones
 
 ```powershell
-# PowerShell: subir solo los archivos modificados (ejemplo: backend/src y frontend/src)
-# pscp -r -i C:\ruta\clave.ppk backend\src usuario@IP:/opt/unyx-erp/backend/src
-# pscp -r -i C:\ruta\clave.ppk frontend\src usuario@IP:/opt/unyx-erp/frontend/src
+# Recomendado: sube el código y redespliega (idempotente)
+cd "D:\Trabajo\Unyx Solutions\Develop\unyx_erp"
+.\deploy\deploy-prod.ps1 -VpsHost <ERP_VPS_IP>
 ```
 
+O en el VPS:
+
 ```bash
-# VPS
 cd /opt/unyx-erp
-docker compose --env-file .env.production -f docker-compose.prod.yml build
-docker compose --env-file .env.production -f docker-compose.prod.yml up -d
-docker compose --env-file .env.production -f docker-compose.prod.yml logs -f unyx-backend
+./deploy/deploy-prod.sh
 ```
+
+El script crea un backup previo, reconstruye, levanta y espera healthchecks.
+Para forzar sin backup: `--no-backup`; sin build: `--skip-build`.
 
 ---
 
@@ -153,9 +246,9 @@ docker compose --env-file .env.production -f docker-compose.prod.yml logs -f uny
 
 ```bash
 cd /opt/unyx-erp
-chmod +x deploy/backup.sh deploy/restore.sh
+chmod +x deploy/*.sh
 
-# Manual
+# Manual (lee .env.production automáticamente)
 ./deploy/backup.sh /backups
 
 # Cron diario a las 3 AM (crontab -e)
@@ -177,6 +270,11 @@ Para copiarlos fuera del VPS: `pscp -i clave.ppk usuario@IP:/backups/unyx_*.sql 
 | Error 502/504 en el dominio | Traefik no encuentra el router | Verificar que la red `traefik-public` existe, el contenedor está en ella y los labels usan el dominio correcto: `docker inspect unyx-erp_backend_1` / `docker logs traefik` |
 | El navegador llama a `http://localhost:4001` en producción | La imagen del frontend se construyó con el `NEXT_PUBLIC_API_URL` de desarrollo | Reconstruir el frontend con el build-arg correcto (`docker compose ... build frontend --no-cache`) |
 | ETL falla con "No se pudo leer la tabla plana productos" | `DATABASE_URL_ALTOSA` mal configurada o sin conectividad al VPS de Altosa | Probar: `docker compose ... exec unyx-backend node -e "console.log(process.env.DATABASE_URL_ALTOSA)"` y validar VPN/túnel/whitelist |
+| Altosa responde `401` | `ALTOSA_API_KEY` no coincide entre ERP y `altosa_infrastructure/.env` | Copiar la misma key en ambos `.env` y reiniciar el backend del ERP |
+| La búsqueda dice "Contifico no está configurado" | Falta `CONTIFICO_API_KEY` o el backend no se reinició tras agregarla | Completar `.env.production`, reiniciar `unyx-backend` y probar `./deploy/contifico-sync.sh --dry-run` |
+| La búsqueda de Contifico no devuelve nada | URL/API key incorrecta o estás en v2 | Verificar `CONTIFICO_API_URL=.../api/v1`; v2 devuelve otro formato de listado e ignora `filtro` |
+| El sync no actualiza Altosa | `ALTOSA_API_URL` no es alcanzable desde el VPS del ERP o la key no coincide | Probar `curl -fsS "$ALTOSA_API_URL/health"` desde el VPS y revisar el log del backend |
+| La imagen subida no aparece en Contifico | `imagen` es read-only en la API de Contifico | Es esperado; la imagen queda en Altosa/local. Súbela en Contifico si debe estar también allí |
 | Migraciones no aplicadas | El contenedor arrancó antes de que Postgres estuviera listo | `docker compose ... run --rm unyx-backend ./node_modules/.bin/prisma migrate deploy` |
 | Certificado TLS no emitido | DNS no apunta al VPS o certresolver distinto | `dig unyx-erp.example.com` y revisar `docker logs traefik \| grep letsencrypt` |
 

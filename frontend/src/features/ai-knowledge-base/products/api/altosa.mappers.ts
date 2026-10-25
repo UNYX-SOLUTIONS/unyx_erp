@@ -1,5 +1,6 @@
 import type {
   KbValidationStatus,
+  KommoTemplateDto,
   ProductDto,
   VariantDto,
 } from '../types/product.types';
@@ -57,6 +58,8 @@ export interface AltosaVariantDto {
   catalogo: AltosaCatalogoDto | null;
   estado: AltosaEstadoDto;
   isActive: boolean;
+  kommoTemplateId?: string | null;
+  kommoTemplate?: KommoTemplateDto | null;
   updatedAt: string;
 }
 
@@ -69,6 +72,8 @@ export interface AltosaProductDto {
   subcategoria: { id: number; nombre: string };
   estado: AltosaEstadoDto;
   isActive: boolean;
+  kommoTemplateId?: string | null;
+  kommoTemplate?: KommoTemplateDto | null;
   updatedAt: string;
   variantes?: AltosaVariantDto[];
 }
@@ -137,6 +142,8 @@ export function mapAltosaVariant(
     description: variante.descripcion,
     isActive: variante.isActive,
     sortOrder: index,
+    kommoTemplateId: variante.kommoTemplateId ?? null,
+    kommoTemplate: variante.kommoTemplate ?? null,
     createdAt: updatedAt,
     updatedAt,
   };
@@ -150,7 +157,7 @@ export function mapAltosaProduct(product: AltosaProductDto): ProductDto {
 
   return {
     id: String(product.id),
-    sku: `ALT-${product.id}`,
+    sku: product.variantes?.[0]?.sku ?? `ALT-${product.id}`,
     name: product.nombre,
     line: product.categoria.nombre,
     category: product.categoria.nombre,
@@ -170,6 +177,7 @@ export function mapAltosaProduct(product: AltosaProductDto): ProductDto {
     price: precios.length > 0 ? Math.min(...precios) : null,
     priceFrom: variantes.length > 1,
     primaryColor: variantes[0]?.color ?? null,
+    kommoTemplateId: product.kommoTemplateId ?? null,
     createdAt: product.updatedAt,
     updatedAt: product.updatedAt,
   };

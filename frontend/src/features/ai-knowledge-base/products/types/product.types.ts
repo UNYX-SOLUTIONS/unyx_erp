@@ -44,8 +44,20 @@ export interface VariantDto {
   description: string | null;
   isActive: boolean;
   sortOrder: number;
+  kommoTemplateId?: string | null;
+  kommoTemplate?: KommoTemplateDto | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface KommoTemplateDto {
+  id: string;
+  kommoId: number;
+  name: string;
+  type: string;
+  content: string | null;
+  isActive?: boolean;
+  updatedAt?: string;
 }
 
 export interface ProductDto {
@@ -67,12 +79,14 @@ export interface ProductDto {
   price: number | null;
   priceFrom: boolean;
   primaryColor: string | null;
+  kommoTemplateId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface ProductDetailDto extends ProductDto {
   variants: VariantDto[];
+  kommoTemplate?: KommoTemplateDto | null;
 }
 
 export interface ProductListParams {
@@ -95,6 +109,7 @@ export interface CreateVariantPayload {
   description?: string;
   isActive?: boolean;
   sortOrder?: number;
+  kommoTemplateId?: string | null;
 }
 
 export type UpdateVariantPayload = Partial<CreateVariantPayload>;

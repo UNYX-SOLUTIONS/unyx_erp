@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { authenticate } from '../../middlewares/auth-middleware';
 import { validate } from '../../middlewares/validate-middleware';
 import * as productsController from './products-controller';
 import {
@@ -13,8 +14,8 @@ import {
 
 export const productsRoutes = Router();
 
-// Cuando se active el auth en estas rutas, encadenar antes de los handlers:
-//   authenticate, requirePermission('products.read' | 'products.create' | 'products.update' | 'products.delete')
+productsRoutes.use(authenticate);
+
 productsRoutes.get('/', validate(listProductsQuerySchema, 'query'), productsController.list);
 productsRoutes.get('/:id', validate(productIdParamSchema, 'params'), productsController.getById);
 productsRoutes.post('/', validate(createProductSchema), productsController.create);

@@ -18,12 +18,15 @@ import { compressImage } from '../../../lib/compress-image';
 import { ColorInput } from '../ColorInput';
 import { CurrencyInput } from '../CurrencyInput';
 import { FormField, detailInputClassName } from '../FormField';
+import { KommoTemplateField } from './KommoTemplateField';
 import type { VariantsFormValues } from '../../../schemas/product-schema';
+import type { KommoTemplateDto } from '../../../types/product.types';
 
 interface VariantCardProps {
   form: UseFormReturn<VariantsFormValues>;
   index: number;
   isBusy?: boolean;
+  initialTemplate?: KommoTemplateDto | null;
   onDuplicate: (index: number) => void;
   onRemove: (index: number) => void;
   onToggleActive: (index: number) => void;
@@ -33,6 +36,7 @@ export function VariantCard({
   form,
   index,
   isBusy = false,
+  initialTemplate,
   onDuplicate,
   onRemove,
   onToggleActive,
@@ -240,6 +244,12 @@ export function VariantCard({
             {...register(`variants.${index}.description`)}
           />
         </FormField>
+
+        <KommoTemplateField
+          form={form}
+          index={index}
+          initialTemplate={initialTemplate}
+        />
       </div>
     </div>
   );

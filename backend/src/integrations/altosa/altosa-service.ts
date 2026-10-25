@@ -89,3 +89,19 @@ export async function deleteVariant(variantId: number) {
 export async function uploadVariantImage(file: AltosaUploadFile) {
   return altosaUpload<unknown>('/api/v1/uploads/variants', file);
 }
+
+
+export async function searchKommoTemplates(search?: string, limit?: number) {
+  return altosaRequest<unknown>('GET', '/api/v1/kommo/templates', {
+    query: {
+      ...(search ? { search } : {}),
+      ...(limit ? { limit } : {}),
+    },
+  });
+}
+
+export async function syncKommoTemplates() {
+  return altosaRequest<unknown>('POST', '/api/v1/kommo/sync-templates', {
+    timeoutMs: 120_000,
+  });
+}
