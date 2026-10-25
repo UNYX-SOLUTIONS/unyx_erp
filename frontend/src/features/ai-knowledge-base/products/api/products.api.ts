@@ -10,6 +10,7 @@ import type {
   CreateProductPayload,
   CreateVariantPayload,
   KommoTemplateDto,
+  MetaCatalogItem,
   ProductDetailDto,
   ProductDto,
   ProductListParams,
@@ -161,6 +162,12 @@ function variantUpdateBody(payload: UpdateVariantPayload) {
   }
   if (payload.kommoTemplateId !== undefined) {
     body.kommoTemplateId = payload.kommoTemplateId;
+  }
+  if (payload.metaRetailerId !== undefined) {
+    body.metaRetailerId = payload.metaRetailerId;
+  }
+  if (payload.metaMappingLocked !== undefined) {
+    body.metaMappingLocked = payload.metaMappingLocked;
   }
   return body;
 }
@@ -360,6 +367,37 @@ export async function syncKommoTemplates(): Promise<ApiResponse<KommoSyncResult>
     '/api/v1/integrations/kommo/sync-templates',
     {},
     { timeout: 120_000 }
+  );
+  return response.data;
+}
+
+// ---------------------------------------------------------------------------
+// Meta: catálogo de WhatsApp para el mapeo de variantes
+// ---------------------------------------------------------------------------
+
+export async function searchMetaCatalog(
+  query: string,
+  limit = 20
+): Promise<ApiResponse<{ items: MetaCatalogItem[] }>> {
+  const response = await apiClient.get<ApiResponse<{ items: MetaCatalogItem[] }>>(
+    `${BASE}/meta/catalog/search`,
+    {
+      params: { q: query, limit },
+      timeout: 30_000,
+    }
+  );
+  return response.data;
+}
+
+export async function getMetaCatalogItem(
+  retailerId: string
+): Promise<ApiResponse<MetaCatalogItem>> {
+  const response = await apiClient.get<ApiResponse<MetaCatalogItem>>(
+    `${BASE}/meta/catalog/item`,
+    {
+      params: { retailerId },
+      timeout: 30_000,
+    }
   );
   return response.data;
 }

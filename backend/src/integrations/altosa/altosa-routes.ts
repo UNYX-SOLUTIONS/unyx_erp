@@ -3,6 +3,7 @@ import multer from 'multer';
 import { StatusCodes } from 'http-status-codes';
 import { ApiError } from '../../utils/api-error';
 import { authenticate } from '../../middlewares/auth-middleware';
+import { requirePermission } from '../../middlewares/rbac-middleware';
 import { validate } from '../../middlewares/validate-middleware';
 import * as altosaController from './altosa-controller';
 import {
@@ -10,6 +11,8 @@ import {
   altosaCreateProductBodySchema,
   altosaDocumentsQuerySchema,
   altosaIdParamSchema,
+  altosaMetaCatalogItemQuerySchema,
+  altosaMetaCatalogSearchQuerySchema,
   altosaProductsQuerySchema,
   altosaSkuParamSchema,
   altosaUpdateProductBodySchema,
@@ -83,6 +86,7 @@ altosaRoutes.post(
 );
 altosaRoutes.patch(
   '/variants/:id',
+  requirePermission('products.update'),
   validate(altosaIdParamSchema, 'params'),
   validate(altosaVariantProductQuerySchema, 'query'),
   validate(altosaUpdateVariantBodySchema),
@@ -93,6 +97,19 @@ altosaRoutes.delete(
   validate(altosaIdParamSchema, 'params'),
   validate(altosaVariantProductQuerySchema, 'query'),
   altosaController.deleteVariant
+);
+
+altosaRoutes.get(
+  '/meta/catalog/search',
+  requirePermission('products.read'),
+  validate(altosaMetaCatalogSearchQuerySchema, 'query'),
+  altosaController.searchMetaCatalog
+);
+altosaRoutes.get(
+  '/meta/catalog/item',
+  requirePermission('products.read'),
+  validate(altosaMetaCatalogItemQuerySchema, 'query'),
+  altosaController.getMetaCatalogItem
 );
 
 altosaRoutes.get('/categories', altosaController.listCategories);

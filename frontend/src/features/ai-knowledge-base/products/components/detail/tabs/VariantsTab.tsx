@@ -104,10 +104,15 @@ export function VariantsTab({
           {fields.map((field, index) => (
             <VariantCard
               key={field.id}
+              productId={product.id}
               form={form}
               index={index}
               isBusy={isBusy}
               initialTemplate={product.variants[index]?.kommoTemplate ?? null}
+              initialMetaRetailerId={product.variants[index]?.metaRetailerId ?? null}
+              initialMetaMappingLocked={
+                product.variants[index]?.metaMappingLocked ?? false
+              }
               onDuplicate={handleDuplicate}
               onRemove={handleRemove}
               onToggleActive={handleToggleActive}

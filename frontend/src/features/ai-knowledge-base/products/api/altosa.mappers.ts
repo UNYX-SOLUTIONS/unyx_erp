@@ -60,6 +60,8 @@ export interface AltosaVariantDto {
   isActive: boolean;
   kommoTemplateId?: string | null;
   kommoTemplate?: KommoTemplateDto | null;
+  metaRetailerId?: string | null;
+  metaMappingLocked?: boolean;
   updatedAt: string;
 }
 
@@ -144,6 +146,8 @@ export function mapAltosaVariant(
     sortOrder: index,
     kommoTemplateId: variante.kommoTemplateId ?? null,
     kommoTemplate: variante.kommoTemplate ?? null,
+    metaRetailerId: variante.metaRetailerId ?? null,
+    metaMappingLocked: variante.metaMappingLocked ?? false,
     createdAt: updatedAt,
     updatedAt,
   };

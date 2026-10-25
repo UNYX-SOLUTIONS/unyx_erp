@@ -19,24 +19,31 @@ import { ColorInput } from '../ColorInput';
 import { CurrencyInput } from '../CurrencyInput';
 import { FormField, detailInputClassName } from '../FormField';
 import { KommoTemplateField } from './KommoTemplateField';
+import { MetaMappingField } from './MetaMappingField';
 import type { VariantsFormValues } from '../../../schemas/product-schema';
 import type { KommoTemplateDto } from '../../../types/product.types';
 
 interface VariantCardProps {
+  productId: string;
   form: UseFormReturn<VariantsFormValues>;
   index: number;
   isBusy?: boolean;
   initialTemplate?: KommoTemplateDto | null;
+  initialMetaRetailerId?: string | null;
+  initialMetaMappingLocked?: boolean;
   onDuplicate: (index: number) => void;
   onRemove: (index: number) => void;
   onToggleActive: (index: number) => void;
 }
 
 export function VariantCard({
+  productId,
   form,
   index,
   isBusy = false,
   initialTemplate,
+  initialMetaRetailerId = null,
+  initialMetaMappingLocked = false,
   onDuplicate,
   onRemove,
   onToggleActive,
@@ -250,6 +257,18 @@ export function VariantCard({
           index={index}
           initialTemplate={initialTemplate}
         />
+
+        {variant?.id && (
+          <MetaMappingField
+            productId={productId}
+            variantId={variant.id}
+            sku={variant.sku}
+            variantName={variant.name}
+            initialRetailerId={initialMetaRetailerId}
+            initialMappingLocked={initialMetaMappingLocked}
+            isBusy={isBusy}
+          />
+        )}
       </div>
     </div>
   );

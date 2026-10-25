@@ -1,6 +1,8 @@
 import { StatusCodes } from 'http-status-codes';
 import { prisma } from '../../config/database';
+import { logger } from '../../config/logger';
 import { ApiError } from '../../utils/api-error';
+import { writeAudit } from '../../utils/audit';
 import * as productsService from '../../modules/products/products-service';
 import { resolveCompanyId } from '../../modules/products/products-service';
 import { syncLocalProductToAltosa } from '../contifico/contifico-sync';
@@ -15,12 +17,90 @@ import type {
 interface AltosaVariantRaw {
   id: number;
   sku: string | null;
+  metaRetailerId?: string | null;
+  metaMappingLocked?: boolean | null;
 }
 
 interface AltosaProductRaw {
   id: number;
   isActive?: boolean;
   variantes?: AltosaVariantRaw[];
+}
+
+export interface AltosaMetaMappingAuditContext {
+  userId?: string;
+  companyId?: string;
+  ipAddress?: string;
+  userAgent?: string;
+}
+
+type MetaMappingAction = 'assign' | 'clear' | 'unlock';
+
+function normalizeMetaRetailerId(value: string | null | undefined): string | null {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
+}
+
+function resolveMetaMappingAction(input: AltosaUpdateVariantBody): MetaMappingAction | null {
+  if (input.metaRetailerId === undefined && input.metaMappingLocked === undefined) {
+    return null;
+  }
+  if (input.metaMappingLocked === false) {
+    return 'unlock';
+  }
+  if (normalizeMetaRetailerId(input.metaRetailerId) === null) {
+    return 'clear';
+  }
+  return 'assign';
+}
+
+async function recordMetaMappingAudit(params: {
+  context?: AltosaMetaMappingAuditContext;
+  variantId: number;
+  sku: string | null;
+  action: MetaMappingAction;
+  oldValue: { metaRetailerId: string | null; metaMappingLocked: boolean | null };
+  newValue: { metaRetailerId: string | null; metaMappingLocked: boolean | null };
+}): Promise<void> {
+  const { context, variantId, sku, action, oldValue, newValue } = params;
+  const timestamp = new Date().toISOString();
+
+  logger.info(
+    {
+      audit: 'altosa.meta-mapping',
+      userId: context?.userId ?? null,
+      variantId,
+      sku,
+      oldValue,
+      newValue,
+      action,
+      timestamp,
+    },
+    'Mapeo de catálogo Meta actualizado'
+  );
+
+  if (!context?.companyId) {
+    return;
+  }
+
+  try {
+    await writeAudit({
+      companyId: context.companyId,
+      userId: context.userId,
+      action: `altosa.meta-mapping.${action}`,
+      entity: 'AltosaProductVariant',
+      entityId: String(variantId),
+      oldValues: oldValue,
+      newValues: newValue,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+    });
+  } catch (error) {
+    logger.error(
+      { err: error, variantId },
+      'No se pudo registrar la auditoría del mapeo Meta'
+    );
+  }
 }
 
 function asProduct(data: unknown): AltosaProductRaw {
@@ -217,42 +297,51 @@ export async function deleteVariant(variantId: number, productId?: number): Prom
 export async function updateVariant(
   variantId: number,
   input: AltosaUpdateVariantBody,
-  productId?: number
+  productId?: number,
+  auditContext?: AltosaMetaMappingAuditContext
 ): Promise<unknown> {
-  if (!productId) {
-    const { data } = await altosaService.updateVariant(variantId, input);
-    return data;
-  }
-
-  const current = await getAltosaProduct(productId);
-  const rawVariant = current.variantes?.find((variant) => variant.id === variantId);
-  const sku = rawVariant?.sku ?? primarySku(current);
+  const current = productId ? await getAltosaProduct(productId) : null;
+  const rawVariant =
+    current?.variantes?.find((variant) => variant.id === variantId) ?? null;
+  const sku = rawVariant?.sku ?? (current ? primarySku(current) : null);
   const local = sku ? await findLocalProductBySku(sku) : null;
-  const localVariant = local?.variants.find((variant) => variant.sku === (rawVariant?.sku ?? sku));
+  const localVariant = local?.variants.find(
+    (variant) => variant.sku === (rawVariant?.sku ?? sku)
+  );
 
-  if (!local || !localVariant) {
-    const { data } = await altosaService.updateVariant(variantId, input);
-    return data;
-  }
-
-  await productsService.updateVariant(local.id, localVariant.id, {
+  const localUpdate = {
     ...(input.sku !== undefined ? { sku: input.sku } : {}),
     ...(input.color !== undefined ? { name: input.color, color: input.color } : {}),
     ...(input.descripcion !== undefined ? { description: input.descripcion } : {}),
     ...(input.precioUsd !== undefined ? { price: input.precioUsd } : {}),
     ...(input.imagenUrl !== undefined ? { imageUrl: input.imagenUrl } : {}),
     ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
-  });
+  };
 
-  if (input.kommoTemplateId !== undefined) {
-    await altosaService.updateVariant(variantId, {
-      kommoTemplateId: input.kommoTemplateId,
+  if (local && localVariant && Object.keys(localUpdate).length > 0) {
+    await productsService.updateVariant(local.id, localVariant.id, localUpdate);
+  }
+
+  const { data } = await altosaService.updateVariant(variantId, input);
+
+  const action = resolveMetaMappingAction(input);
+  if (action) {
+    const updated = data as AltosaVariantRaw | null;
+    await recordMetaMappingAudit({
+      context: auditContext,
+      variantId,
+      sku: updated?.sku ?? sku,
+      action,
+      oldValue: {
+        metaRetailerId: rawVariant?.metaRetailerId ?? null,
+        metaMappingLocked: rawVariant?.metaMappingLocked ?? null,
+      },
+      newValue: {
+        metaRetailerId: updated?.metaRetailerId ?? null,
+        metaMappingLocked: updated?.metaMappingLocked ?? null,
+      },
     });
   }
 
-  const refreshed = await getAltosaProduct(productId);
-  return (
-    refreshed.variantes?.find((variant) => variant.id === variantId) ??
-    (await altosaService.updateVariant(variantId, input)).data
-  );
+  return data;
 }

@@ -46,8 +46,20 @@ export interface VariantDto {
   sortOrder: number;
   kommoTemplateId?: string | null;
   kommoTemplate?: KommoTemplateDto | null;
+  metaRetailerId?: string | null;
+  metaMappingLocked?: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface MetaCatalogItem {
+  retailerId: string;
+  name: string;
+  imageUrl: string | null;
+  price: string | null;
+  availability: string | null;
+  visibility: string | null;
+  url: string | null;
 }
 
 export interface KommoTemplateDto {
@@ -112,7 +124,10 @@ export interface CreateVariantPayload {
   kommoTemplateId?: string | null;
 }
 
-export type UpdateVariantPayload = Partial<CreateVariantPayload>;
+export type UpdateVariantPayload = Partial<CreateVariantPayload> & {
+  metaRetailerId?: string | null;
+  metaMappingLocked?: boolean;
+};
 
 export interface CreateProductPayload {
   sku: string;

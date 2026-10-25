@@ -9,6 +9,8 @@ import type {
   AltosaActiveQuery,
   AltosaCreateProductBody,
   AltosaDocumentsQuery,
+  AltosaMetaCatalogItemQuery,
+  AltosaMetaCatalogSearchQuery,
   AltosaProductsQuery,
   AltosaUpdateProductBody,
   AltosaUpdateVariantBody,
@@ -93,7 +95,13 @@ export const updateVariant = asyncHandler(async (req: Request, res: Response) =>
   const data = await altosaWriteThrough.updateVariant(
     Number(req.params.id),
     input,
-    query.productId
+    query.productId,
+    {
+      userId: req.user?.id,
+      companyId: req.user?.companyId,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent') ?? undefined,
+    }
   );
   sendSuccess(res, data);
 });
@@ -110,4 +118,16 @@ export const uploadVariantImage = asyncHandler(async (req: Request, res: Respons
   }
   const { data } = await altosaService.uploadVariantImage(req.file);
   sendSuccess(res, data, undefined, StatusCodes.CREATED);
+});
+
+export const searchMetaCatalog = asyncHandler(async (req: Request, res: Response) => {
+  const query = req.query as unknown as AltosaMetaCatalogSearchQuery;
+  const { data } = await altosaService.searchMetaCatalog(query);
+  sendSuccess(res, data);
+});
+
+export const getMetaCatalogItem = asyncHandler(async (req: Request, res: Response) => {
+  const query = req.query as unknown as AltosaMetaCatalogItemQuery;
+  const { data } = await altosaService.getMetaCatalogItem(query);
+  sendSuccess(res, data);
 });
