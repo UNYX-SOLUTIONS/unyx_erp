@@ -33,6 +33,8 @@ export function KommoTemplateField({
     initialTemplate ?? null
   );
   const selectedId = form.watch(`variants.${index}.kommoTemplateId`);
+  const variantName = form.watch(`variants.${index}.name`);
+  const variantSku = form.watch(`variants.${index}.sku`);
 
   useEffect(() => {
     if (!selectedId) {
@@ -77,10 +79,21 @@ export function KommoTemplateField({
                   <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
                     {selected.type}
                   </span>
+                  {selected.isActive === false && (
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                      Inactiva
+                    </span>
+                  )}
                 </div>
                 <p className="mt-1 line-clamp-2 whitespace-pre-line text-xs text-gray-500 dark:text-slate-400">
                   {selected.content || 'Sin contenido'}
                 </p>
+                {selected.isActive === false && (
+                  <p className="mt-1 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                    Esta plantilla ya no está activa en Kommo. Asígnale otra a esta
+                    variante.
+                  </p>
+                )}
               </div>
               <div className="flex shrink-0 items-center gap-1">
                 <Button
@@ -119,11 +132,21 @@ export function KommoTemplateField({
       </FormField>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-xl overflow-hidden sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Plantilla de Kommo</DialogTitle>
             <DialogDescription>
-              Busca y asigna la plantilla que se usará para esta variante.
+              {variantName ? (
+                <>
+                  Plantilla para{' '}
+                  <span className="font-medium text-gray-700 dark:text-slate-300">
+                    {variantName}
+                  </span>
+                  {variantSku ? ` (${variantSku})` : ''}.
+                </>
+              ) : (
+                'Busca y asigna la plantilla que se usará para esta variante.'
+              )}
             </DialogDescription>
           </DialogHeader>
           <KommoTemplatePicker

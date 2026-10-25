@@ -91,14 +91,17 @@ export async function uploadVariantImage(file: AltosaUploadFile) {
 }
 
 
-export async function searchKommoTemplates(search?: string) {
+export async function searchKommoTemplates(search?: string, limit?: number) {
   return altosaRequest<unknown>('GET', '/api/v1/kommo/templates', {
-    query: search ? { search } : undefined,
+    query: {
+      ...(search ? { search } : {}),
+      ...(limit ? { limit } : {}),
+    },
   });
 }
 
 export async function syncKommoTemplates() {
   return altosaRequest<unknown>('POST', '/api/v1/kommo/sync-templates', {
-    timeoutMs: 60_000,
+    timeoutMs: 120_000,
   });
 }

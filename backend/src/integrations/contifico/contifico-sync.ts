@@ -36,8 +36,56 @@ import type {
 const DEFAULT_COMPANY_TAX_ID = '0000000000001';
 const ALTOSA_BATCH_SIZE = 50;
 const ALTOSA_DEACTIVATE_BATCH_SIZE = 200;
+const ALTOSA_RETRY_ATTEMPTS = 3;
+const ALTOSA_RETRY_BASE_DELAY_MS = 400;
 
 type LocalProductWithVariants = KbProduct & { variants: KbProductVariant[] };
+
+async function withRetries<T>(operation: () => Promise<T>, label: string): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= ALTOSA_RETRY_ATTEMPTS; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (attempt === ALTOSA_RETRY_ATTEMPTS) {
+        break;
+      }
+      const retryInMs = ALTOSA_RETRY_BASE_DELAY_MS * 2 ** (attempt - 1);
+      logger.warn(
+        { err: error, attempt, retryInMs, label },
+        'Reintentando operación contra Altosa'
+      );
+      await new Promise((resolve) => setTimeout(resolve, retryInMs));
+    }
+  }
+  throw lastError;
+}
+
+async function markProductsUnsyncedBySku(skus: string[]): Promise<void> {
+  const unique = Array.from(new Set(skus.map((sku) => sku.trim()).filter(Boolean)));
+  if (unique.length === 0) {
+    return;
+  }
+
+  const variants = await prisma.kbProductVariant.findMany({
+    where: { sku: { in: unique } },
+    select: { productId: true },
+  });
+  const productIds = Array.from(new Set(variants.map((variant) => variant.productId)));
+  if (productIds.length === 0) {
+    return;
+  }
+
+  await prisma.kbProduct.updateMany({
+    where: { id: { in: productIds } },
+    data: { syncStatus: 'SIN_SINCRONIZAR' as KbSyncStatus },
+  });
+  logger.warn(
+    { products: productIds.length, skus: unique.length },
+    'Productos marcados SIN_SINCRONIZAR por fallo de push a Altosa'
+  );
+}
 
 function createEmptyCounters(dryRun: boolean): ContificoSyncCounters {
   return {
@@ -334,17 +382,34 @@ async function pushToAltosa(
     return;
   }
 
+  const failedSkus: string[] = [];
   for (let index = 0; index < items.length; index += ALTOSA_BATCH_SIZE) {
     const batch = items.slice(index, index + ALTOSA_BATCH_SIZE);
     try {
-      await syncAltosaProducts(batch, { matchByName });
+      await withRetries(
+        () => syncAltosaProducts(batch, { matchByName }),
+        'push de productos a Altosa'
+      );
       counters.altosa.pushed += batch.length;
     } catch (error) {
       counters.altosa.failed += batch.length;
       counters.altosa.error =
         error instanceof Error ? error.message : 'Error desconocido sincronizando Altosa';
+      for (const item of batch) {
+        if (item.variantes.length > 0) {
+          failedSkus.push(...item.variantes.map((variant) => variant.sku));
+        } else {
+          failedSkus.push(item.codigo);
+        }
+      }
       logger.warn({ err: error, batchSize: batch.length }, 'No se pudo sincronizar un lote a Altosa');
     }
+  }
+
+  if (failedSkus.length > 0) {
+    // El push es best-effort para no bloquear el resto del catálogo, pero los
+    // productos afectados deben quedar visibles para reintento/reconciliación.
+    await markProductsUnsyncedBySku(failedSkus);
   }
 }
 
@@ -360,7 +425,10 @@ async function deactivateAltosaSkus(
   for (let index = 0; index < unique.length; index += ALTOSA_DEACTIVATE_BATCH_SIZE) {
     const batch = unique.slice(index, index + ALTOSA_DEACTIVATE_BATCH_SIZE);
     try {
-      const response = await deactivateAltosaProductsBySku(batch);
+      const response = await withRetries(
+        () => deactivateAltosaProductsBySku(batch),
+        'desactivación de SKUs en Altosa'
+      );
       counters.altosa.deactivatedVariants += response.data.variantsDeactivated ?? 0;
       counters.altosa.deactivatedProducts += response.data.productsDeactivated ?? 0;
     } catch (error) {
@@ -398,9 +466,13 @@ export async function syncLocalProductToAltosa(
 
   try {
     const payload = buildAltosaPayloadFromLocal(product);
-    await syncAltosaProducts(
-      [options.updateTaxonomy ? { ...payload, updateTaxonomy: true } : payload],
-      { matchByName: options.matchByName ?? false }
+    await withRetries(
+      () =>
+        syncAltosaProducts(
+          [options.updateTaxonomy ? { ...payload, updateTaxonomy: true } : payload],
+          { matchByName: options.matchByName ?? false }
+        ),
+      'push de producto a Altosa'
     );
     await prisma.kbProduct.update({
       where: { id: productId },

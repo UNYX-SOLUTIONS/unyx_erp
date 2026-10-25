@@ -66,7 +66,7 @@ KOMMO_API_KEY=<token de larga duración>
 ### altosa-api (x-api-key)
 
 - `GET /api/v1/kommo/templates?search=&limit=` — busca en la tabla local (no llama a Kommo).
-- `POST /api/v1/kommo/sync-templates` — lee Kommo, hace upsert y desactiva las plantillas que ya no vienen.
+- `POST /api/v1/kommo/sync-templates` — lee Kommo, hace upsert de las plantillas; no desactiva automáticamente las ausentes.
 
 ### ERP BFF (JWT)
 

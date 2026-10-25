@@ -83,6 +83,17 @@ async function main(): Promise<void> {
   if (counters.exportedTo) {
     console.log(`Payload de Altosa exportado en: ${counters.exportedTo}`);
   }
+  if (
+    !counters.dryRun &&
+    counters.altosa.configured &&
+    (counters.altosa.failed > 0 || counters.altosa.deactivationFailed > 0)
+  ) {
+    console.error(
+      'La sincronización terminó con fallos hacia Altosa. Los productos afectados quedaron ' +
+        'SIN_SINCRONIZAR; revisa el log y vuelve a ejecutar el sync (es idempotente).'
+    );
+    process.exitCode = 1;
+  }
 }
 
 main()

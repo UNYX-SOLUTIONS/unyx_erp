@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # ============================================================================
-# Unyx ERP - Sincronización Contifico -> DB local -> Altosa (en producción)
+# Unyx ERP - Sincronización Contifico -> DB local -> Altosa
 #
 # Por seguridad, por defecto hace DRY-RUN. Para aplicar cambios usa --apply.
+# Funciona con producción y con el ambiente de pruebas (ver ejemplos).
 #
 # Uso:
 #   ./deploy/contifico-sync.sh --match-by-name                 # dry-run
@@ -11,12 +12,17 @@
 #   ./deploy/contifico-sync.sh --apply --only 091003BE
 #   ./deploy/contifico-sync.sh --apply --create-missing        # importa TODO (no recomendado)
 #   ./deploy/contifico-sync.sh --apply --skip-altosa
+#
+# Pruebas (docker-compose.test.yml):
+#   COMPOSE_FILE="$PWD/docker-compose.test.yml" ENV_FILE="$PWD/.env.deploy" \
+#     BACKEND_SERVICE=backend ./deploy/contifico-sync.sh --apply
 # ============================================================================
 set -Eeuo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE_FILE="${COMPOSE_FILE:-$REPO_DIR/docker-compose.prod.yml}"
 ENV_FILE="${ENV_FILE:-$REPO_DIR/.env.production}"
+BACKEND_SERVICE="${BACKEND_SERVICE:-unyx-backend}"
 
 APPLY=0
 ARGS=()
@@ -43,7 +49,7 @@ while [ "$#" -gt 0 ]; do
       shift
       ;;
     -h|--help)
-      sed -n '1,20p' "$0"
+      awk '/^set -Eeuo pipefail$/{exit} {print}' "$0"
       exit 0
       ;;
     *)
@@ -76,10 +82,10 @@ set -a
 source "$ENV_FILE"
 set +a
 
-CID="$(docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps -q unyx-backend | head -n 1)"
-[ -n "$CID" ] || fail "El backend no está corriendo. Ejecuta deploy/deploy-prod.sh primero."
+CID="$(docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps -q "$BACKEND_SERVICE" | head -n 1)"
+[ -n "$CID" ] || fail "El servicio '$BACKEND_SERVICE' no está corriendo. Ejecuta deploy/deploy-prod.sh (o deploy-test.sh) primero."
 STATUS="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$CID" 2>/dev/null || echo missing)"
-[ "$STATUS" = "healthy" ] || fail "El backend no está healthy (estado: $STATUS)."
+[ "$STATUS" = "healthy" ] || fail "El servicio '$BACKEND_SERVICE' no está healthy (estado: $STATUS)."
 
 if [ -n "${ALTOSA_API_URL:-}" ] && command -v curl >/dev/null 2>&1; then
   if curl -fsS --max-time 10 "${ALTOSA_API_URL%/}/health" >/dev/null 2>&1; then
@@ -104,5 +110,5 @@ if [ "$HAS_PRUNE" = 1 ]; then
 fi
 
 log "Ejecutando: node dist/scripts/sync-contifico.js ${ARGS[*]}"
-docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T unyx-backend \
+docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T "$BACKEND_SERVICE" \
   node dist/scripts/sync-contifico.js "${ARGS[@]}"

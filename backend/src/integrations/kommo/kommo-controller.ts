@@ -5,7 +5,13 @@ import * as altosaService from '../altosa/altosa-service';
 
 export const listTemplates = asyncHandler(async (req: Request, res: Response) => {
   const search = typeof req.query.search === 'string' ? req.query.search.trim() : undefined;
-  const result = await altosaService.searchKommoTemplates(search || undefined);
+  const rawLimit = typeof req.query.limit === 'string' ? Number(req.query.limit) : undefined;
+  const limit =
+    rawLimit !== undefined && Number.isInteger(rawLimit)
+      ? Math.min(Math.max(rawLimit, 1), 50)
+      : undefined;
+
+  const result = await altosaService.searchKommoTemplates(search || undefined, limit);
   sendSuccess(res, result.data);
 });
 

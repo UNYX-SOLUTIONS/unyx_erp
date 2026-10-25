@@ -334,15 +334,23 @@ export interface KommoSyncResult {
   fetched: number;
   created: number;
   updated: number;
+  unchanged: number;
   deactivated: number;
 }
 
 export async function searchKommoTemplates(
-  search?: string
+  search?: string,
+  limit = 50
 ): Promise<ApiResponse<KommoTemplateDto[]>> {
   const response = await apiClient.get<ApiResponse<KommoTemplateDto[]>>(
     '/api/v1/integrations/kommo/templates',
-    { params: search ? { search } : undefined, timeout: 30_000 }
+    {
+      params: {
+        ...(search ? { search } : {}),
+        limit,
+      },
+      timeout: 30_000,
+    }
   );
   return response.data;
 }
@@ -351,7 +359,7 @@ export async function syncKommoTemplates(): Promise<ApiResponse<KommoSyncResult>
   const response = await apiClient.post<ApiResponse<KommoSyncResult>>(
     '/api/v1/integrations/kommo/sync-templates',
     {},
-    { timeout: 60_000 }
+    { timeout: 120_000 }
   );
   return response.data;
 }
