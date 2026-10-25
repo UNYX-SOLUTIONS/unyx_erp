@@ -64,10 +64,21 @@ export async function altosaRequest<T>(
     const body = (await response.json().catch(() => null)) as AltosaResponseBody<T> | null;
 
     if (!response.ok || !body?.success) {
+      const message =
+        body?.message ?? `El API de Altosa respondió con estado ${response.status}.`;
+      const code = body?.code ?? 'ALTOSA_API_ERROR';
+      const preserveStatus =
+        code.startsWith('META_') ||
+        response.status === 400 ||
+        response.status === 404 ||
+        response.status === 409 ||
+        response.status === 422 ||
+        response.status === 503;
+
       throw new ApiError(
-        502,
-        body?.message ?? `El API de Altosa respondió con estado ${response.status}.`,
-        'ALTOSA_API_ERROR'
+        preserveStatus && response.status >= 400 ? response.status : 502,
+        message,
+        code
       );
     }
 
@@ -87,9 +98,10 @@ export async function altosaRequest<T>(
 
 export async function altosaGet<T>(
   path: string,
-  query?: Record<string, string | number | boolean | undefined>
+  query?: Record<string, string | number | boolean | undefined>,
+  options?: { timeoutMs?: number }
 ): Promise<{ data: T; meta?: PaginationMeta }> {
-  return altosaRequest<T>('GET', path, { query });
+  return altosaRequest<T>('GET', path, { query, ...options });
 }
 
 export interface AltosaUploadFile {

@@ -20,12 +20,16 @@ Traefik (VPS ERP, red traefik-public, Let's Encrypt)
                              unyx-postgres:5432 (solo red interna)
                              volumen: unyx_pgdata
 
-unyx-backend ──► Contifico API v1 (fuente de verdad del inventario)
+unyx-backend ──► Contifico API v1 (histórico/stock; write-back de campos soportados)
 unyx-backend ──► altosa-api pública (x-api-key) ──► PostgreSQL Altosa/pgvector
 ```
 
-- Contifico es la fuente de verdad. El ERP actualiza solo los productos que ya
-  existen; los nuevos se agregan a demanda desde el buscador de Contifico.
+- Contifico conserva el histórico y el stock. El ERP es la consola de
+  administración: escribe de vuelta los campos soportados (nombre, descripción
+  comercial, categoría, estado, precio/descripción de la variante principal),
+  mantiene local y Altosa, y preserva la aprobación (`isActive`) y el estado por
+  variante. Los productos nuevos entran inactivos y `PENDIENTE`; el equipo los
+  activa.
 - El ERP escribe en su base (`unyx_erp`) **y** en Altosa a través de su API.
   Kommo consume Altosa por el flujo existente.
 - `DATABASE_URL_ALTOSA` solo se usa para el ETL legado; el sync nuevo usa la API.
@@ -193,15 +197,18 @@ El script `deploy/contifico-sync.sh` hace dry-run por defecto:
 # Aplicar: actualiza solo productos existentes y los empuja a Altosa
 ./deploy/contifico-sync.sh --apply --match-by-name
 
-# Reconciliación: desactiva en local/Altosa lo que ya no está en Contifico
+# Reconciliación SOLO REPORTE: revisa SKUs que ya no vienen de Contifico.
+# No desactives automáticamente: la desactivación se hace en el ERP y se propaga.
 ./deploy/contifico-sync.sh --dry-run --prune
-./deploy/contifico-sync.sh --apply --prune
 ```
 
 - `--match-by-name` enlaza el catálogo heredado por nombre (primera vez).
 - Sin `--create-missing` **no se importan** los productos de Contifico que no
   existan en el ERP. Para agregarlos, usa el buscador del panel de producto.
-- `--create-missing` importa todo Contifico (no recomendado).
+- Los productos importados (on-demand o con `--create-missing`) nacen
+  **inactivos y `PENDIENTE`**; el equipo los revisa y activa antes de publicarlos.
+- No uses `--apply --prune` en cron: desactiva todo lo que no venga en la
+  corrida de Contifico. La desactivación normal es desde el ERP.
 
 El ETL legado (solo si no usas Contifico como fuente) sigue disponible:
 

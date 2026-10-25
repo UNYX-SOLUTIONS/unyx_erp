@@ -390,6 +390,13 @@ export async function updateProduct(id: string, input: UpdateProductInput): Prom
     });
   }
 
+  const nextCategory =
+    input.category !== undefined ? input.category || null : existing.category;
+  const nextSubcategory =
+    input.subcategory !== undefined ? input.subcategory || null : existing.subcategory;
+  const taxonomyChanged =
+    nextCategory !== existing.category || nextSubcategory !== existing.subcategory;
+
   const product = await prisma.kbProduct.update({
     where: { id },
     data: {
@@ -425,7 +432,7 @@ export async function updateProduct(id: string, input: UpdateProductInput): Prom
     newValues: toProductDto(product, product.variants),
   });
 
-  await syncLocalProductToAltosa(product.id);
+  await syncLocalProductToAltosa(product.id, { updateTaxonomy: taxonomyChanged });
   return getProductById(id);
 }
 

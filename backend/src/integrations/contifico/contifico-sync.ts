@@ -124,10 +124,6 @@ function stockAsInt(value: number): number {
   return Math.round(value);
 }
 
-function buildValidation(price: number | null): KbValidationStatus {
-  return price !== null && price > 0 ? 'APROBADO' : 'SIN_PRECIO';
-}
-
 function buildAltosaPayloadFromCanonical(product: ContificoCanonicalProduct): AltosaSyncProduct {
   return {
     codigo: product.sku,
@@ -148,6 +144,7 @@ function buildAltosaPayloadFromCanonical(product: ContificoCanonicalProduct): Al
         ...variant.especificaciones,
         stock: variant.stock,
       },
+      isActive: variant.isActive,
     })),
   };
 }
@@ -169,6 +166,7 @@ function buildAltosaPayloadFromLocal(
             ...((variant.especificaciones as Record<string, unknown> | null) ?? {}),
             stock: variant.stock,
           },
+          isActive: variant.isActive,
         }))
       : [
           {
@@ -178,6 +176,7 @@ function buildAltosaPayloadFromLocal(
             precioUsd: null,
             imagenUrl: product.thumbnailUrl,
             especificaciones: { stock: 0 },
+            isActive: product.isActive,
           },
         ];
 
@@ -219,6 +218,17 @@ async function upsertVariant(
   const existingSpecs = (existing?.especificaciones as Record<string, unknown> | null) ?? {};
   const existingName = existing?.name ?? canonical.name;
 
+  if (existing && existing.isActive !== canonical.isActive) {
+    logger.info(
+      {
+        sku: canonical.sku,
+        erpActive: existing.isActive,
+        contificoActive: canonical.isActive,
+      },
+      'Se conserva el estado activo de la variante del ERP (difiere de Contifico)'
+    );
+  }
+
   const data = {
     sku: canonical.sku,
     name: hasExplicitColor ? canonical.name : existingName,
@@ -226,9 +236,8 @@ async function upsertVariant(
     colorHex: hasExplicitColor ? canonical.colorHex : (existing?.colorHex ?? canonical.colorHex),
     price: canonical.price,
     stock: stockAsInt(canonical.stock),
-    imageUrl: canonical.imageUrl ?? existing?.imageUrl ?? null,
+    imageUrl: existing?.imageUrl ?? canonical.imageUrl ?? null,
     description: canonical.description ?? existing?.description ?? null,
-    isActive: canonical.isActive,
     sortOrder: canonical.sortOrder,
     sourceRowKey,
     especificaciones: toJson({
@@ -248,7 +257,8 @@ async function upsertVariant(
   }
 
   await prisma.kbProductVariant.create({
-    data: { productId, ...data },
+    // Las variantes nuevas nacen inactivas: el equipo las aprueba en el ERP.
+    data: { productId, ...data, isActive: false },
   });
   counters.variants.created += 1;
 }
@@ -296,6 +306,17 @@ async function upsertCanonicalProduct(
         ? 'APROBADO'
         : existing.validation;
 
+    if (existing.isActive !== canonical.isActive) {
+      logger.info(
+        {
+          sku: canonical.sku,
+          erpActive: existing.isActive,
+          contificoActive: canonical.isActive,
+        },
+        'Se conserva el estado activo del producto del ERP (difiere de Contifico)'
+      );
+    }
+
     const updated = await prisma.kbProduct.update({
       where: { id: existing.id },
       data: {
@@ -309,11 +330,10 @@ async function upsertCanonicalProduct(
           ? {}
           : { commercialDescription: canonical.commercialDescription }),
         ...(preserveKeywords ? {} : { keywords: canonical.keywords }),
-        thumbnailUrl: canonical.thumbnailUrl ?? existing.thumbnailUrl,
+        thumbnailUrl: existing.thumbnailUrl ?? canonical.thumbnailUrl,
         sourceUrl: canonical.sourceUrl ?? existing.sourceUrl,
         validation: nextValidation,
         syncStatus: 'SINCRONIZADO' as KbSyncStatus,
-        isActive: canonical.isActive,
         sourceRowKey,
         lastSyncedAt: new Date(),
       },
@@ -353,9 +373,11 @@ async function upsertCanonicalProduct(
       keywords: canonical.keywords,
       thumbnailUrl: canonical.thumbnailUrl,
       sourceUrl: canonical.sourceUrl,
-      validation: buildValidation(canonical.price),
+      // Los productos nuevos de Contifico entran inactivos y pendientes: el
+      // equipo los revisa/aprueba en el ERP antes de publicarlos a Altosa/Meta.
+      validation: 'PENDIENTE' as KbValidationStatus,
       syncStatus: 'SINCRONIZADO' as KbSyncStatus,
-      isActive: canonical.isActive,
+      isActive: false,
       sourceRowKey,
       lastSyncedAt: new Date(),
     },

@@ -69,10 +69,21 @@ export const altosaVariantBodySchema = z.object({
   catalogoId: z.coerce.number().int().positive().optional(),
   estadoId: z.coerce.number().int().positive().max(32767).optional(),
   kommoTemplateId: z.string().trim().min(1).max(80).nullable().optional(),
+  metaRetailerId: z.string().trim().max(100).nullable().optional(),
+  metaMappingLocked: z.boolean().optional(),
 });
 
 export const altosaUpdateVariantBodySchema = altosaVariantBodySchema.partial().extend({
   isActive: z.boolean().optional(),
+});
+
+export const altosaMetaCatalogSearchQuerySchema = z.object({
+  q: z.string().trim().min(2).max(80),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
+
+export const altosaMetaCatalogItemQuerySchema = z.object({
+  retailerId: z.string().trim().min(1).max(100),
 });
 
 export const altosaCreateProductBodySchema = z.object({
@@ -114,6 +125,7 @@ export const altosaSyncVariantSchema = z.object({
   precioUsd: z.number().min(0).max(1_000_000).nullable().optional(),
   imagenUrl: optionalUrl.nullable().optional(),
   especificaciones: z.record(z.unknown()).nullable().optional(),
+  isActive: z.boolean().optional(),
 });
 
 export const altosaSyncProductSchema = z.object({
@@ -143,3 +155,5 @@ export type AltosaUpdateProductBody = z.infer<typeof altosaUpdateProductBodySche
 export type AltosaProductsQuery = z.infer<typeof altosaProductsQuerySchema>;
 export type AltosaDocumentsQuery = z.infer<typeof altosaDocumentsQuerySchema>;
 export type AltosaActiveQuery = z.infer<typeof altosaActiveQuerySchema>;
+export type AltosaMetaCatalogSearchQuery = z.infer<typeof altosaMetaCatalogSearchQuerySchema>;
+export type AltosaMetaCatalogItemQuery = z.infer<typeof altosaMetaCatalogItemQuerySchema>;
