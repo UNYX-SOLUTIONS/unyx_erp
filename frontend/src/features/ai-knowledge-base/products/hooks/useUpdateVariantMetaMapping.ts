@@ -8,7 +8,7 @@ import type { UpdateVariantPayload } from '../types/product.types';
 
 interface UpdateMetaMappingVariables {
   variantId: string;
-  payload: UpdateVariantPayload;
+  payload: UpdateVariantPayload; //Comentario
 }
 
 export function useUpdateVariantMetaMapping(productId: string) {
