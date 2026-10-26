@@ -1,156 +1,106 @@
 services:
   # =========================================================
-  # POSTGRESQL - UNYX ERP
-  # Base de datos exclusiva del ERP
+  # POSTGRESQL - UNYX ERP (exclusivo, sin puertos públicos)
   # =========================================================
   unyx-postgres:
     image: postgres:16-alpine
     restart: always
-
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER requerido}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerido}
       POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB requerido}
       TZ: America/Guayaquil
-
     volumes:
       - unyx_pgdata:/var/lib/postgresql/data
-
     networks:
       - unyx-internal
-
     healthcheck:
-      test:
-        - CMD-SHELL
-        - pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 10s
 
   # =========================================================
-  # BACKEND - UNYX ERP
-  # Node.js / Prisma / API
+  # BACKEND - UNYX ERP / Prisma
   # =========================================================
   unyx-backend:
     build:
       context: ./backend
-
     restart: always
-
     environment:
       NODE_ENV: production
-      PORT: 4000
-
-      # Base de datos exclusiva del ERP
+      PORT: "4000"
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@unyx-postgres:5432/${POSTGRES_DB}?schema=public
-
-      # Conexión directa legado, opcional
       DATABASE_URL_ALTOSA: ${DATABASE_URL_ALTOSA:-}
-
-      # Autenticación
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET requerido}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET requerido}
       JWT_ACCESS_EXPIRES: ${JWT_ACCESS_EXPIRES:-15m}
       JWT_REFRESH_EXPIRES: ${JWT_REFRESH_EXPIRES:-7d}
-
-      # Configuración de seguridad
-      CORS_ORIGIN: https://${UNYX_DOMAIN}
+      CORS_ORIGIN: https://${UNYX_DOMAIN:?UNYX_DOMAIN requerido}
       TRUST_PROXY: "true"
       TZ: America/Guayaquil
-
-      # API Altosa
-      ALTOSA_API_URL: ${ALTOSA_API_URL}
-      ALTOSA_API_KEY: ${ALTOSA_API_KEY}
-
-      # API Contífico
+      ALTOSA_API_URL: ${ALTOSA_API_URL:?ALTOSA_API_URL requerido}
+      ALTOSA_API_KEY: ${ALTOSA_API_KEY:?ALTOSA_API_KEY requerido}
       CONTIFICO_API_URL: ${CONTIFICO_API_URL:-https://api.contifico.com/sistema/api/v1}
-      CONTIFICO_API_KEY: ${CONTIFICO_API_KEY}
+      CONTIFICO_API_KEY: ${CONTIFICO_API_KEY:?CONTIFICO_API_KEY requerido}
       CONTIFICO_API_TOKEN: ${CONTIFICO_API_TOKEN:-}
-
     networks:
       - unyx-internal
-
     labels:
-      - "traefik.enable=true"
-
-      # Router de API
-      - 'traefik.http.routers.unyx-erp-api.rule=Host(${UNYX_DOMAIN}) && PathPrefix(/api)'
-      - "traefik.http.routers.unyx-erp-api.entrypoints=websecure"
-      - "traefik.http.routers.unyx-erp-api.tls=true"
-      - "traefik.http.routers.unyx-erp-api.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.unyx-erp-api.priority=20"
-      - "traefik.http.routers.unyx-erp-api.service=unyx-erp-api"
-
-      # Puerto interno del backend
-      - "traefik.http.services.unyx-erp-api.loadbalancer.server.port=4000"
-
+      traefik.enable: "true"
+      # Comillas dobles internas: argumentos válidos para el parser de Traefik.
+      traefik.http.routers.unyx-erp-api.rule: 'Host("${UNYX_DOMAIN}") && PathPrefix("/api")'
+      traefik.http.routers.unyx-erp-api.entrypoints: websecure
+      traefik.http.routers.unyx-erp-api.tls: "true"
+      traefik.http.routers.unyx-erp-api.tls.certresolver: letsencrypt
+      traefik.http.routers.unyx-erp-api.priority: "20"
+      traefik.http.routers.unyx-erp-api.service: unyx-erp-api
+      traefik.http.services.unyx-erp-api.loadbalancer.server.port: "4000"
     depends_on:
       unyx-postgres:
         condition: service_healthy
-
     healthcheck:
-      test:
-        - CMD-SHELL
-        - wget -qO- http://127.0.0.1:4000/api/v1/health > /dev/null 2>&1 || exit 1
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4000/api/v1/health > /dev/null 2>&1 || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 30s
 
   # =========================================================
-  # FRONTEND - UNYX ERP
-  # Next.js
+  # FRONTEND - UNYX ERP / Next.js
   # =========================================================
   unyx-frontend:
     build:
       context: ./frontend
-
       args:
-        NEXT_PUBLIC_API_URL: https://${UNYX_DOMAIN}
+        NEXT_PUBLIC_API_URL: https://${UNYX_DOMAIN:?UNYX_DOMAIN requerido}
         API_PROXY_URL: http://unyx-backend:4000
-
     restart: always
-
     networks:
       - unyx-internal
-
     labels:
-      - "traefik.enable=true"
-
-      # Router web
-      - 'traefik.http.routers.unyx-erp-web.rule=Host(${UNYX_DOMAIN})'
-      - "traefik.http.routers.unyx-erp-web.entrypoints=websecure"
-      - "traefik.http.routers.unyx-erp-web.tls=true"
-      - "traefik.http.routers.unyx-erp-web.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.unyx-erp-web.priority=10"
-      - "traefik.http.routers.unyx-erp-web.service=unyx-erp-web"
-
-      # Puerto interno del frontend
-      - "traefik.http.services.unyx-erp-web.loadbalancer.server.port=3000"
-
+      traefik.enable: "true"
+      traefik.http.routers.unyx-erp-web.rule: 'Host("${UNYX_DOMAIN}")'
+      traefik.http.routers.unyx-erp-web.entrypoints: websecure
+      traefik.http.routers.unyx-erp-web.tls: "true"
+      traefik.http.routers.unyx-erp-web.tls.certresolver: letsencrypt
+      traefik.http.routers.unyx-erp-web.priority: "10"
+      traefik.http.routers.unyx-erp-web.service: unyx-erp-web
+      traefik.http.services.unyx-erp-web.loadbalancer.server.port: "3000"
     depends_on:
       unyx-backend:
         condition: service_healthy
-
     healthcheck:
-      test:
-        - CMD-SHELL
-        - wget -qO- http://127.0.0.1:3000/ > /dev/null 2>&1 || exit 1
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ > /dev/null 2>&1 || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 30s
 
-# =========================================================
-# NETWORKS
-# =========================================================
 networks:
   unyx-internal:
     driver: bridge
 
-# =========================================================
-# PERSISTENT VOLUMES
-# =========================================================
 volumes:
   unyx_pgdata:
