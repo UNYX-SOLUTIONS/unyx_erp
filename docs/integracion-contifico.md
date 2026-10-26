@@ -73,17 +73,22 @@ Reglas:
 ```env
 CONTIFICO_API_URL=https://api.contifico.com/sistema/api/v1
 CONTIFICO_API_KEY=<api key de Contifico>
-CONTIFICO_API_TOKEN=<pos token opcional>
+# CONTIFICO_API_TOKEN=  # opcional POS, no usado por inventario
 
 # Altosa (ya existente)
 ALTOSA_API_URL=http://localhost:4100
 ALTOSA_API_KEY=<misma clave que altosa_infrastructure/.env>
 ```
 
+- `backend/.env` es **solo para desarrollo local**. En Docker/VPS las variables
+  salen de `.env.production` y las inyecta `docker-compose.prod.yml`; el
+  Dockerfile del backend no copia `backend/.env`. No necesitas duplicar los
+  valores de producción en ambos archivos.
 - `CONTIFICO_API_KEY` se envía en el header `Authorization` tal cual (sin
-  `Bearer`), como indica la documentación de Contifico.
+  `Bearer`), como indica la documentación de Contifico. Es la única credencial
+  necesaria para el inventario.
 - `CONTIFICO_API_TOKEN` es el token de POS. No se usa para los endpoints de
-  producto; queda disponible para futuras integraciones POS.
+  producto ni para el sync; queda disponible para futuras integraciones POS.
 - `CONTIFICO_API_URL` debe quedar en `v1`. El código tiene un camino v2, pero el
   listado/búsqueda de v2 devuelve otro formato e IDs y no filtra por `filtro`.
 - Si el backend corre en Docker, define las mismas variables en el `.env` raíz

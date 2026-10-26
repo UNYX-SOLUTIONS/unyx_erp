@@ -36,6 +36,30 @@ unyx-backend ──► altosa-api pública (x-api-key) ──► PostgreSQL Alto
 - `kb_products` (productos padre) + `kb_product_variants` (variantes).
 - Postgres y backend NO exponen puertos al exterior: solo Traefik enruta.
 
+### Qué archivo `.env` se usa en cada entorno
+
+| Archivo | Dónde vive | Quién lo lee | ¿Es producción? |
+|---|---|---|---|
+| `backend/.env` | Tu PC (repo local) | `pnpm dev` del backend (`dotenv`) | **No** |
+| `backend/.env.example` | Repo | Plantilla para crear `backend/.env` local | No |
+| `.env.production` | VPS: `/opt/unyx-erp/.env.production` | `deploy-prod.sh` y `docker compose --env-file` | **Sí, el único** |
+| `.env.production.example` | Repo | Plantilla para crear el `.env.production` del VPS | No |
+| `.env` (raíz) | Tu PC | Docker Compose de desarrollo (`docker-compose.yml`) | No |
+| `.env.deploy` | VPS de pruebas | `docker-compose.test.yml` / `deploy-test.sh` | No (es test) |
+
+- En producción **solo** se usa `/opt/unyx-erp/.env.production`. No crees ni
+  edites `/opt/unyx-erp/backend/.env`: no se copia a la imagen y no se lee.
+- `deploy-prod.ps1` empaqueta el código excluyendo `.env*`; no sube tu
+  `backend/.env` ni un `.env.production` local. El `.env.production` del VPS se
+  conserva y se edita directamente allí.
+- El contenedor `unyx-backend` recibe las variables desde
+  `docker-compose.prod.yml` (`environment:`), no desde un archivo dentro del
+  contenedor.
+- Si cambias variables en `.env.production`, recrea el backend:
+  `sudo bash deploy/deploy-prod.sh --skip-build`.
+- Si cambias `UNYX_DOMAIN` o código del frontend, ejecuta el deploy completo
+  (sin `--skip-build`) para reconstruir la imagen.
+
 ---
 
 ## 2. Prerrequisitos en el VPS
@@ -47,8 +71,8 @@ unyx-backend ──► altosa-api pública (x-api-key) ──► PostgreSQL Alto
 - Acceso SSH (PuTTY). Firewall (ufw) permitiendo 22, 80 y 443 únicamente.
 - **altosa-api desplegada** y accesible desde el ERP (URL pública del subdominio).
   Su `ALTOSA_API_KEY` debe ser la misma que `ALTOSA_API_KEY` de este `.env.production`.
-- **Credenciales de Contifico**: `CONTIFICO_API_KEY` y, si aplica,
-  `CONTIFICO_API_TOKEN`.
+- **Credenciales de Contifico**: `CONTIFICO_API_KEY` (API v1). `CONTIFICO_API_TOKEN`
+  es opcional, no se usa para inventario y puedes omitirlo.
 - `DATABASE_URL_ALTOSA` solo si vas a usar el ETL legado; el sync de inventario
   usa la API de Altosa.
 
@@ -91,7 +115,7 @@ KOMMO_API_KEY=<token de larga duración>
 
 - `UNYX_DOMAIN`, `POSTGRES_*`, `JWT_*`
 - `ALTOSA_API_URL` y `ALTOSA_API_KEY` con los valores del paso 1
-- `CONTIFICO_API_KEY` y `CONTIFICO_API_TOKEN`
+- `CONTIFICO_API_KEY`
 - `DATABASE_URL_ALTOSA` solo si usarás el ETL legado
 
 Protege el archivo: `chmod 600 /opt/unyx-erp/.env.production`.
@@ -155,7 +179,7 @@ nano .env.production
 #   - POSTGRES_PASSWORD: clave fuerte
 #   - JWT_ACCESS_SECRET / JWT_REFRESH_SECRET: secretos largos y distintos
 #   - ALTOSA_API_URL / ALTOSA_API_KEY: URL pública y key de altosa-api
-#   - CONTIFICO_API_KEY / CONTIFICO_API_TOKEN
+#   - CONTIFICO_API_KEY
 #   - DATABASE_URL_ALTOSA: solo si usarás el ETL legado
 
 # Construir y levantar
