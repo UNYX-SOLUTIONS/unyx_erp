@@ -1,30 +1,19 @@
 #!/usr/bin/env bash
-# ============================================================================
-# Unyx ERP - Despliegue de PRODUCCIÓN en el VPS
-#
-# Uso:
-#   sudo bash deploy/deploy-prod.sh
-#   sudo bash deploy/deploy-prod.sh --seed          # roles/permisos/empresa base
-#   sudo bash deploy/deploy-prod.sh --seed --demo   # + catálogo demo (solo pruebas)
-#   sudo bash deploy/deploy-prod.sh --no-backup
-#   sudo bash deploy/deploy-prod.sh --skip-build
-#
-# Requisitos:
-#   - /opt/unyx-erp/.env.production creado desde .env.production.example
-#   - Red externa de Traefik: traefik-public
-#   - Altosa API accesible desde este VPS (ALTOSA_API_URL)
-# ============================================================================
+# UNYX ERP - despliegue de producción con Traefik existente en modo host.
+# Uso: sudo bash deploy/deploy-prod.sh [--seed] [--demo] [--no-backup] [--skip-build]
 set -Eeuo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE_FILE="${COMPOSE_FILE:-$REPO_DIR/docker-compose.prod.yml}"
 ENV_FILE="${ENV_FILE:-$REPO_DIR/.env.production}"
 BACKUP_DIR="${BACKUP_DIR:-/backups}"
+TRAEFIK_CONTAINER="${TRAEFIK_CONTAINER:-traefik-traefik-1}"
+RUN_SEED=0; RUN_DEMO=0; SKIP_BACKUP=0; SKIP_BUILD=0
 
-RUN_SEED=0
-RUN_DEMO=0
-SKIP_BACKUP=0
-SKIP_BUILD=0
+log() { printf '\n==> %s\n' "$*"; }
+warn() { printf '\nAVISO: %s\n' "$*" >&2; }
+fail() { printf '\nERROR: %s\n' "$*" >&2; exit 1; }
+trap 'warn "Despliegue interrumpido (línea $LINENO). Revisa los logs; no se han eliminado volúmenes."' ERR
 
 for arg in "$@"; do
   case "$arg" in
@@ -32,216 +21,166 @@ for arg in "$@"; do
     --demo) RUN_DEMO=1; RUN_SEED=1 ;;
     --no-backup) SKIP_BACKUP=1 ;;
     --skip-build) SKIP_BUILD=1 ;;
-    -h|--help)
-      sed -n '1,20p' "$0"
-      exit 0
-      ;;
-    *)
-      echo "Opción desconocida: $arg" >&2
-      exit 1
-      ;;
+    -h|--help) sed -n '1,3p' "$0"; exit 0 ;;
+    *) fail "Opción desconocida: $arg" ;;
   esac
 done
 
 cd "$REPO_DIR"
-
-log() { printf '\n==> %s\n' "$*"; }
-warn() { printf '\nAVISO: %s\n' "$*" >&2; }
-fail() { printf '\nERROR: %s\n' "$*" >&2; exit 1; }
-
-command -v docker >/dev/null 2>&1 || fail "Docker no está instalado."
-docker compose version >/dev/null 2>&1 || fail "Docker Compose no está disponible."
-docker info >/dev/null 2>&1 || fail "No hay acceso a Docker. Ejecuta como root o agrega el usuario al grupo docker."
-
-[ -f "$ENV_FILE" ] || fail "No existe $ENV_FILE. Copia .env.production.example y configura los valores reales."
-[ -f "$COMPOSE_FILE" ] || fail "No existe $COMPOSE_FILE."
+command -v docker >/dev/null || fail "Docker no está instalado."
+docker compose version >/dev/null || fail "Docker Compose no está disponible."
+docker info >/dev/null || fail "No hay acceso a Docker."
+[ -f "$ENV_FILE" ] || fail "No existe $ENV_FILE"
+[ -f "$COMPOSE_FILE" ] || fail "No existe $COMPOSE_FILE"
 
 set -a
 # shellcheck source=/dev/null
 source "$ENV_FILE"
 set +a
 
-require_var() {
-  local key="$1"
-  local value="${!1:-}"
-  [ -n "$value" ] || fail "Falta $key en $ENV_FILE."
-}
-
-require_var UNYX_DOMAIN
-require_var POSTGRES_USER
-require_var POSTGRES_PASSWORD
-require_var POSTGRES_DB
-require_var JWT_ACCESS_SECRET
-require_var JWT_REFRESH_SECRET
-require_var ALTOSA_API_URL
-require_var ALTOSA_API_KEY
-require_var CONTIFICO_API_KEY
-
+require_var() { [ -n "${!1:-}" ] || fail "Falta $1 en $ENV_FILE"; }
+for key in UNYX_DOMAIN POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB JWT_ACCESS_SECRET JWT_REFRESH_SECRET ALTOSA_API_URL ALTOSA_API_KEY CONTIFICO_API_KEY; do
+  require_var "$key"
+done
 : "${CONTIFICO_API_URL:=https://api.contifico.com/sistema/api/v1}"
 export CONTIFICO_API_URL
 
-[ "${#JWT_ACCESS_SECRET}" -ge 16 ] || fail "JWT_ACCESS_SECRET debe tener al menos 16 caracteres."
-[ "${#JWT_REFRESH_SECRET}" -ge 16 ] || fail "JWT_REFRESH_SECRET debe tener al menos 16 caracteres."
+[ "${#POSTGRES_PASSWORD}" -ge 16 ] || fail "POSTGRES_PASSWORD debe tener al menos 16 caracteres."
+[ "${#JWT_ACCESS_SECRET}" -ge 32 ] || fail "JWT_ACCESS_SECRET debe tener al menos 32 caracteres."
+[ "${#JWT_REFRESH_SECRET}" -ge 32 ] || fail "JWT_REFRESH_SECRET debe tener al menos 32 caracteres."
+[ "$JWT_ACCESS_SECRET" != "$JWT_REFRESH_SECRET" ] || fail "Los JWT secrets deben ser distintos."
 [ "${#ALTOSA_API_KEY}" -ge 16 ] || fail "ALTOSA_API_KEY debe tener al menos 16 caracteres."
 
+for key in POSTGRES_PASSWORD JWT_ACCESS_SECRET JWT_REFRESH_SECRET ALTOSA_API_KEY CONTIFICO_API_KEY; do
+  value="${!key}"
+  case "${value,,}" in
+    *cambia*|*change_me*|*placeholder*) fail "$key sigue siendo un placeholder." ;;
+  esac
+done
 case "$UNYX_DOMAIN" in
-  *example.com*|*localhost*|*127.0.0.1*)
-    fail "UNYX_DOMAIN sigue siendo un valor de ejemplo ($UNYX_DOMAIN)."
-    ;;
+  *example.com*|*localhost*|*127.0.0.1*|*/*|*:*|*' '*) fail "UNYX_DOMAIN no es un dominio válido de producción." ;;
 esac
-
-case "$POSTGRES_PASSWORD" in
-  CAMBIA*|change_me*|*CHANGE_ME*) fail "POSTGRES_PASSWORD sigue siendo un placeholder." ;;
-esac
-case "$JWT_ACCESS_SECRET" in
-  CAMBIA*|change_me*|*CHANGE_ME*) fail "JWT_ACCESS_SECRET sigue siendo un placeholder." ;;
-esac
-case "$JWT_REFRESH_SECRET" in
-  CAMBIA*|change_me*|*CHANGE_ME*) fail "JWT_REFRESH_SECRET sigue siendo un placeholder." ;;
-esac
-case "$ALTOSA_API_KEY" in
-  CAMBIA*|change_me*|*CHANGE_ME*) fail "ALTOSA_API_KEY sigue siendo un placeholder." ;;
-esac
-case "$CONTIFICO_API_KEY" in
-  CAMBIA*|change_me*|*CHANGE_ME*) fail "CONTIFICO_API_KEY sigue siendo un placeholder." ;;
-esac
-
-printf '%s' "$ALTOSA_API_URL" | grep -Eq '^https?://' || fail "ALTOSA_API_URL debe ser una URL http(s)."
+[[ "$ALTOSA_API_URL" =~ ^https:// ]] || fail "ALTOSA_API_URL debe utilizar HTTPS en producción."
 case "$ALTOSA_API_URL" in
-  *localhost*|*127.0.0.1*)
-    fail "ALTOSA_API_URL apunta a localhost. En producción usa la URL pública de altosa-api."
-    ;;
+  *localhost*|*127.0.0.1*) fail "ALTOSA_API_URL no puede apuntar a localhost." ;;
 esac
-
-if [ -z "${DATABASE_URL_ALTOSA:-}" ] || printf '%s' "${DATABASE_URL_ALTOSA:-}" | grep -q 'IP_O_HOST_ALTOSA'; then
-  warn "DATABASE_URL_ALTOSA no está configurada o sigue siendo un placeholder."
-  warn "No es necesaria para el sync Contifico -> Altosa (usa ALTOSA_API_URL), solo para el ETL legado."
+if [ -n "${DATABASE_URL_ALTOSA:-}" ]; then
+  warn "DATABASE_URL_ALTOSA está configurada: verifica que el ETL legado realmente la necesite."
 fi
-
-if [ -n "${SEED_ADMIN_PASSWORD:-}" ]; then
-  case "$SEED_ADMIN_PASSWORD" in
-    CAMBIA*|change_me*|*CHANGE_ME*) fail "SEED_ADMIN_PASSWORD sigue siendo un placeholder." ;;
+if [ "$RUN_SEED" = 1 ]; then
+  require_var SEED_ADMIN_PASSWORD
+  [ "${#SEED_ADMIN_PASSWORD}" -ge 16 ] || fail "SEED_ADMIN_PASSWORD debe tener al menos 16 caracteres."
+  case "${SEED_ADMIN_PASSWORD,,}" in
+    *cambia*|*change_me*|*placeholder*|admin123\!*) fail "SEED_ADMIN_PASSWORD no es segura." ;;
   esac
 fi
-
-docker network inspect traefik-public >/dev/null 2>&1 || fail \
-  "No existe la red externa 'traefik-public'. Créala y conecta Traefik antes de desplegar."
-
-log "Archivo de entorno: $ENV_FILE"
-log "Dominio público: https://$UNYX_DOMAIN"
-log "Altosa API: $ALTOSA_API_URL"
-
-# Altosa es un servicio separado. Validar conectividad antes de desplegar.
-if command -v curl >/dev/null 2>&1; then
-  ALTOSA_HEALTH_URL="${ALTOSA_API_URL%/}/health"
-  if curl -fsS --max-time 15 "$ALTOSA_HEALTH_URL" >/dev/null 2>&1; then
-    log "Altosa API responde: $ALTOSA_HEALTH_URL"
-    if curl -fsS --max-time 15 -H "x-api-key: $ALTOSA_API_KEY" \
-      "${ALTOSA_API_URL%/}/api/v1/products?page=1&pageSize=1" >/dev/null 2>&1; then
-      log "Altosa API key OK."
-    else
-      warn "Altosa API no aceptó ALTOSA_API_KEY."
-      warn "Copia la misma ALTOSA_API_KEY de altosa_infrastructure/.env al .env.production."
-    fi
-  else
-    warn "No pude validar $ALTOSA_HEALTH_URL."
-    warn "Revisa que altosa-api esté arriba, el DNS/TLS del subdominio y el firewall."
-    warn "El ERP puede desplegarse, pero el CRUD/sync hacia Altosa fallará hasta que responda."
-  fi
-else
-  warn "curl no está instalado; no se pudo validar la API de Altosa."
+if [ "$RUN_DEMO" = 1 ] && [ "${ALLOW_DEMO_IN_PROD:-false}" != "true" ]; then
+  fail "El catálogo demo está bloqueado en producción."
 fi
 
-log "Validando docker-compose..."
-docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" config >/dev/null
+# Se utiliza el Traefik existente en modo host; no se requiere traefik-public.
+[ "$(docker inspect "$TRAEFIK_CONTAINER" --format '{{.State.Running}}' 2>/dev/null || true)" = true ] || \
+  fail "Traefik ($TRAEFIK_CONTAINER) no está ejecutándose."
+[ "$(docker inspect "$TRAEFIK_CONTAINER" --format '{{.HostConfig.NetworkMode}}')" = host ] || \
+  fail "Traefik no está en modo host, como exige esta instalación."
 
-if [ "$SKIP_BACKUP" != 1 ]; then
-  if docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps -q unyx-postgres 2>/dev/null | grep -q .; then
-    log "Creando backup previo de PostgreSQL..."
-    if ! ENV_FILE="$ENV_FILE" COMPOSE_FILE="$COMPOSE_FILE" bash "$REPO_DIR/deploy/backup.sh" "$BACKUP_DIR"; then
-      warn "El backup previo falló; se continúa con el despliegue."
+COMPOSE=(docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE")
+log "Validando Docker Compose..."
+"${COMPOSE[@]}" config --quiet
+for service in unyx-postgres unyx-backend unyx-frontend; do
+  "${COMPOSE[@]}" config --services | grep -Fxq "$service" || fail "Falta servicio $service en Compose."
+done
+# La red externa ya no debe formar parte del Compose de producción.
+if "${COMPOSE[@]}" config --format json | grep -q 'traefik-public'; then
+  fail "El Compose todavía contiene traefik-public. Actualízalo antes de desplegar."
+fi
+
+log "Dominio: https://$UNYX_DOMAIN"
+log "Altosa API: $ALTOSA_API_URL"
+if command -v curl >/dev/null 2>&1; then
+  if curl -fsS --max-time 15 "${ALTOSA_API_URL%/}/health" >/dev/null; then
+    log "Altosa API accesible."
+    if ! curl -fsS --max-time 15 -H "x-api-key: $ALTOSA_API_KEY" \
+      "${ALTOSA_API_URL%/}/api/v1/products?page=1&pageSize=1" >/dev/null; then
+      warn "No se pudo verificar el endpoint autenticado de Altosa; comprueba ruta y permisos."
     fi
   else
-    log "PostgreSQL aún no está corriendo; se omite el backup previo."
+    warn "Altosa API no respondió al endpoint /health; revisa la URL y su ruta real."
   fi
+else
+  warn "curl no está disponible; se omiten las comprobaciones HTTP externas."
+fi
+
+# El backup es obligatorio si PostgreSQL ya está iniciado.
+DB_CID="$("${COMPOSE[@]}" ps -q unyx-postgres 2>/dev/null || true)"
+DB_RUNNING=false
+if [ -n "$DB_CID" ] && [ "$(docker inspect "$DB_CID" --format '{{.State.Running}}')" = true ]; then
+  DB_RUNNING=true
+fi
+if [ "$SKIP_BACKUP" = 1 ]; then
+  warn "Backup omitido expresamente (--no-backup). Asegúrate de tener uno verificado."
+elif [ "$DB_RUNNING" = true ]; then
+  [ -f "$REPO_DIR/deploy/backup.sh" ] || fail "No existe deploy/backup.sh"
+  log "Creando respaldo obligatorio de PostgreSQL..."
+  ENV_FILE="$ENV_FILE" COMPOSE_FILE="$COMPOSE_FILE" \
+    bash "$REPO_DIR/deploy/backup.sh" "$BACKUP_DIR" || fail "Falló el backup: se cancela el despliegue."
+else
+  warn "PostgreSQL no está ejecutándose: no se puede hacer backup en línea. Confirma el estado del volumen antes de continuar."
+  fail "Inicia y valida PostgreSQL o revisa su volumen antes del despliegue."
 fi
 
 if [ "$SKIP_BUILD" != 1 ]; then
-  log "Construyendo imágenes (backend + frontend)..."
-  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" build
+  log "Construyendo backend y frontend..."
+  "${COMPOSE[@]}" build unyx-backend unyx-frontend
 fi
 
-log "Levantando servicios..."
-docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --remove-orphans
+log "Levantando servicios (sin borrar contenedores huérfanos ni volúmenes)..."
+"${COMPOSE[@]}" up -d --no-build unyx-postgres unyx-backend unyx-frontend
 
 wait_healthy() {
-  local service="$1"
-  local cid status
-  cid="$(docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps -q "$service" | head -n 1)"
-  [ -n "$cid" ] || fail "No se encontró el contenedor del servicio $service."
-
+  local service="$1" cid status state
+  cid="$("${COMPOSE[@]}" ps -q "$service" | head -n 1)"
+  [ -n "$cid" ] || fail "No existe el contenedor $service."
   for _ in $(seq 1 80); do
     status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$cid" 2>/dev/null || echo missing)"
-    if [ "$status" = "healthy" ]; then
-      log "$service: healthy"
-      return 0
-    fi
-    if [ "$status" = "unhealthy" ]; then
-      docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs --tail=120 "$service" >&2 || true
-      fail "$service quedó unhealthy."
+    state="$(docker inspect --format '{{.State.Status}}' "$cid" 2>/dev/null || echo missing)"
+    if [ "$status" = healthy ]; then log "$service: healthy"; return 0; fi
+    if [ "$status" = unhealthy ] || [ "$state" = exited ] || [ "$state" = dead ]; then
+      "${COMPOSE[@]}" logs --tail=100 "$service" >&2 || true
+      fail "$service no inició correctamente ($state / $status)."
     fi
     sleep 3
   done
-
-  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs --tail=120 "$service" >&2 || true
+  "${COMPOSE[@]}" logs --tail=100 "$service" >&2 || true
   fail "$service no quedó healthy a tiempo."
 }
-
 wait_healthy unyx-postgres
 wait_healthy unyx-backend
 wait_healthy unyx-frontend
 
 if [ "$RUN_SEED" = 1 ]; then
-  if [ "${SEED_ADMIN_PASSWORD:-}" = "" ]; then
-    warn "SEED_ADMIN_PASSWORD no está definida; el seed usará Admin123! por defecto."
-    warn "Defínela en .env.production o en el entorno antes de ejecutar --seed."
-  fi
-  log "Ejecutando seed base (roles, permisos, empresa)..."
-  SEED_ENV=(-e NODE_ENV=development)
-  if [ -n "${SEED_ADMIN_PASSWORD:-}" ]; then
-    SEED_ENV+=(-e "SEED_ADMIN_PASSWORD=${SEED_ADMIN_PASSWORD}")
-  fi
-  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T "${SEED_ENV[@]}" \
+  log "Ejecutando seed base..."
+  "${COMPOSE[@]}" exec -T -e NODE_ENV=development \
+    -e "SEED_ADMIN_PASSWORD=$SEED_ADMIN_PASSWORD" \
     unyx-backend node dist/prisma/seed.js
 fi
-
 if [ "$RUN_DEMO" = 1 ]; then
-  log "Ejecutando seed demo de productos (solo para pruebas)..."
-  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T \
-    unyx-backend node dist/scripts/seed-demo.js
+  "${COMPOSE[@]}" exec -T unyx-backend node dist/scripts/seed-demo.js
 fi
 
 if command -v curl >/dev/null 2>&1; then
-  if curl -fsS --max-time 20 "https://$UNYX_DOMAIN/api/v1/health" >/dev/null 2>&1; then
-    log "Health público OK: https://$UNYX_DOMAIN/api/v1/health"
-  else
-    warn "El health público aún no responde: https://$UNYX_DOMAIN/api/v1/health"
-    warn "Verifica DNS, certificado TLS y los routers de Traefik."
-  fi
+  log "Comprobando acceso HTTPS público..."
+  curl -fsS --retry 3 --retry-delay 2 --max-time 20 \
+    "https://$UNYX_DOMAIN/api/v1/health" >/dev/null || \
+    fail "El health público no responde. Revisa DNS, Traefik, routers y conectividad Docker."
 fi
-
-cat <<EOF
+cat <<EOF2
 
 ============================================================
- Unyx ERP desplegado en PRODUCCIÓN
-------------------------------------------------------------
- URL:       https://$UNYX_DOMAIN
- API:       https://$UNYX_DOMAIN/api/v1/health
- Altosa:    $ALTOSA_API_URL
-------------------------------------------------------------
- Logs:      docker compose --env-file .env.production -f docker-compose.prod.yml logs -f
- Reiniciar: docker compose --env-file .env.production -f docker-compose.prod.yml restart
- Backup:    ./deploy/backup.sh
- Sync:      ./deploy/contifico-sync.sh --dry-run --match-by-name
+ UNYX ERP - DESPLIEGUE FINALIZADO
+ URL: https://$UNYX_DOMAIN
+ API: https://$UNYX_DOMAIN/api/v1/health
+ Altosa: $ALTOSA_API_URL
+ Logs: docker compose --env-file .env.production -f docker-compose.prod.yml logs -f
 ============================================================
-EOF
+EOF2
