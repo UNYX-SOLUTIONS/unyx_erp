@@ -1,7 +1,7 @@
 services:
   # =========================================================
   # POSTGRESQL - UNYX ERP
-  # Base de datos exclusiva del ERP!
+  # Base de datos exclusiva del ERP
   # =========================================================
   unyx-postgres:
     image: postgres:16-alpine
@@ -30,7 +30,7 @@ services:
 
   # =========================================================
   # BACKEND - UNYX ERP
-  # Node.js / API / Prisma
+  # Node.js / Prisma / API
   # =========================================================
   unyx-backend:
     build:
@@ -42,28 +42,28 @@ services:
       NODE_ENV: production
       PORT: 4000
 
-      # Base de datos local del ERP
+      # Base de datos exclusiva del ERP
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@unyx-postgres:5432/${POSTGRES_DB}?schema=public
 
-      # ETL legado opcional
+      # Conexión directa legado, opcional
       DATABASE_URL_ALTOSA: ${DATABASE_URL_ALTOSA:-}
 
       # Autenticación
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET requerido}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET requerido}
       JWT_ACCESS_EXPIRES: ${JWT_ACCESS_EXPIRES:-15m}
       JWT_REFRESH_EXPIRES: ${JWT_REFRESH_EXPIRES:-7d}
 
-      # Seguridad
+      # Configuración de seguridad
       CORS_ORIGIN: https://${UNYX_DOMAIN}
       TRUST_PROXY: "true"
       TZ: America/Guayaquil
 
-      # Comunicación con VPS Altosa mediante API
+      # API Altosa
       ALTOSA_API_URL: ${ALTOSA_API_URL}
       ALTOSA_API_KEY: ${ALTOSA_API_KEY}
 
-      # Integración Contífico
+      # API Contífico
       CONTIFICO_API_URL: ${CONTIFICO_API_URL:-https://api.contifico.com/sistema/api/v1}
       CONTIFICO_API_KEY: ${CONTIFICO_API_KEY}
       CONTIFICO_API_TOKEN: ${CONTIFICO_API_TOKEN:-}
@@ -74,8 +74,8 @@ services:
     labels:
       - "traefik.enable=true"
 
-      # Router API
-      - "traefik.http.routers.unyx-erp-api.rule=Host(${UNYX_DOMAIN}) && PathPrefix(/api)"
+      # Router de API
+      - 'traefik.http.routers.unyx-erp-api.rule=Host(${UNYX_DOMAIN}) && PathPrefix(/api)'
       - "traefik.http.routers.unyx-erp-api.entrypoints=websecure"
       - "traefik.http.routers.unyx-erp-api.tls=true"
       - "traefik.http.routers.unyx-erp-api.tls.certresolver=letsencrypt"
@@ -118,8 +118,8 @@ services:
     labels:
       - "traefik.enable=true"
 
-      # Router frontend
-      - "traefik.http.routers.unyx-erp-web.rule=Host(${UNYX_DOMAIN})"
+      # Router web
+      - 'traefik.http.routers.unyx-erp-web.rule=Host(${UNYX_DOMAIN})'
       - "traefik.http.routers.unyx-erp-web.entrypoints=websecure"
       - "traefik.http.routers.unyx-erp-web.tls=true"
       - "traefik.http.routers.unyx-erp-web.tls.certresolver=letsencrypt"
