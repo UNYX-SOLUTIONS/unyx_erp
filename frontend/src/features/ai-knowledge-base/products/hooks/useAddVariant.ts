@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/utils';
 import { addVariant } from '../api/products.api';
 import type { CreateVariantPayload } from '../types/product.types';
 
@@ -15,8 +16,8 @@ export function useAddVariant(productId: string) {
       void queryClient.invalidateQueries({ queryKey: ['products'] });
       toast.success('Variante agregada');
     },
-    onError: () => {
-      toast.error('No se pudo agregar la variante');
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, 'No se pudo agregar la variante'));
     },
   });
 }

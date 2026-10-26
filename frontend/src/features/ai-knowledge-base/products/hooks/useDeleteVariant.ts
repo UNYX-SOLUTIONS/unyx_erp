@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/utils';
 import { deleteVariant } from '../api/products.api';
 
 export function useDeleteVariant(productId: string) {
@@ -14,8 +15,8 @@ export function useDeleteVariant(productId: string) {
       void queryClient.invalidateQueries({ queryKey: ['products'] });
       toast.success('Variante eliminada');
     },
-    onError: () => {
-      toast.error('No se pudo eliminar la variante');
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, 'No se pudo eliminar la variante'));
     },
   });
 }

@@ -72,7 +72,7 @@ export function ProductDetailSheet() {
   const isSaving = isCreate
     ? createProduct.isPending
     : activeTab === 'variants'
-      ? updateVariantMutation.isPending
+      ? updateVariantMutation.isPending || addVariantMutation.isPending
       : updateProduct.isPending;
 
   const requestClose = () => {
@@ -138,21 +138,27 @@ export function ProductDetailSheet() {
       return;
     }
     const results = await Promise.allSettled(
-      values.variants.map((variant) =>
-        updateVariantMutation.mutateAsync({
+      values.variants.map((variant) => {
+        const payload = {
+          name: variant.name,
+          sku: variant.sku,
+          color: variant.colorLabel || undefined,
+          colorHex: variant.color || undefined,
+          price: variant.price,
+          description: variant.description || undefined,
+          imageUrl: variant.imageUrl ?? '',
+          kommoTemplateId: variant.kommoTemplateId ?? null,
+        };
+
+        if (!variant.id) {
+          return addVariantMutation.mutateAsync(payload);
+        }
+
+        return updateVariantMutation.mutateAsync({
           variantId: variant.id,
-          payload: {
-            name: variant.name,
-            sku: variant.sku,
-            color: variant.colorLabel || undefined,
-            colorHex: variant.color || undefined,
-            price: variant.price,
-            description: variant.description || undefined,
-            imageUrl: variant.imageUrl ?? '',
-            kommoTemplateId: variant.kommoTemplateId ?? null,
-          },
-        })
-      )
+          payload,
+        });
+      })
     );
     const hasFailures = results.some((result) => result.status === 'rejected');
     if (!hasFailures) {
