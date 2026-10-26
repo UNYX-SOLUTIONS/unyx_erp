@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/lib/utils';
 import { updateVariant } from '../api/products.api';
 import type { UpdateVariantPayload } from '../types/product.types';
 
@@ -20,8 +21,8 @@ export function useUpdateVariant(productId: string) {
       void queryClient.invalidateQueries({ queryKey: ['product', productId] });
       void queryClient.invalidateQueries({ queryKey: ['products'] });
     },
-    onError: () => {
-      toast.error('No se pudo actualizar la variante');
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, 'No se pudo actualizar la variante'));
     },
   });
 }

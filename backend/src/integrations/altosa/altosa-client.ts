@@ -8,6 +8,7 @@ interface AltosaResponseBody<T> {
   meta?: PaginationMeta;
   message?: string;
   code?: string;
+  details?: unknown;
 }
 
 const TIMEOUT_MS = 10_000;
@@ -78,7 +79,8 @@ export async function altosaRequest<T>(
       throw new ApiError(
         preserveStatus && response.status >= 400 ? response.status : 502,
         message,
-        code
+        code,
+        body?.details
       );
     }
 

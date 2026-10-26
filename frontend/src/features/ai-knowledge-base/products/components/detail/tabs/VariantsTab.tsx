@@ -31,27 +31,48 @@ export function VariantsTab({
   const isBusy = addVariant.isPending || updateVariant.isPending || deleteVariant.isPending;
 
   const handleAdd = () => {
-    addVariant.mutate({ name: `Variante ${fields.length + 1}` });
+    const nextNumber = fields.length + 1;
+    variantsArray.append({
+      id: '',
+      name: `Variante ${nextNumber}`,
+      sku: '',
+      color: '#9CA3AF',
+      colorLabel: `Variante ${nextNumber}`,
+      price: 0,
+      description: '',
+      imageUrl: '',
+      isActive: true,
+      kommoTemplateId: null,
+    });
   };
 
   const handleDuplicate = (index: number) => {
     const current = form.getValues(`variants.${index}`);
-    addVariant.mutate({
+    variantsArray.append({
+      ...current,
+      id: '',
       name: `${current.name} (copia)`,
-      color: current.colorLabel || undefined,
-      colorHex: current.color || undefined,
-      price: current.price,
-      description: current.description || undefined,
-      imageUrl: current.imageUrl || undefined,
+      sku: '',
     });
   };
 
   const handleRemove = (index: number) => {
-    deleteVariant.mutate(form.getValues(`variants.${index}.id`));
+    const current = form.getValues(`variants.${index}`);
+    if (!current.id) {
+      variantsArray.remove(index);
+      return;
+    }
+    deleteVariant.mutate(current.id);
   };
 
   const handleToggleActive = (index: number) => {
     const current = form.getValues(`variants.${index}`);
+    if (!current.id) {
+      form.setValue(`variants.${index}.isActive`, !current.isActive, {
+        shouldDirty: true,
+      });
+      return;
+    }
     updateVariant.mutate({
       variantId: current.id,
       payload: { isActive: !current.isActive },
