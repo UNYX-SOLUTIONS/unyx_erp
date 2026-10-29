@@ -74,6 +74,7 @@ export const altosaVariantBodySchema = z.object({
   metaMappingLocked: z.boolean().optional(),
   contificoId: z.string().trim().max(100).nullable().optional(),
   contificoSku: z.string().trim().max(120).nullable().optional(),
+  writeThroughContifico: z.boolean().optional(),
 });
 
 export const altosaUpdateVariantBodySchema = altosaVariantBodySchema.partial().extend({
@@ -148,10 +149,11 @@ export const altosaSyncProductSchema = z.object({
 export const altosaSyncProductsBodySchema = z.object({
   items: z.array(altosaSyncProductSchema).min(1).max(100),
   syncExternals: z.boolean().optional().default(false),
+  writeThroughContifico: z.boolean().optional().default(false),
 });
 
 export const altosaExternalPendingQuerySchema = z.object({
-  limit: z.coerce.number().int().min(1).max(500).default(200),
+  limit: z.coerce.number().int().min(1).max(1000).default(200),
   search: z.string().trim().max(120).optional(),
   source: z.enum(['all', 'meta', 'contifico']).default('all'),
 });

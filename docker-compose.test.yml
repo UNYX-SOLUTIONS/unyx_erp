@@ -49,9 +49,6 @@ services:
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-Admin123!}
       ALTOSA_API_URL: ${ALTOSA_API_URL:-https://api.altosamobiliario.com}
       ALTOSA_API_KEY: ${ALTOSA_API_KEY:-}
-      CONTIFICO_API_URL: ${CONTIFICO_API_URL:-https://api.contifico.com/sistema/api/v1}
-      CONTIFICO_API_KEY: ${CONTIFICO_API_KEY:-}
-      CONTIFICO_API_TOKEN: ${CONTIFICO_API_TOKEN:-}
     depends_on:
       postgres:
         condition: service_healthy

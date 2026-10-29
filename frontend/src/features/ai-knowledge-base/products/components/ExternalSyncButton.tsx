@@ -14,7 +14,7 @@ export function ExternalSyncButton() {
   const [open, setOpen] = useState(false);
   const pendingQuery = useQuery({
     queryKey: ['external-pending'],
-    queryFn: () => getExternalPending({ limit: 500 }),
+    queryFn: () => getExternalPending({ limit: 1000 }),
     staleTime: 120_000,
     refetchOnWindowFocus: false,
     enabled: canImport,

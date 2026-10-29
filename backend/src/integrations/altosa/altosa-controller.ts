@@ -88,7 +88,12 @@ export const deleteProduct = asyncHandler(async (req: Request, res: Response) =>
 
 export const createVariant = asyncHandler(async (req: Request, res: Response) => {
   const input = req.body as AltosaVariantBody;
-  const { data } = await altosaService.createVariant(Number(req.params.id), input);
+  const { data } = await altosaService.createVariant(Number(req.params.id), {
+    ...input,
+    // Una variante nueva del ERP se crea también como producto plano en
+    // Contifico (si está configurado). La lógica vive en Altosa.
+    writeThroughContifico: true,
+  });
   sendSuccess(res, data, undefined, StatusCodes.CREATED);
 });
 

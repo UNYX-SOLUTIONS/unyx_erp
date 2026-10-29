@@ -368,11 +368,11 @@ export async function getExternalPending(params: {
     `${BASE}/external/pending`,
     {
       params: {
-        limit: params.limit ?? 500,
+        limit: params.limit ?? 1000,
         ...(params.search ? { search: params.search } : {}),
         source: params.source ?? 'all',
       },
-      timeout: 90_000,
+      timeout: 150_000,
     }
   );
   return response.data;

@@ -34,17 +34,15 @@ set -a
 source "$ENV_FILE"
 set +a
 require_var() { [ -n "${!1:-}" ] || fail "Falta $1 en $ENV_FILE"; }
-for key in UNYX_DOMAIN POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB JWT_ACCESS_SECRET JWT_REFRESH_SECRET ALTOSA_API_URL ALTOSA_API_KEY CONTIFICO_API_KEY; do
+for key in UNYX_DOMAIN POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB JWT_ACCESS_SECRET JWT_REFRESH_SECRET ALTOSA_API_URL ALTOSA_API_KEY; do
   require_var "$key"
 done
-: "${CONTIFICO_API_URL:=https://api.contifico.com/sistema/api/v1}"
-export CONTIFICO_API_URL
 [ "${#POSTGRES_PASSWORD}" -ge 16 ] || fail "POSTGRES_PASSWORD debe tener al menos 16 caracteres."
 [ "${#JWT_ACCESS_SECRET}" -ge 32 ] || fail "JWT_ACCESS_SECRET debe tener al menos 32 caracteres."
 [ "${#JWT_REFRESH_SECRET}" -ge 32 ] || fail "JWT_REFRESH_SECRET debe tener al menos 32 caracteres."
 [ "$JWT_ACCESS_SECRET" != "$JWT_REFRESH_SECRET" ] || fail "Los JWT secrets deben ser distintos."
 [ "${#ALTOSA_API_KEY}" -ge 16 ] || fail "ALTOSA_API_KEY debe tener al menos 16 caracteres."
-for key in POSTGRES_PASSWORD JWT_ACCESS_SECRET JWT_REFRESH_SECRET ALTOSA_API_KEY CONTIFICO_API_KEY; do
+for key in POSTGRES_PASSWORD JWT_ACCESS_SECRET JWT_REFRESH_SECRET ALTOSA_API_KEY; do
   value="${!key}"
   case "${value,,}" in
     *cambia*|*change_me*|*placeholder*) fail "$key sigue siendo un placeholder." ;;

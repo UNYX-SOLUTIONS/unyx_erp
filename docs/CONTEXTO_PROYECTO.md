@@ -17,7 +17,7 @@ Tener un ERP Unyx que sea el punto de operación del catálogo de Altosa, con:
 - Kommo para plantillas de chat.
 - n8n/WhatsApp consumiendo `COALESCE(meta_retailer_id, sku)` para enviar tarjetas de producto.
 
-La intención a futuro es que el catálogo almacenado en Altosa sea el maestro, operado desde el ERP, y que los cambios se repliquen a Meta y Contifico. Hoy eso está implementado parcialmente; ver sección de pendientes.
+La intención es que el catálogo almacenado en Altosa sea el maestro, operado desde el ERP, y que los cambios se repliquen a Meta y Contifico. **Altosa es la dueña de las integraciones y los tokens; el ERP solo llama a Altosa** (ver sección 3).
 
 ---
 
@@ -43,8 +43,8 @@ Reglas que no se deben romper:
 4. **El BFF del ERP habla con la API de Altosa**, no con PostgreSQL de Altosa.
 5. **El ERP no es dueño de la base de conocimiento**. Es la consola de operación; el almacenamiento del catálogo es Altosa.
 6. **El auth y los permisos no van a Altosa**. La knowledge base no va al ERP.
-7. **`kb_products` / `kb_product_variants` del ERP son staging técnico del sync de Contifico**, no el catálogo y no la fuente de verdad. Es deuda técnica que se debe eliminar/refactorizar.
-8. **El token de Meta vive solo en Altosa**. Nunca en el frontend ni en el ERP.
+7. **`kb_products` / `kb_product_variants` del ERP son staging técnico legado**. Ya no son dueños del sync de Contifico; el sync vive en Altosa. Se usan solo para compatibilidad/backfill y se deben eliminar/refactorizar.
+8. **Los tokens de Meta, Kommo y Contifico viven solo en Altosa**. Nunca en el frontend ni en el ERP.
 9. **n8n/WhatsApp consumen Altosa**, no el ERP.
 
 No confundir:
@@ -106,7 +106,7 @@ API Altosa (Express + Prisma)
         ▼
 PostgreSQL Altosa (base de conocimiento del catálogo)
         ▲
-        ├── sync Contifico (job en ERP, empuja a API Altosa)
+        ├── sync Contifico (job nativo en Altosa)
         ├── Meta (mapeo de retailer_id)
         └── Kommo (plantillas)
 ```
@@ -134,11 +134,11 @@ La API de Altosa es el backend del catálogo. PostgreSQL Altosa es la **base de 
 
 ### Contifico
 
-La integración de Contifico está en el ERP (`backend/scripts/sync-contifico.ts`, `backend/src/integrations/contifico`). El sync corre en el VPS del ERP y empuja a Altosa. Hay una deuda técnica: usa el staging local del ERP y todavía no es un flujo directo Altosa ↔ Contifico.
+La integración de Contifico vive en **Altosa** (`backend/src/modules/contifico`): cliente v1, sync nativo, búsqueda/importación y write-through. El token `CONTIFICO_API_KEY` está solo en el `.env` de Altosa. El sync corre en el VPS de Altosa (`scripts/contifico-sync.sh`) y escribe directamente en su PostgreSQL. El ERP solo hace proxy a `/api/v1/contifico/*` y ya no tiene credenciales de Contifico.
 
 ### Meta
 
-El token de Meta vive solo en el `.env` de Altosa. El ERP nunca recibe el token. La API Altosa consulta el catálogo Meta y el ERP usa el buscador/mapeo mediante el BFF.
+El token de Meta vive solo en el `.env` de Altosa. El ERP nunca recibe el token. La API Altosa consulta el catálogo Meta y el ERP usa el buscador/mapeo mediante el BFF. Altosa también publica ítems planos cuando el alta del ERP lo pide (`syncExternals`).
 
 ### Kommo
 
@@ -401,9 +401,6 @@ JWT_ACCESS_EXPIRES
 JWT_REFRESH_EXPIRES
 ALTOSA_API_URL
 ALTOSA_API_KEY
-CONTIFICO_API_URL
-CONTIFICO_API_KEY
-# CONTIFICO_API_TOKEN (opcional, no usado para inventario)
 # DATABASE_URL_ALTOSA (solo ETL legado; no usado por el sync nuevo)
 ```
 
@@ -425,6 +422,9 @@ KOMMO_API_KEY
 META_CATALOG_ID=1524398256394561
 META_ACCESS_TOKEN
 META_API_VERSION=v26.0
+CONTIFICO_API_URL=https://api.contifico.com/sistema/api/v1
+CONTIFICO_API_KEY
+# CONTIFICO_API_TOKEN (opcional POS; no usado para inventario)
 ```
 
 Contratos entre proyectos:
@@ -432,7 +432,8 @@ Contratos entre proyectos:
 - `ALTOSA_API_KEY` debe ser la misma en ERP y Altosa.
 - `ALTOSA_API_URL` del ERP debe ser igual a `ALTOSA_PUBLIC_URL_BASE` de Altosa.
 - `POSTGRES_*` son bases distintas: ERP y Altosa no comparten base.
-- El token de Meta solo va en Altosa.
+- Los tokens de Meta, Kommo y Contifico solo van en Altosa.
+- Después de migrar, el ERP no debe tener `CONTIFICO_API_KEY`.
 
 ### Deploy
 
@@ -444,6 +445,9 @@ git fetch origin
 git checkout main
 git pull --ff-only
 sudo bash update.sh --api-only
+# configura CONTIFICO_API_URL/KEY en .env antes de este paso
+bash scripts/healthcheck.sh
+bash scripts/contifico-sync.sh --dry-run --match-by-name
 ```
 
 ERP:
@@ -456,6 +460,9 @@ git pull --ff-only
 sudo bash deploy/deploy-prod.sh
 # Si solo cambiaron variables:
 sudo bash deploy/deploy-prod.sh --skip-build
+# Una sola vez tras migrar los mapeos legados:
+docker compose --env-file .env.production -f docker-compose.prod.yml \
+  exec -T unyx-backend node dist/scripts/backfill-altosa-mappings.js
 ```
 
 ### Reset de Altosa
@@ -687,6 +694,14 @@ backend/src/scripts/suggest-meta-mappings.ts
 backend/src/scripts/reconcile-meta-variants.ts
 backend/src/scripts/backfill-meta-retailer-ids.ts
 backend/src/scripts/seed-products.ts
+backend/src/modules/contifico/contifico-client.ts
+backend/src/modules/contifico/contifico-catalog.ts
+backend/src/modules/contifico/contifico-service.ts
+backend/src/modules/contifico/contifico-sync.ts
+backend/src/modules/contifico/contifico-routes.ts
+backend/prisma/sql/contifico_mapping.sql
+scripts/apply-contifico-migration.sh
+scripts/contifico-sync.sh
 scripts/reset-altosa-db.sh
 ```
 
@@ -696,11 +711,13 @@ ERP backend:
 backend/src/integrations/altosa/altosa-client.ts
 backend/src/integrations/altosa/altosa-service.ts
 backend/src/integrations/altosa/altosa-write-through.ts
+backend/src/integrations/altosa/altosa-local-sync.ts
+backend/src/integrations/altosa/altosa-contifico-proxy.ts
+backend/src/integrations/altosa/altosa-external-service.ts
 backend/src/integrations/altosa/altosa-controller.ts
 backend/src/integrations/altosa/altosa-routes.ts
 backend/src/integrations/altosa/altosa-schema.ts
-backend/scripts/sync-contifico.ts
-deploy/contifico-sync.sh
+backend/scripts/backfill-altosa-mappings.ts
 deploy/deploy-prod.sh
 ```
 

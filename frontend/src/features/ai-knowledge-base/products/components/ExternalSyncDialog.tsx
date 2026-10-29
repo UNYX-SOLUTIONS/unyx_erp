@@ -47,7 +47,7 @@ export function ExternalSyncDialog({ open, onOpenChange }: ExternalSyncDialogPro
 
   const pendingQuery = useQuery({
     queryKey: ['external-pending'],
-    queryFn: () => getExternalPending({ limit: 500 }),
+    queryFn: () => getExternalPending({ limit: 1000 }),
     enabled: open,
     staleTime: 120_000,
     refetchOnWindowFocus: false,

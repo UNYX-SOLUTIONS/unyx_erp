@@ -6,7 +6,7 @@ import { ApiError } from '../../utils/api-error';
 import { writeAudit } from '../../utils/audit';
 import * as productsService from '../../modules/products/products-service';
 import { resolveCompanyId } from '../../modules/products/products-service';
-import { syncLocalProductToAltosa } from '../contifico/contifico-sync';
+import { syncLocalProductToAltosa } from './altosa-local-sync';
 import type { CreateVariantInput } from '../../modules/products/products-types';
 import * as altosaService from './altosa-service';
 import type {
@@ -20,6 +20,8 @@ interface AltosaVariantRaw {
   sku: string | null;
   metaRetailerId?: string | null;
   metaMappingLocked?: boolean | null;
+  contificoId?: string | null;
+  contificoSku?: string | null;
 }
 
 interface AltosaProductRaw {
@@ -182,8 +184,9 @@ export async function createProduct(input: AltosaCreateProductBody): Promise<unk
       ...(variants ? { variants } : {}),
     },
     // El alta desde el ERP valida/duplica y publica la primera variante en
-    // Meta dentro de Altosa. El sync masivo de Contifico no usa este flag.
-    { syncExternals: true }
+    // Meta/Contifico dentro de Altosa. El sync masivo de Contifico no usa
+    // estos flags.
+    { syncExternals: true, writeThroughContifico: true }
   );
 
   const lookupSku = variants?.[0]?.sku || sku;
@@ -215,28 +218,49 @@ export async function updateProduct(
   const sku = primarySku(current);
   const local = sku ? await findLocalProductBySku(sku) : null;
 
+  if (
+    input.sku !== undefined &&
+    sku &&
+    input.sku !== sku &&
+    current.variantes?.some((variant) => variant.contificoId)
+  ) {
+    throw new ApiError(
+      StatusCodes.CONFLICT,
+      'El SKU de un producto con variantes mapeadas a Contifico no se puede cambiar desde el ERP. Cámbialo en Contifico o quita el mapeo primero.',
+      'CONTIFICO_PRODUCT_SKU_LOCKED'
+    );
+  }
+
   if (!local) {
     const { data } = await altosaService.updateProduct(altosaId, input);
     return data;
   }
 
-  await productsService.updateProduct(local.id, {
-    ...(input.sku !== undefined ? { sku: input.sku } : {}),
-    ...(input.nombre !== undefined ? { name: input.nombre } : {}),
-    ...(input.line !== undefined ? { line: input.line } : {}),
-    ...(input.category !== undefined ? { category: input.category } : {}),
-    ...(input.subcategory !== undefined ? { subcategory: input.subcategory } : {}),
-    ...(input.usoRecomendado !== undefined
-      ? { description: input.usoRecomendado ?? undefined }
-      : {}),
-    ...(input.descripcion !== undefined
-      ? { commercialDescription: input.descripcion ?? undefined }
-      : {}),
-    ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
-  });
+  await productsService.updateProduct(
+    local.id,
+    {
+      ...(input.sku !== undefined ? { sku: input.sku } : {}),
+      ...(input.nombre !== undefined ? { name: input.nombre } : {}),
+      ...(input.line !== undefined ? { line: input.line } : {}),
+      ...(input.category !== undefined ? { category: input.category } : {}),
+      ...(input.subcategory !== undefined ? { subcategory: input.subcategory } : {}),
+      ...(input.usoRecomendado !== undefined
+        ? { description: input.usoRecomendado ?? undefined }
+        : {}),
+      ...(input.descripcion !== undefined
+        ? { commercialDescription: input.descripcion ?? undefined }
+        : {}),
+      ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+    },
+    // Las variantes ya mapeadas se actualizan en Contifico desde Altosa.
+    { writeThroughContifico: true }
+  );
 
   // Un update explícito desde el ERP sí puede cambiar la taxonomía de Altosa.
-  await syncLocalProductToAltosa(local.id, { updateTaxonomy: true });
+  await syncLocalProductToAltosa(local.id, {
+    updateTaxonomy: true,
+    writeThroughContifico: true,
+  });
 
   if (
     input.subcategoryId !== undefined ||
@@ -268,16 +292,11 @@ export async function deleteProduct(altosaId: number): Promise<unknown> {
 
   await productsService.deleteProduct(local.id);
 
-  try {
-    const { data } = await altosaService.getProductById(altosaId);
-    return data;
-  } catch {
-    return {
-      ...current,
-      isActive: false,
-      variantes: current.variantes?.map((variant) => ({ ...variant, isActive: false })),
-    };
-  }
+  // Altosa es la dueña del borrado lógico y del write-through a Contifico.
+  // Si falla, se propaga para que la UI reintente; el staging local ya quedó
+  // marcado como eliminado, pero la fuente de verdad sigue siendo Altosa.
+  const { data } = await altosaService.deleteProduct(altosaId);
+  return data;
 }
 
 export async function deleteVariant(variantId: number, productId?: number): Promise<unknown> {

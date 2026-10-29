@@ -87,6 +87,7 @@ if ($domain) {
   Write-Host "API:   https://$domain/api/v1/health" -ForegroundColor Green
 }
 Write-Host ""
-Write-Host "Siguiente paso (sync inicial de Contifico):" -ForegroundColor Yellow
-Write-Host "  ssh -p $SshPort ${target} `"cd '$RemoteDir' && ./deploy/contifico-sync.sh --dry-run --match-by-name`"" -ForegroundColor Yellow
-Write-Host "  ssh -p $SshPort ${target} `"cd '$RemoteDir' && ./deploy/contifico-sync.sh --apply --match-by-name`"" -ForegroundColor Yellow
+Write-Host "Siguiente paso (backfill de mapeos y sync en Altosa):" -ForegroundColor Yellow
+Write-Host "  ssh -p $SshPort ${target} `"cd '$RemoteDir' && docker compose --env-file .env.production -f docker-compose.prod.yml exec -T unyx-backend node dist/scripts/backfill-altosa-mappings.js`"" -ForegroundColor Yellow
+Write-Host "  # El sync Contifico ahora corre en el VPS de Altosa:" -ForegroundColor Yellow
+Write-Host "  ssh -p $SshPort ${target} `"cd /docker/altosa_infrastructure && bash scripts/contifico-sync.sh --apply --match-by-name`"" -ForegroundColor Yellow
