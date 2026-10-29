@@ -65,6 +65,11 @@ export function ProductVariantsPanel({ product, onEditVariant }: ProductVariants
                     <span title={variant.metaRetailerId}>Meta</span>
                   </StatusBadge>
                 )}
+                {variant.contificoId && (
+                  <StatusBadge variant="info">
+                    <span title={variant.contificoId}>Contífico</span>
+                  </StatusBadge>
+                )}
                 <StatusBadge variant={variant.isActive ? 'approved' : 'neutral'} dot>
                   {variant.isActive ? 'Activa' : 'Inactiva'}
                 </StatusBadge>

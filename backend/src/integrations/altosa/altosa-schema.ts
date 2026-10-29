@@ -39,6 +39,7 @@ export const altosaActiveQuerySchema = z.object({
 });
 
 const optionalUrl = z.string().trim().url().max(500).optional().or(z.literal(''));
+const optionalExternalUrl = z.string().trim().max(1000).nullable().optional();
 
 export const altosaVariantBodySchema = z.object({
   sku: z.string().trim().max(80).optional(),
@@ -71,6 +72,8 @@ export const altosaVariantBodySchema = z.object({
   kommoTemplateId: z.string().trim().min(1).max(80).nullable().optional(),
   metaRetailerId: z.string().trim().max(100).nullable().optional(),
   metaMappingLocked: z.boolean().optional(),
+  contificoId: z.string().trim().max(100).nullable().optional(),
+  contificoSku: z.string().trim().max(120).nullable().optional(),
 });
 
 export const altosaUpdateVariantBodySchema = altosaVariantBodySchema.partial().extend({
@@ -126,6 +129,8 @@ export const altosaSyncVariantSchema = z.object({
   imagenUrl: optionalUrl.nullable().optional(),
   especificaciones: z.record(z.unknown()).nullable().optional(),
   isActive: z.boolean().optional(),
+  contificoId: z.string().trim().max(100).nullable().optional(),
+  contificoSku: z.string().trim().max(120).nullable().optional(),
 });
 
 export const altosaSyncProductSchema = z.object({
@@ -142,10 +147,42 @@ export const altosaSyncProductSchema = z.object({
 
 export const altosaSyncProductsBodySchema = z.object({
   items: z.array(altosaSyncProductSchema).min(1).max(100),
+  syncExternals: z.boolean().optional().default(false),
+});
+
+export const altosaExternalPendingQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(500).default(200),
+  search: z.string().trim().max(120).optional(),
+  source: z.enum(['all', 'meta', 'contifico']).default('all'),
+});
+
+export const altosaExternalImportItemSchema = z.object({
+  source: z.enum(['meta', 'contifico']),
+  externalId: z.string().trim().min(1).max(150),
+  sku: z.string().trim().max(120).nullable().optional(),
+  name: z.string().trim().min(1).max(300),
+  baseName: z.string().trim().max(300).nullable().optional(),
+  color: z.string().trim().max(120).nullable().optional(),
+  price: z.number().min(0).max(1_000_000).nullable().optional(),
+  imageUrl: optionalExternalUrl,
+  url: optionalExternalUrl,
+  category: z.string().trim().max(200).nullable().optional(),
+  subcategory: z.string().trim().max(200).nullable().optional(),
+  stock: z.number().int().min(0).max(10_000_000).nullable().optional(),
+  barcode: z.string().trim().max(120).nullable().optional(),
+  metaRetailerId: z.string().trim().max(100).nullable().optional(),
+  contificoId: z.string().trim().max(100).nullable().optional(),
+  contificoSku: z.string().trim().max(120).nullable().optional(),
+});
+
+export const altosaExternalImportBodySchema = z.object({
+  items: z.array(altosaExternalImportItemSchema).min(1).max(100),
 });
 
 export type AltosaSyncVariant = z.infer<typeof altosaSyncVariantSchema>;
 export type AltosaSyncProduct = z.infer<typeof altosaSyncProductSchema>;
+export type AltosaExternalPendingQuery = z.infer<typeof altosaExternalPendingQuerySchema>;
+export type AltosaExternalImportItem = z.infer<typeof altosaExternalImportItemSchema>;
 
 export type AltosaVariantBody = z.infer<typeof altosaVariantBodySchema>;
 export type AltosaUpdateVariantBody = z.infer<typeof altosaUpdateVariantBodySchema>;

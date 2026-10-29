@@ -211,7 +211,10 @@ export async function getProductById(id: string): Promise<ProductDetailDto> {
   };
 }
 
-export async function createProduct(input: CreateProductInput): Promise<ProductDetailDto> {
+export async function createProduct(
+  input: CreateProductInput,
+  options: { syncExternals?: boolean } = {}
+): Promise<ProductDetailDto> {
   const companyId = await resolveCompanyId();
 
   const existing = await prisma.kbProduct.findUnique({
@@ -336,7 +339,9 @@ export async function createProduct(input: CreateProductInput): Promise<ProductD
     newValues: toProductDto(product, product.variants),
   });
 
-  await syncLocalProductToAltosa(product.id);
+  await syncLocalProductToAltosa(product.id, {
+    syncExternals: options.syncExternals ?? false,
+  });
   return getProductById(product.id);
 }
 

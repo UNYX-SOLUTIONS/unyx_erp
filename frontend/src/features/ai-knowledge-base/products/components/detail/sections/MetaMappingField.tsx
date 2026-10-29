@@ -166,7 +166,7 @@ export function MetaMappingField({
                   className="gap-1.5 border-emerald-200 bg-white text-emerald-700 hover:bg-emerald-50 dark:border-slate-700 dark:bg-slate-900 dark:text-emerald-300"
                 >
                   <Search className="h-3.5 w-3.5" />
-                  {retailerId ? 'Cambiar' : 'Buscar en catálogo Meta'}
+                  {retailerId ? 'Cambiar' : 'Sincronizar con Meta'}
                 </Button>
                 {retailerId && (
                   <Button

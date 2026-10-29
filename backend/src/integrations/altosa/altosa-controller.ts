@@ -4,11 +4,14 @@ import { ApiError } from '../../utils/api-error';
 import { asyncHandler } from '../../utils/async-handler';
 import { sendSuccess } from '../../utils/api-response';
 import * as altosaService from './altosa-service';
+import * as altosaExternalService from './altosa-external-service';
 import * as altosaWriteThrough from './altosa-write-through';
 import type {
   AltosaActiveQuery,
   AltosaCreateProductBody,
   AltosaDocumentsQuery,
+  AltosaExternalImportItem,
+  AltosaExternalPendingQuery,
   AltosaMetaCatalogItemQuery,
   AltosaMetaCatalogSearchQuery,
   AltosaProductsQuery,
@@ -130,4 +133,16 @@ export const getMetaCatalogItem = asyncHandler(async (req: Request, res: Respons
   const query = req.query as unknown as AltosaMetaCatalogItemQuery;
   const { data } = await altosaService.getMetaCatalogItem(query);
   sendSuccess(res, data);
+});
+
+export const getExternalPending = asyncHandler(async (req: Request, res: Response) => {
+  const query = req.query as unknown as AltosaExternalPendingQuery;
+  const data = await altosaExternalService.getExternalPending(query);
+  sendSuccess(res, data);
+});
+
+export const importExternalItems = asyncHandler(async (req: Request, res: Response) => {
+  const { items } = req.body as { items: AltosaExternalImportItem[] };
+  const data = await altosaExternalService.importExternalItems(items);
+  sendSuccess(res, data, undefined, StatusCodes.CREATED);
 });

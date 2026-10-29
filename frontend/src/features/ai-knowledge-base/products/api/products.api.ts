@@ -9,6 +9,11 @@ import {
 import type {
   CreateProductPayload,
   CreateVariantPayload,
+  ContificoCatalogItem,
+  ExternalImportResult,
+  ExternalPendingItem,
+  ExternalPendingResult,
+  ExternalSource,
   KommoTemplateDto,
   MetaCatalogItem,
   ProductDetailDto,
@@ -168,6 +173,12 @@ function variantUpdateBody(payload: UpdateVariantPayload) {
   }
   if (payload.metaMappingLocked !== undefined) {
     body.metaMappingLocked = payload.metaMappingLocked;
+  }
+  if (payload.contificoId !== undefined) {
+    body.contificoId = payload.contificoId;
+  }
+  if (payload.contificoSku !== undefined) {
+    body.contificoSku = payload.contificoSku;
   }
   return body;
 }
@@ -329,6 +340,51 @@ export async function importContificoProduct(payload: {
     '/api/v1/integrations/contifico/import',
     payload,
     { timeout: 60_000 }
+  );
+  return response.data;
+}
+
+export async function searchContificoCatalog(
+  search: string,
+  limit = 20
+): Promise<ApiResponse<ContificoCatalogItem[]>> {
+  const response = await apiClient.get<ApiResponse<ContificoCatalogItem[]>>(
+    '/api/v1/integrations/contifico/products',
+    { params: { search, limit }, timeout: 45_000 }
+  );
+  return response.data;
+}
+
+// ---------------------------------------------------------------------------
+// Ingesta inversa: ítems planos de Meta/Contifico que faltan en Altosa
+// ---------------------------------------------------------------------------
+
+export async function getExternalPending(params: {
+  limit?: number;
+  search?: string;
+  source?: ExternalSource | 'all';
+} = {}): Promise<ApiResponse<ExternalPendingResult>> {
+  const response = await apiClient.get<ApiResponse<ExternalPendingResult>>(
+    `${BASE}/external/pending`,
+    {
+      params: {
+        limit: params.limit ?? 500,
+        ...(params.search ? { search: params.search } : {}),
+        source: params.source ?? 'all',
+      },
+      timeout: 90_000,
+    }
+  );
+  return response.data;
+}
+
+export async function importExternalItems(
+  items: ExternalPendingItem[]
+): Promise<ApiResponse<ExternalImportResult>> {
+  const response = await apiClient.post<ApiResponse<ExternalImportResult>>(
+    `${BASE}/external/import`,
+    { items },
+    { timeout: 120_000 }
   );
   return response.data;
 }

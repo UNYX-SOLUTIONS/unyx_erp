@@ -20,6 +20,7 @@ export function useUpdateVariantMetaMapping(productId: string) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['product', productId] });
       void queryClient.invalidateQueries({ queryKey: ['products'] });
+      void queryClient.invalidateQueries({ queryKey: ['external-pending'] });
     },
     onError: (error) => {
       toast.error(

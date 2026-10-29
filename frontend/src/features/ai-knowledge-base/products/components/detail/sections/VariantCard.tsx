@@ -21,6 +21,7 @@ import { CurrencyInput } from '../CurrencyInput';
 import { FormField, detailInputClassName } from '../FormField';
 import { KommoTemplateField } from './KommoTemplateField';
 import { MetaMappingField } from './MetaMappingField';
+import { ContificoMappingField } from './ContificoMappingField';
 import type { VariantsFormValues } from '../../../schemas/product-schema';
 import type { KommoTemplateDto } from '../../../types/product.types';
 
@@ -32,6 +33,8 @@ interface VariantCardProps {
   initialTemplate?: KommoTemplateDto | null;
   initialMetaRetailerId?: string | null;
   initialMetaMappingLocked?: boolean;
+  initialContificoId?: string | null;
+  initialContificoSku?: string | null;
   isFocused?: boolean;
   onDuplicate: (index: number) => void;
   onRemove: (index: number) => void;
@@ -46,6 +49,8 @@ export function VariantCard({
   initialTemplate,
   initialMetaRetailerId = null,
   initialMetaMappingLocked = false,
+  initialContificoId = null,
+  initialContificoSku = null,
   isFocused = false,
   onDuplicate,
   onRemove,
@@ -279,15 +284,26 @@ export function VariantCard({
         />
 
         {variant?.id && (
-          <MetaMappingField
-            productId={productId}
-            variantId={variant.id}
-            sku={variant.sku}
-            variantName={variant.name}
-            initialRetailerId={initialMetaRetailerId}
-            initialMappingLocked={initialMetaMappingLocked}
-            isBusy={isBusy}
-          />
+          <>
+            <MetaMappingField
+              productId={productId}
+              variantId={variant.id}
+              sku={variant.sku}
+              variantName={variant.name}
+              initialRetailerId={initialMetaRetailerId}
+              initialMappingLocked={initialMetaMappingLocked}
+              isBusy={isBusy}
+            />
+            <ContificoMappingField
+              productId={productId}
+              variantId={variant.id}
+              sku={variant.sku}
+              variantName={variant.name}
+              initialContificoId={initialContificoId}
+              initialContificoSku={initialContificoSku}
+              isBusy={isBusy}
+            />
+          </>
         )}
       </div>
     </div>

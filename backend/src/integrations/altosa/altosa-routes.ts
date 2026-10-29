@@ -10,6 +10,8 @@ import {
   altosaActiveQuerySchema,
   altosaCreateProductBodySchema,
   altosaDocumentsQuerySchema,
+  altosaExternalImportBodySchema,
+  altosaExternalPendingQuerySchema,
   altosaIdParamSchema,
   altosaMetaCatalogItemQuerySchema,
   altosaMetaCatalogSearchQuerySchema,
@@ -110,6 +112,19 @@ altosaRoutes.get(
   requirePermission('products.read'),
   validate(altosaMetaCatalogItemQuerySchema, 'query'),
   altosaController.getMetaCatalogItem
+);
+
+altosaRoutes.get(
+  '/external/pending',
+  requirePermission('products.read'),
+  validate(altosaExternalPendingQuerySchema, 'query'),
+  altosaController.getExternalPending
+);
+altosaRoutes.post(
+  '/external/import',
+  requirePermission('products.create'),
+  validate(altosaExternalImportBodySchema),
+  altosaController.importExternalItems
 );
 
 altosaRoutes.get('/categories', altosaController.listCategories);

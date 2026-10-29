@@ -62,6 +62,8 @@ export interface AltosaVariantDto {
   kommoTemplate?: KommoTemplateDto | null;
   metaRetailerId?: string | null;
   metaMappingLocked?: boolean;
+  contificoId?: string | null;
+  contificoSku?: string | null;
   updatedAt: string;
 }
 
@@ -82,6 +84,9 @@ export interface AltosaProductDto {
 
 function normalizeValidation(value: string | null | undefined): KbValidationStatus {
   const text = (value ?? '').toLowerCase();
+  if (text.includes('inactiv') || text.includes('anulad')) {
+    return 'PENDIENTE';
+  }
   if (text.includes('activo') || text.includes('aprob')) {
     return 'APROBADO';
   }
@@ -148,6 +153,8 @@ export function mapAltosaVariant(
     kommoTemplate: variante.kommoTemplate ?? null,
     metaRetailerId: variante.metaRetailerId ?? null,
     metaMappingLocked: variante.metaMappingLocked ?? false,
+    contificoId: variante.contificoId ?? null,
+    contificoSku: variante.contificoSku ?? null,
     createdAt: updatedAt,
     updatedAt,
   };

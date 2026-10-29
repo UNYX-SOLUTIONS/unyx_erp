@@ -41,6 +41,16 @@ const ALTOSA_RETRY_BASE_DELAY_MS = 400;
 
 type LocalProductWithVariants = KbProduct & { variants: KbProductVariant[] };
 
+function contificoIdFromSourceRowKey(
+  sourceRowKey: string | null | undefined
+): string | null {
+  if (!sourceRowKey?.startsWith('contifico:')) {
+    return null;
+  }
+  const id = sourceRowKey.slice('contifico:'.length).trim();
+  return id.length > 0 ? id : null;
+}
+
 async function withRetries<T>(operation: () => Promise<T>, label: string): Promise<T> {
   let lastError: unknown;
   for (let attempt = 1; attempt <= ALTOSA_RETRY_ATTEMPTS; attempt += 1) {
@@ -156,18 +166,26 @@ function buildAltosaPayloadFromLocal(
 
   const mappedVariants =
     variants.length > 0
-      ? variants.map((variant) => ({
-          sku: variant.sku,
-          color: variant.name,
-          descripcion: variant.description,
-          precioUsd: variant.price === null ? null : Number(variant.price),
-          imagenUrl: variant.imageUrl,
-          especificaciones: {
-            ...((variant.especificaciones as Record<string, unknown> | null) ?? {}),
-            stock: variant.stock,
-          },
-          isActive: variant.isActive,
-        }))
+      ? variants.map((variant) => {
+          const contificoId =
+            contificoIdFromSourceRowKey(variant.sourceRowKey) ??
+            contificoIdFromSourceRowKey(product.sourceRowKey);
+          return {
+            sku: variant.sku,
+            color: variant.name,
+            descripcion: variant.description,
+            precioUsd: variant.price === null ? null : Number(variant.price),
+            imagenUrl: variant.imageUrl,
+            especificaciones: {
+              ...((variant.especificaciones as Record<string, unknown> | null) ?? {}),
+              stock: variant.stock,
+            },
+            isActive: variant.isActive,
+            ...(contificoId
+              ? { contificoId, contificoSku: variant.sku }
+              : {}),
+          };
+        })
       : [
           {
             sku: product.sku,
@@ -177,6 +195,12 @@ function buildAltosaPayloadFromLocal(
             imagenUrl: product.thumbnailUrl,
             especificaciones: { stock: 0 },
             isActive: product.isActive,
+            ...(contificoIdFromSourceRowKey(product.sourceRowKey)
+              ? {
+                  contificoId: contificoIdFromSourceRowKey(product.sourceRowKey),
+                  contificoSku: product.sku,
+                }
+              : {}),
           },
         ];
 
@@ -472,7 +496,11 @@ async function deactivateAltosaSkus(
  */
 export async function syncLocalProductToAltosa(
   productId: string,
-  options: { updateTaxonomy?: boolean; matchByName?: boolean } = {}
+  options: {
+    updateTaxonomy?: boolean;
+    matchByName?: boolean;
+    syncExternals?: boolean;
+  } = {}
 ): Promise<boolean> {
   if (!env.ALTOSA_API_KEY) {
     return false;
@@ -488,14 +516,26 @@ export async function syncLocalProductToAltosa(
 
   try {
     const payload = buildAltosaPayloadFromLocal(product);
-    await withRetries(
+    const response = await withRetries(
       () =>
         syncAltosaProducts(
           [options.updateTaxonomy ? { ...payload, updateTaxonomy: true } : payload],
-          { matchByName: options.matchByName ?? false }
+          {
+            matchByName: options.matchByName ?? false,
+            syncExternals: options.syncExternals ?? false,
+          }
         ),
       'push de producto a Altosa'
     );
+    const metaWarnings = (
+      response.data as { meta?: { warnings?: string[] } } | undefined
+    )?.meta?.warnings;
+    if (metaWarnings?.length) {
+      logger.warn(
+        { productId, warnings: metaWarnings },
+        'El producto se sincronizó a Altosa, pero Meta reportó advertencias'
+      );
+    }
     await prisma.kbProduct.update({
       where: { id: productId },
       data: { syncStatus: 'SINCRONIZADO' as KbSyncStatus },

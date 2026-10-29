@@ -7,7 +7,7 @@ import {
   searchContificoProducts,
   updateContificoProduct,
 } from './contifico-catalog';
-import { mapContificoProduct } from './contifico-mappers';
+import { mapContificoProduct, resolveContificoSku } from './contifico-mappers';
 import { resolveSyncCompanyId, syncContificoCatalog } from './contifico-sync';
 import type {
   ContificoProductDto,
@@ -49,6 +49,19 @@ export async function createContificoProductFromErp(
   if (!isContificoConfigured()) {
     return null;
   }
+
+  // Antes de crear, valida por SKU para no duplicar un producto que ya existe
+  // en el catálogo plano de Contifico (alta desde el ERP).
+  const matches = await searchContificoProducts(input.sku, 10);
+  const existing = matches.find(
+    (product) =>
+      resolveContificoSku(product).trim().toLowerCase() ===
+      input.sku.trim().toLowerCase()
+  );
+  if (existing) {
+    return existing;
+  }
+
   const price = input.price ?? 0;
   return createContificoProduct({
     codigo: input.sku,

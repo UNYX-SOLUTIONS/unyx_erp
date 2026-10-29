@@ -169,17 +169,22 @@ export async function createProduct(input: AltosaCreateProductBody): Promise<unk
     `ERP-${Date.now()}`;
   const variants = mapVariantCreate(input.variantes);
 
-  await productsService.createProduct({
-    sku,
-    name: input.nombre,
-    line: input.line || input.category || input.subcategory || undefined,
-    category: input.category || input.line || input.subcategory || undefined,
-    subcategory: input.subcategory,
-    description: input.usoRecomendado,
-    commercialDescription: input.descripcion,
-    isActive: true,
-    ...(variants ? { variants } : {}),
-  });
+  await productsService.createProduct(
+    {
+      sku,
+      name: input.nombre,
+      line: input.line || input.category || input.subcategory || undefined,
+      category: input.category || input.line || input.subcategory || undefined,
+      subcategory: input.subcategory,
+      description: input.usoRecomendado,
+      commercialDescription: input.descripcion,
+      isActive: true,
+      ...(variants ? { variants } : {}),
+    },
+    // El alta desde el ERP valida/duplica y publica la primera variante en
+    // Meta dentro de Altosa. El sync masivo de Contifico no usa este flag.
+    { syncExternals: true }
+  );
 
   const lookupSku = variants?.[0]?.sku || sku;
   const lookup = await altosaService.getProductByVariantSku(lookupSku);

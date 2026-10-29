@@ -136,6 +136,8 @@ export function VariantsTab({
               initialMetaMappingLocked={
                 product.variants[index]?.metaMappingLocked ?? false
               }
+              initialContificoId={product.variants[index]?.contificoId ?? null}
+              initialContificoSku={product.variants[index]?.contificoSku ?? null}
               isFocused={
                 focusVariantId != null && product.variants[index]?.id === focusVariantId
               }
