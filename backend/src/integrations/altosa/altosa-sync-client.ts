@@ -10,10 +10,19 @@ import type { AltosaSyncProduct } from './altosa-schema';
  */
 export async function syncProducts(
   items: AltosaSyncProduct[],
-  options?: { matchByName?: boolean }
+  options?: {
+    matchByName?: boolean;
+    syncExternals?: boolean;
+    writeThroughContifico?: boolean;
+  }
 ) {
   return altosaRequest<unknown>('POST', '/api/v1/sync/products', {
-    body: { items, matchByName: options?.matchByName ?? false },
+    body: {
+      items,
+      matchByName: options?.matchByName ?? false,
+      syncExternals: options?.syncExternals ?? false,
+      writeThroughContifico: options?.writeThroughContifico ?? false,
+    },
     timeoutMs: 60_000,
   });
 }

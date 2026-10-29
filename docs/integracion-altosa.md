@@ -31,7 +31,7 @@ Regla de oro: **el frontend habla SOLO con el backend del ERP** (patrón BFF). E
   - `GET /api/v1/products/:id` · `GET /api/v1/products/sku/:sku`
   - `GET /api/v1/categories` · `/catalogs?active` · `/locations?active` · `/warranties?active`
   - `GET /api/v1/documents` — metadatos (sin `embedding`); `includeContent=true` para el texto
-  - `POST /api/v1/sync/products` — upsert masivo idempotente por SKU (usado por el ERP para replicar Contifico). Ver `docs/integracion-contifico.md`.
+  - `POST /api/v1/sync/products` — upsert masivo idempotente por SKU (usado por el ERP para replicar el staging local). El sync de Contifico ya vive en Altosa (`/api/v1/contifico/*`). Ver `docs/integracion-contifico.md`.
 - Seguridad: sin puertos públicos (solo red `altosa_backend`), API key con comparación en tiempo constante, rate limit 600/15min, helmet, sin CORS, logs con redacción de `x-api-key`.
 - Prisma: `binaryTargets = [native, linux-musl-openssl-3.0.x]`; **no ejecutar `prisma migrate`** (las tablas las administra el pipeline n8n del cliente). La columna `embedding vector(1536)` no está en el modelo (usar SQL raw si se implementa búsqueda semántica).
 
@@ -42,17 +42,22 @@ Regla de oro: **el frontend habla SOLO con el backend del ERP** (patrón BFF). E
 - BFF (requieren `authenticate` del ERP): `GET /api/v1/integrations/altosa/{products, products/:id, products/sku/:sku, categories, catalogs, locations, warranties, documents, meta/catalog/search, meta/catalog/item}`.
 - Errores típicos: `502 ALTOSA_API_ERROR`, `502 ALTOSA_UNREACHABLE`, `504 ALTOSA_TIMEOUT`.
 
-### 3. Productos: Contifico → ERP → Altosa
+### 3. Productos: Contifico → Altosa → ERP
 
-Contifico conserva el histórico y el stock; el ERP es la consola de
-administración y escribe de vuelta los campos soportados. El flujo vigente
-está documentado en `docs/integracion-contifico.md`:
+Contifico conserva el histórico y el stock; **Altosa es la dueña del cliente y
+del token**, ejecuta el sync y el write-through de los campos soportados. El ERP
+es la consola de administración y solo llama a Altosa. El flujo vigente está
+documentado en `docs/integracion-contifico.md`:
 
-- `pnpm --dir backend sync:contifico` hace upsert en
-  `kb_products`/`kb_product_variants` y empuja a Altosa.
+- `scripts/contifico-sync.sh` (VPS de Altosa) hace el sync nativo contra su DB.
 - El frontend de productos **no se modificó**: sigue leyendo el BFF de Altosa.
-  El CRUD de la UI pasa por ese BFF, que escribe primero en Contifico, luego en
-  la DB local y finalmente en Altosa.
+  El CRUD de la UI pasa por ese BFF, que crea/edita en Altosa; Altosa escribe en
+  Contifico.
+- El ERP ya no tiene `CONTIFICO_API_KEY`; sus rutas `/integrations/contifico/*`
+  son un proxy a Altosa.
+- El staging `kb_products`/`kb_product_variants` queda como legado; el backfill
+  `pnpm --dir backend backfill:altosa-mappings` copia los mapeos históricos una
+  sola vez.
 - El ETL de Altosa queda como legado para catálogos que aún no existan en
   Contifico.
 

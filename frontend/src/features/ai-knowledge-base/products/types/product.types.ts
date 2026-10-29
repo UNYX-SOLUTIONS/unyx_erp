@@ -8,6 +8,8 @@ export type ProductSyncStatus = 'synced' | 'notSynced';
 
 export type ProductLine = string;
 
+export type ProductDetailTab = 'general' | 'variants' | 'specifications' | 'warranty';
+
 export interface ProductVariantInfo {
   count: number;
   label?: string;
@@ -24,6 +26,7 @@ export interface Product {
   sku: string;
   line: string;
   variants: ProductVariantInfo;
+  variantDetails: VariantDto[];
   price: number | null;
   priceFrom: boolean;
   status: ProductStatus;
@@ -48,6 +51,8 @@ export interface VariantDto {
   kommoTemplate?: KommoTemplateDto | null;
   metaRetailerId?: string | null;
   metaMappingLocked?: boolean;
+  contificoId?: string | null;
+  contificoSku?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -91,6 +96,7 @@ export interface ProductDto {
   price: number | null;
   priceFrom: boolean;
   primaryColor: string | null;
+  variants?: VariantDto[];
   kommoTemplateId?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -127,7 +133,60 @@ export interface CreateVariantPayload {
 export type UpdateVariantPayload = Partial<CreateVariantPayload> & {
   metaRetailerId?: string | null;
   metaMappingLocked?: boolean;
+  contificoId?: string | null;
+  contificoSku?: string | null;
 };
+
+export type ExternalSource = 'meta' | 'contifico';
+
+export interface ExternalPendingItem {
+  source: ExternalSource;
+  sources: ExternalSource[];
+  externalId: string;
+  sku: string | null;
+  metaRetailerId: string | null;
+  contificoId: string | null;
+  contificoSku: string | null;
+  name: string;
+  price: number | null;
+  imageUrl: string | null;
+  url: string | null;
+  stock: number | null;
+  category: string | null;
+  barcode: string | null;
+  availability: string | null;
+}
+
+export interface ExternalPendingResult {
+  items: ExternalPendingItem[];
+  counts: { meta: number; contifico: number; total: number };
+  warnings: string[];
+}
+
+export interface ExternalImportResult {
+  productsCreated: number;
+  productsReused: number;
+  variantsCreated: number;
+  variantsSkipped: number;
+  created: Array<{
+    productId: number;
+    productName: string;
+    variantId: number;
+    sku: string;
+  }>;
+  errors: string[];
+}
+
+export interface ContificoCatalogItem {
+  externalId: string;
+  sku: string;
+  name: string;
+  category: string | null;
+  price: number | null;
+  stock: number;
+  barcode: string | null;
+  isActive: boolean;
+}
 
 export interface CreateProductPayload {
   sku: string;

@@ -104,9 +104,6 @@ TRAEFIK_NETWORK=${TRAEFIK_NETWORK}
 SEED_ADMIN_PASSWORD=Admin123!
 ALTOSA_API_URL=https://api.altosamobiliario.com
 ALTOSA_API_KEY=
-CONTIFICO_API_URL=https://api.contifico.com/sistema/api/v1
-CONTIFICO_API_KEY=
-CONTIFICO_API_TOKEN=
 EOF
   echo "Creado .env.deploy con secretos nuevos"
   echo "IMPORTANTE: setea ALTOSA_API_KEY en .env.deploy con la MISMA clave de altosa_infrastructure/.env"
@@ -117,9 +114,6 @@ else
   set_env_value FRONTEND_PORT "$FRONTEND_PORT"
   grep -q '^ALTOSA_API_URL=' "$ENV_FILE" || printf 'ALTOSA_API_URL=https://api.altosamobiliario.com\n' >> "$ENV_FILE"
   grep -q '^ALTOSA_API_KEY=' "$ENV_FILE" || printf 'ALTOSA_API_KEY=\n' >> "$ENV_FILE"
-  grep -q '^CONTIFICO_API_URL=' "$ENV_FILE" || printf 'CONTIFICO_API_URL=https://api.contifico.com/sistema/api/v1\n' >> "$ENV_FILE"
-  grep -q '^CONTIFICO_API_KEY=' "$ENV_FILE" || printf 'CONTIFICO_API_KEY=\n' >> "$ENV_FILE"
-  grep -q '^CONTIFICO_API_TOKEN=' "$ENV_FILE" || printf 'CONTIFICO_API_TOKEN=\n' >> "$ENV_FILE"
   echo "Reutilizando .env.deploy existente (dominio y red de Traefik actualizados)"
 fi
 

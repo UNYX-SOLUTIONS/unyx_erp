@@ -35,6 +35,8 @@ export function ProductDetailSheet() {
   const isOpen = useProductDetailStore((state) => state.isOpen);
   const mode = useProductDetailStore((state) => state.mode);
   const productId = useProductDetailStore((state) => state.productId);
+  const initialTab = useProductDetailStore((state) => state.initialTab);
+  const focusVariantId = useProductDetailStore((state) => state.focusVariantId);
   const close = useProductDetailStore((state) => state.close);
   const openProduct = useProductDetailStore((state) => state.open);
   const isCreate = mode === 'create';
@@ -58,9 +60,9 @@ export function ProductDetailSheet() {
 
   useEffect(() => {
     if (isOpen) {
-      setActiveTab('general');
+      setActiveTab(initialTab);
     }
-  }, [isOpen, productId, mode]);
+  }, [isOpen, productId, mode, initialTab]);
 
   const activeTabIsDirty =
     activeTab === 'general'
@@ -242,6 +244,7 @@ export function ProductDetailSheet() {
                     addVariant={addVariantMutation}
                     updateVariant={updateVariantMutation}
                     deleteVariant={deleteVariantMutation}
+                    focusVariantId={focusVariantId}
                   />
                 )}
                 {activeTab === 'specifications' && <SpecificationsTab />}

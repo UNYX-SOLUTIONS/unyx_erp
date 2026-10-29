@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { ImageIcon, Loader2, MoreVertical, Upload } from 'lucide-react';
@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 import { useUploadVariantImage } from '../../../hooks/useUploadVariantImage';
 import { compressImage } from '../../../lib/compress-image';
 import { ColorInput } from '../ColorInput';
@@ -20,6 +21,7 @@ import { CurrencyInput } from '../CurrencyInput';
 import { FormField, detailInputClassName } from '../FormField';
 import { KommoTemplateField } from './KommoTemplateField';
 import { MetaMappingField } from './MetaMappingField';
+import { ContificoMappingField } from './ContificoMappingField';
 import type { VariantsFormValues } from '../../../schemas/product-schema';
 import type { KommoTemplateDto } from '../../../types/product.types';
 
@@ -31,6 +33,9 @@ interface VariantCardProps {
   initialTemplate?: KommoTemplateDto | null;
   initialMetaRetailerId?: string | null;
   initialMetaMappingLocked?: boolean;
+  initialContificoId?: string | null;
+  initialContificoSku?: string | null;
+  isFocused?: boolean;
   onDuplicate: (index: number) => void;
   onRemove: (index: number) => void;
   onToggleActive: (index: number) => void;
@@ -44,6 +49,9 @@ export function VariantCard({
   initialTemplate,
   initialMetaRetailerId = null,
   initialMetaMappingLocked = false,
+  initialContificoId = null,
+  initialContificoSku = null,
+  isFocused = false,
   onDuplicate,
   onRemove,
   onToggleActive,
@@ -53,8 +61,19 @@ export function VariantCard({
   const errors = formState.errors.variants?.[index];
   const variantNumber = String(index + 1).padStart(2, '0');
 
+  const cardRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadImage = useUploadVariantImage();
+
+  useEffect(() => {
+    if (!isFocused) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 200);
+    return () => window.clearTimeout(timer);
+  }, [isFocused]);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null;
@@ -72,7 +91,13 @@ export function VariantCard({
   };
 
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
+    <div
+      ref={cardRef}
+      className={cn(
+        'rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-shadow',
+        isFocused && 'border-blue-400 ring-2 ring-blue-500/30 dark:border-blue-600'
+      )}
+    >
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center">
           <h4 className="text-sm font-semibold text-gray-900 dark:text-slate-100">Variante {variantNumber}</h4>
@@ -259,15 +284,26 @@ export function VariantCard({
         />
 
         {variant?.id && (
-          <MetaMappingField
-            productId={productId}
-            variantId={variant.id}
-            sku={variant.sku}
-            variantName={variant.name}
-            initialRetailerId={initialMetaRetailerId}
-            initialMappingLocked={initialMetaMappingLocked}
-            isBusy={isBusy}
-          />
+          <>
+            <MetaMappingField
+              productId={productId}
+              variantId={variant.id}
+              sku={variant.sku}
+              variantName={variant.name}
+              initialRetailerId={initialMetaRetailerId}
+              initialMappingLocked={initialMetaMappingLocked}
+              isBusy={isBusy}
+            />
+            <ContificoMappingField
+              productId={productId}
+              variantId={variant.id}
+              sku={variant.sku}
+              variantName={variant.name}
+              initialContificoId={initialContificoId}
+              initialContificoSku={initialContificoSku}
+              isBusy={isBusy}
+            />
+          </>
         )}
       </div>
     </div>

@@ -18,6 +18,7 @@ export function mapProductDtoToUi(dto: ProductDto): Product {
       count: dto.variantCount,
       ...(dto.primaryColor ? { label: dto.primaryColor } : {}),
     },
+    variantDetails: dto.variants ?? [],
     price: dto.price,
     priceFrom: dto.priceFrom,
     status: VALIDATION_TO_STATUS[dto.validation],

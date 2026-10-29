@@ -3,8 +3,9 @@
 import type { LucideIcon } from 'lucide-react';
 import { CircleDot, ShieldCheck, SlidersHorizontal, Tags } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { ProductDetailTab } from '../../types/product.types';
 
-export type DetailTab = 'general' | 'variants' | 'specifications' | 'warranty';
+export type DetailTab = ProductDetailTab;
 
 interface TabConfig {
   id: DetailTab;

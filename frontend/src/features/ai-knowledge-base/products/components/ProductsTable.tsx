@@ -14,6 +14,7 @@ import { mapProductDtoToUi } from '../mappers';
 import { useProductDetailStore } from '../stores/product-detail-store';
 import type { ProductListParams } from '../types/product.types';
 import { ProductsFilters } from './ProductsFilters';
+import { ProductVariantsPanel } from './ProductVariantsPanel';
 
 const ALL = 'all';
 
@@ -24,6 +25,7 @@ export function ProductsTable() {
   const [sync, setSync] = useState(ALL);
   const [line, setLine] = useState(ALL);
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
 
   const isDetailOpen = useProductDetailStore((state) => state.isOpen);
   const openedProductId = useProductDetailStore((state) => state.productId);
@@ -120,7 +122,18 @@ export function ProductsTable() {
           data={products}
           isLoading={isLoading}
           skeletonRows={8}
-          onRowClick={(product) => openProductDetail(product.id)}
+          onRowClick={(product) =>
+            setExpandedProductId((current) => (current === product.id ? null : product.id))
+          }
+          expandedRowId={expandedProductId}
+          renderExpandedRow={(product) => (
+            <ProductVariantsPanel
+              product={product}
+              onEditVariant={(variantId) =>
+                openProductDetail(product.id, { tab: 'variants', variantId })
+              }
+            />
+          )}
           selectedRowId={isDetailOpen ? (openedProductId ?? undefined) : undefined}
           getRowId={(product) => product.id}
           emptyState={

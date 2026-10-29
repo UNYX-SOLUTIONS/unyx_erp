@@ -13,6 +13,7 @@ export function useCreateProduct() {
     mutationFn: (payload: CreateProductPayload) => createProduct(payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['products'] });
+      void queryClient.invalidateQueries({ queryKey: ['external-pending'] });
       toast.success('Producto creado');
     },
     onError: (error) => {
