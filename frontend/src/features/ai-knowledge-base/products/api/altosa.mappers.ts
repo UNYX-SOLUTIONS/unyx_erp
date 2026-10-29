@@ -181,6 +181,9 @@ export function mapAltosaProduct(product: AltosaProductDto): ProductDto {
     price: precios.length > 0 ? Math.min(...precios) : null,
     priceFrom: variantes.length > 1,
     primaryColor: variantes[0]?.color ?? null,
+    variants: variantes.map((variante, index) =>
+      mapAltosaVariant(variante, String(product.id), index)
+    ),
     kommoTemplateId: product.kommoTemplateId ?? null,
     createdAt: product.updatedAt,
     updatedAt: product.updatedAt,

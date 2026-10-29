@@ -30,6 +30,8 @@ interface DataTableProps<TData> {
   onRowClick?: (row: TData) => void;
   selectedRowId?: string;
   getRowId?: (row: TData) => string;
+  expandedRowId?: string | null;
+  renderExpandedRow?: (row: TData) => React.ReactNode;
   isLoading?: boolean;
   skeletonRows?: number;
   emptyState?: React.ReactNode;
@@ -45,6 +47,8 @@ export function DataTable<TData>({
   onRowClick,
   selectedRowId,
   getRowId,
+  expandedRowId,
+  renderExpandedRow,
   isLoading = false,
   skeletonRows = 8,
   emptyState,
@@ -97,24 +101,36 @@ export function DataTable<TData>({
             <DataTableSkeleton columns={columns.length} rows={skeletonRows} />
           ) : rows.length > 0 ? (
             rows.map((row) => {
-              const isSelected =
-                selectedRowId !== undefined && getRowId?.(row.original) === selectedRowId;
+              const rowId = getRowId?.(row.original) ?? row.id;
+              const isSelected = selectedRowId !== undefined && rowId === selectedRowId;
+              const isExpanded = expandedRowId != null && rowId === expandedRowId;
               return (
-                <TableRow
-                  key={row.id}
-                  onClick={onRowClick ? () => onRowClick(row.original) : undefined}
-                  className={cn(
-                    'border-gray-100 dark:border-slate-800 transition-colors hover:bg-gray-50 dark:hover:bg-slate-800/50',
-                    onRowClick && 'cursor-pointer',
-                    isSelected && 'border-l-2 border-l-blue-600 bg-blue-50/50 hover:bg-blue-50/50'
+                <React.Fragment key={row.id}>
+                  <TableRow
+                    onClick={onRowClick ? () => onRowClick(row.original) : undefined}
+                    data-expanded={renderExpandedRow ? String(isExpanded) : undefined}
+                    aria-expanded={renderExpandedRow ? isExpanded : undefined}
+                    className={cn(
+                      'group border-gray-100 dark:border-slate-800 transition-colors hover:bg-gray-50 dark:hover:bg-slate-800/50',
+                      onRowClick && 'cursor-pointer',
+                      isExpanded && 'bg-gray-50/70 dark:bg-slate-800/40',
+                      isSelected && 'border-l-2 border-l-blue-600 bg-blue-50/50 hover:bg-blue-50/50'
+                    )}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className="px-4 py-3">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  {isExpanded && renderExpandedRow && (
+                    <TableRow className="border-gray-100 bg-gray-50/70 hover:bg-gray-50/70 dark:border-slate-800 dark:bg-slate-800/40 dark:hover:bg-slate-800/40">
+                      <TableCell colSpan={row.getVisibleCells().length} className="p-0">
+                        {renderExpandedRow(row.original)}
+                      </TableCell>
+                    </TableRow>
                   )}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="px-4 py-3">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
+                </React.Fragment>
               );
             })
           ) : (

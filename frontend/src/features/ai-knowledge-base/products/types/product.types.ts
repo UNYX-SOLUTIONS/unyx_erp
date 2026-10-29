@@ -8,6 +8,8 @@ export type ProductSyncStatus = 'synced' | 'notSynced';
 
 export type ProductLine = string;
 
+export type ProductDetailTab = 'general' | 'variants' | 'specifications' | 'warranty';
+
 export interface ProductVariantInfo {
   count: number;
   label?: string;
@@ -24,6 +26,7 @@ export interface Product {
   sku: string;
   line: string;
   variants: ProductVariantInfo;
+  variantDetails: VariantDto[];
   price: number | null;
   priceFrom: boolean;
   status: ProductStatus;
@@ -91,6 +94,7 @@ export interface ProductDto {
   price: number | null;
   priceFrom: boolean;
   primaryColor: string | null;
+  variants?: VariantDto[];
   kommoTemplateId?: string | null;
   createdAt: string;
   updatedAt: string;

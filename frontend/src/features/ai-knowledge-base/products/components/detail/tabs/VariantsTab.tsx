@@ -17,6 +17,7 @@ interface VariantsTabProps {
   addVariant: ReturnType<typeof useAddVariant>;
   updateVariant: ReturnType<typeof useUpdateVariant>;
   deleteVariant: ReturnType<typeof useDeleteVariant>;
+  focusVariantId?: string | null;
 }
 
 export function VariantsTab({
@@ -26,6 +27,7 @@ export function VariantsTab({
   addVariant,
   updateVariant,
   deleteVariant,
+  focusVariantId,
 }: VariantsTabProps) {
   const { fields } = variantsArray;
   const isBusy = addVariant.isPending || updateVariant.isPending || deleteVariant.isPending;
@@ -133,6 +135,9 @@ export function VariantsTab({
               initialMetaRetailerId={product.variants[index]?.metaRetailerId ?? null}
               initialMetaMappingLocked={
                 product.variants[index]?.metaMappingLocked ?? false
+              }
+              isFocused={
+                focusVariantId != null && product.variants[index]?.id === focusVariantId
               }
               onDuplicate={handleDuplicate}
               onRemove={handleRemove}

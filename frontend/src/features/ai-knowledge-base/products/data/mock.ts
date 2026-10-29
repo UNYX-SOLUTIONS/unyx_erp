@@ -16,7 +16,7 @@ const LINES: ProductLine[] = [
   'Sillas Lounge',
 ];
 
-const EXPLICIT_PRODUCTS: Product[] = [
+const EXPLICIT_PRODUCTS: Array<Omit<Product, 'variantDetails'>> = [
   {
     id: 'p-1',
     name: 'Silla Sandy',
@@ -274,7 +274,7 @@ function spreadStatuses(
   return statuses;
 }
 
-function generateProducts(): Product[] {
+function generateProducts(): Array<Omit<Product, 'variantDetails'>> {
   const statuses = spreadStatuses(GENERATED_STATUS_COUNTS, GENERATED_TOTAL);
   let firstNoPriceIndex = -1;
   statuses.forEach((status, index) => {
@@ -311,4 +311,9 @@ function generateProducts(): Product[] {
   });
 }
 
-export const PRODUCTS: Product[] = [...EXPLICIT_PRODUCTS, ...generateProducts()];
+export const PRODUCTS: Product[] = [...EXPLICIT_PRODUCTS, ...generateProducts()].map(
+  (product) => ({
+    ...product,
+    variantDetails: [],
+  })
+);

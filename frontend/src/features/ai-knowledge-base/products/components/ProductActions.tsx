@@ -28,7 +28,7 @@ export function ProductActions({ product }: { product: Product }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   return (
-    <div className="flex justify-end">
+    <div className="flex justify-end" onClick={(event) => event.stopPropagation()}>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -36,20 +36,19 @@ export function ProductActions({ product }: { product: Product }) {
             size="icon"
             className="h-8 w-8 text-gray-500 dark:text-slate-400"
             aria-label={`Acciones para ${product.name}`}
-            onClick={(event) => event.stopPropagation()}
           >
             <MoreVertical className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => openProductDetail(product.id)}>
-            Ver detalle
+            Editar producto
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => openProductDetail(product.id)}>Editar</DropdownMenuItem>
-          <DropdownMenuItem>Duplicar</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>Cambiar validación</DropdownMenuItem>
-          <DropdownMenuItem>Marcar para revisión</DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => openProductDetail(product.id, { tab: 'variants' })}
+          >
+            Ver variantes
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={() => setConfirmOpen(true)}
