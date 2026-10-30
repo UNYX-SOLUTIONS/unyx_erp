@@ -13,6 +13,7 @@ export async function syncProducts(
   options?: {
     matchByName?: boolean;
     syncExternals?: boolean;
+    writeThroughMeta?: boolean;
     writeThroughContifico?: boolean;
   }
 ) {
@@ -21,6 +22,7 @@ export async function syncProducts(
       items,
       matchByName: options?.matchByName ?? false,
       syncExternals: options?.syncExternals ?? false,
+      writeThroughMeta: options?.writeThroughMeta ?? false,
       writeThroughContifico: options?.writeThroughContifico ?? false,
     },
     timeoutMs: 60_000,

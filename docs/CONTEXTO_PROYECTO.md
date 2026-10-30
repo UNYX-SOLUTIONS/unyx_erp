@@ -138,7 +138,7 @@ La integración de Contifico vive en **Altosa** (`backend/src/modules/contifico`
 
 ### Meta
 
-El token de Meta vive solo en el `.env` de Altosa. El ERP nunca recibe el token. La API Altosa consulta el catálogo Meta y el ERP usa el buscador/mapeo mediante el BFF. Altosa también publica ítems planos cuando el alta del ERP lo pide (`syncExternals`).
+El token de Meta vive solo en el `.env` de Altosa. El ERP nunca recibe el token. La API Altosa consulta el catálogo Meta y el ERP usa el buscador/mapeo mediante el BFF. Altosa también publica ítems planos cuando el alta del ERP lo pide (`syncExternals`), actualiza el ítem mapeado al editar y lo elimina en el DELETE explícito; desactivar (`isActive=false`) solo lo deja `out of stock`.
 
 ### Kommo
 
@@ -565,9 +565,9 @@ Pendientes frontend:
 
 ### Meta escritura
 
-- No se crean/editan/eliminan productos en Meta desde el ERP.
-- `catalog_management` está restringido para muchas apps.
-- Alternativas: feed de productos generado por el ERP/Altosa que Meta consuma, o API si se obtiene permiso.
+- Altosa publica el ítem plano al crear una variante/producto, actualiza nombre/descripción/precio/imagen/availability al editar y elimina el ítem al borrar (`DELETE`). Desactivar (`isActive=false`) lo deja `out of stock`.
+- `catalog_management` está restringido para muchas apps. Si Meta rechaza la escritura, el alta/edición de Altosa continúa y la variante queda sin mapear (se puede reintentar guardando la variante o mapeando a mano).
+- Alternativas si no se obtiene `catalog_management`: feed de productos generado por el ERP/Altosa que Meta consuma.
 - Para enviar tarjetas WhatsApp no se necesita `catalog_management`; se usa `whatsapp_business_messaging` y el catálogo debe estar vinculado a la WABA.
 
 ### Datos

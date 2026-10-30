@@ -1,11 +1,14 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
-import { ImageIcon, PackageOpen, Pencil } from 'lucide-react';
+import { PackageOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { formatCurrency } from '@/lib/formatters';
-import type { Product } from '../types/product.types';
+import type { Product, VariantDto } from '../types/product.types';
+import { ContificoMappingDialog } from './detail/sections/ContificoMappingDialog';
+import { MetaMappingDialog } from './detail/sections/MetaMappingDialog';
 
 interface ProductVariantsPanelProps {
   product: Product;
@@ -14,10 +17,13 @@ interface ProductVariantsPanelProps {
 
 export function ProductVariantsPanel({ product, onEditVariant }: ProductVariantsPanelProps) {
   const variants = product.variantDetails;
+  const [contificoVariant, setContificoVariant] = useState<VariantDto | null>(null);
+  const [metaVariant, setMetaVariant] = useState<VariantDto | null>(null);
 
   return (
     <div className="border-l-2 border-l-blue-500/60 px-6 py-4">
-      <div className="mb-2 flex items-center justify-between gap-3">
+      {/* Header del panel */}
+      <div className="mb-4 flex items-center justify-between gap-3">
         <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-slate-400">
           Variantes del producto
         </p>
@@ -32,70 +38,156 @@ export function ProductVariantsPanel({ product, onEditVariant }: ProductVariants
           Este producto todavía no tiene variantes registradas.
         </div>
       ) : (
-        <ul className="divide-y divide-gray-200 dark:divide-slate-800">
-          {variants.map((variant) => (
+        <ul className="flex flex-col">
+          {variants.map((variant, index) => (
             <li
               key={variant.id}
-              className="flex flex-wrap items-center gap-3 py-3 first:pt-1 last:pb-1"
+              className={`grid grid-cols-[auto_1.5fr_1fr_1fr_auto_auto] items-center gap-4 py-3 ${
+                index !== variants.length - 1 ? 'border-b border-gray-100 dark:border-slate-800/60' : ''
+              }`}
             >
-              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md border border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-800">
-                {variant.imageUrl ? (
-                  <Image
-                    src={variant.imageUrl}
-                    alt={`Imagen de ${variant.name}`}
-                    fill
-                    sizes="40px"
-                    className="object-cover"
-                  />
-                ) : (
-                  <ImageIcon className="absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 text-gray-300 dark:text-slate-600" />
-                )}
+              {/* 1. Imagen y SKU */}
+              <div className="flex items-center gap-3">
+                <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded border border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-800 flex items-center justify-center">
+                  {variant.imageUrl ? (
+                    <Image
+                      src={variant.imageUrl}
+                      alt={`Imagen de ${variant.name}`}
+                      fill
+                      sizes="32px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="h-2 w-2 rounded-full bg-gray-300 dark:bg-slate-600" />
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onEditVariant(variant.id)}
+                  title="Editar variante"
+                  className="text-xs font-medium text-blue-600 underline-offset-2 whitespace-nowrap hover:text-blue-800 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                >
+                  {variant.sku || 'SKU hijo'}
+                </button>
               </div>
 
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-gray-900 dark:text-slate-100">
+              {/* 2. Nombre / Color */}
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-gray-900 dark:text-slate-100">
                   {variant.name}
                 </p>
-                <p className="mt-0.5 text-xs text-gray-500 dark:text-slate-400">{variant.sku}</p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                {variant.metaRetailerId && (
-                  <StatusBadge variant="info">
-                    <span title={variant.metaRetailerId}>Meta</span>
-                  </StatusBadge>
+              {/* 3. Precio */}
+              <div className="text-sm font-medium text-gray-900 dark:text-slate-100">
+                {variant.price === null ? (
+                  <span className="text-xs font-normal text-gray-400 dark:text-slate-500">—</span>
+                ) : (
+                  formatCurrency(variant.price)
                 )}
-                {variant.contificoId && (
-                  <StatusBadge variant="info">
-                    <span title={variant.contificoId}>Contífico</span>
-                  </StatusBadge>
-                )}
-                <StatusBadge variant={variant.isActive ? 'approved' : 'neutral'} dot>
-                  {variant.isActive ? 'Activa' : 'Inactiva'}
-                </StatusBadge>
-                <span className="w-24 text-right text-sm font-medium text-gray-900 dark:text-slate-100">
-                  {variant.price === null ? (
-                    <span className="text-xs font-normal text-gray-400 dark:text-slate-500">
-                      Sin precio
+              </div>
+
+              {/* 4. Estado (Válido / Falta precio) */}
+              <div className="flex justify-start">
+                {variant.isActive && variant.price !== null ? (
+                  <StatusBadge variant="approved" className="bg-blue-50 text-blue-700 border-blue-200">
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-blue-600"></span>
+                      Válido
                     </span>
-                  ) : (
-                    formatCurrency(variant.price)
-                  )}
-                </span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onEditVariant(variant.id)}
-                  className="gap-1.5 border-gray-300 text-gray-700 dark:border-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                  Editar variante
-                </Button>
+                  </StatusBadge>
+                ) : (
+                  <StatusBadge variant="warning" className="bg-orange-50 text-orange-700 border-orange-200">
+                    <span className="flex flex-col items-start leading-tight">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider opacity-80">Falta precio</span>
+                      <span className="text-xs font-medium">Contifico</span>
+                    </span>
+                  </StatusBadge>
+                )}
+              </div>
+
+              {/* 5. Integraciones (Contifico / Meta) */}
+              <div className="flex items-center gap-2">
+                {variant.contificoId ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setContificoVariant(variant)}
+                    className="h-8 border-blue-200 bg-blue-50/50 text-blue-700 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300 gap-1 px-2.5"
+                  >
+                    <span className="text-blue-500">✓</span> Contifico
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setContificoVariant(variant)}
+                    className="h-8 border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-slate-700 dark:text-slate-300 gap-1 px-2.5"
+                  >
+                    + Contifico
+                  </Button>
+                )}
+
+                {variant.metaRetailerId ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMetaVariant(variant)}
+                    className="h-8 border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-slate-700 dark:text-slate-300 gap-1 px-2.5"
+                  >
+                    <span className="text-gray-400">✓</span> Meta
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMetaVariant(variant)}
+                    className="h-8 border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-slate-700 dark:text-slate-300 gap-1 px-2.5"
+                  >
+                    + Meta
+                  </Button>
+                )}
+              </div>
+
+              {/* 6. Stock */}
+              <div className="text-sm text-gray-500 dark:text-slate-400 whitespace-nowrap min-w-[80px]">
+                Stock: <span className="font-medium text-gray-700 dark:text-slate-200">14 uds</span>
               </div>
             </li>
           ))}
         </ul>
+      )}
+
+      {contificoVariant && (
+        <ContificoMappingDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) {
+              setContificoVariant(null);
+            }
+          }}
+          productId={product.id}
+          variantId={contificoVariant.id}
+          variantName={contificoVariant.name}
+          sku={contificoVariant.sku}
+          selectedContificoSku={contificoVariant.contificoSku ?? null}
+        />
+      )}
+
+      {metaVariant && (
+        <MetaMappingDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) {
+              setMetaVariant(null);
+            }
+          }}
+          productId={product.id}
+          variantId={metaVariant.id}
+          variantName={metaVariant.name}
+          sku={metaVariant.sku}
+          selectedRetailerId={metaVariant.metaRetailerId ?? null}
+        />
       )}
     </div>
   );
