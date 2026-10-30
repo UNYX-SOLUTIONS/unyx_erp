@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Package, PackageOpen } from 'lucide-react';
+import { Edit3, Package, PackageOpen, SquarePen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { TableCell, TableRow } from '@/components/ui/table';
@@ -67,7 +67,7 @@ export function ProductVariantsPanel({ product, onEditVariant }: ProductVariants
         <TableRow className="hover:bg-transparent">
           <TableCell
             colSpan={7}
-            className="border-l-2 border-l-blue-500/60 px-4 py-4"
+            className="border-l-2 border-l-blue-500/60 px-4 py-4 pl-16" // <-- pl-16 agregado
           >
             <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400">
               <PackageOpen className="h-4 w-4" />
@@ -81,32 +81,30 @@ export function ProductVariantsPanel({ product, onEditVariant }: ProductVariants
             key={variant.id}
             className={cn(
               'border-b border-gray-100 hover:bg-transparent dark:border-slate-800/60',
-              index % 2 === 0
-                ? 'bg-slate-50/80 dark:bg-slate-900/50'
-                : 'bg-white dark:bg-slate-900'
+              index % 2 === 0 ? 'bg-slate-50/80 dark:bg-slate-900/50' : 'bg-white dark:bg-slate-900'
             )}
           >
             {/* Variante: ocupa Producto + Variantes para alinear el precio */}
             <TableCell
               colSpan={2}
-              className="border-l-2 border-l-blue-500/60 px-4 py-3"
+              className="border-l-2 border-l-blue-500/60 px-4 py-3 pl-16" // <-- pl-16 agregado
             >
               <div className="flex min-w-0 items-center gap-3">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-gray-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500">
                   <Package className="h-4 w-4" />
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold leading-tight text-gray-900 dark:text-slate-100">
-                    {variant.name}
-                  </p>
                   <button
                     type="button"
                     onClick={() => onEditVariant(variant.id)}
                     title="Editar variante"
-                    className="mt-0.5 break-all text-left text-xs font-medium text-gray-500 underline-offset-2 hover:text-blue-700 hover:underline dark:text-slate-400 dark:hover:text-blue-400"
+                    className="truncate text-sm font-semibold leading-tight text-gray-900 dark:text-slate-100 hover:text-blue-700 hover:underline dark:hover:text-blue-400"
                   >
-                    {variant.sku || 'Sin SKU'}
+                    {variant.name || 'Variante sin nombre'}
                   </button>
+                  <p className="mt-0.5 break-all text-left text-xs font-medium text-gray-500 underline-offset-2 dark:text-slate-400">
+                    {variant.sku || 'Sin SKU'}
+                  </p>
                 </div>
               </div>
             </TableCell>
@@ -114,9 +112,7 @@ export function ProductVariantsPanel({ product, onEditVariant }: ProductVariants
             {/* Precio: misma columna que la fila principal */}
             <TableCell className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-slate-100">
               {variant.price === null ? (
-                <span className="text-xs font-normal text-gray-400 dark:text-slate-500">
-                  —
-                </span>
+                <span className="text-xs font-normal text-gray-400 dark:text-slate-500">—</span>
               ) : (
                 formatCurrency(variant.price)
               )}
@@ -185,9 +181,9 @@ export function ProductVariantsPanel({ product, onEditVariant }: ProductVariants
               <button
                 type="button"
                 onClick={() => onEditVariant(variant.id)}
-                className="text-sm font-medium text-blue-600 transition-colors hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                className="text-sm font-medium text-gray-600 transition-colors hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 pr-2"
               >
-                Editar
+                <SquarePen className="h-4 w-4" />
               </button>
             </TableCell>
           </TableRow>
