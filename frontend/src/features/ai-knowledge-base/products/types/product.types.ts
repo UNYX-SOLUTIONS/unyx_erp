@@ -8,7 +8,7 @@ export type ProductSyncStatus = 'synced' | 'notSynced';
 
 export type ProductLine = string;
 
-export type ProductDetailTab = 'general' | 'variants' | 'specifications' | 'warranty';
+export type ProductDetailTab = 'general' | 'variants';
 
 export interface ProductVariantInfo {
   count: number;
@@ -53,6 +53,7 @@ export interface VariantDto {
   metaMappingLocked?: boolean;
   contificoId?: string | null;
   contificoSku?: string | null;
+  garantiaId?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -128,6 +129,7 @@ export interface CreateVariantPayload {
   isActive?: boolean;
   sortOrder?: number;
   kommoTemplateId?: string | null;
+  garantiaId?: number | null;
 }
 
 export type UpdateVariantPayload = Partial<CreateVariantPayload> & {
@@ -186,6 +188,53 @@ export interface ContificoCatalogItem {
   stock: number;
   barcode: string | null;
   isActive: boolean;
+}
+
+export type ExternalHealthStatus =
+  | 'ok'
+  | 'inactive'
+  | 'missing'
+  | 'mismatch'
+  | 'unmapped'
+  | 'unknown';
+
+export interface ExternalHealthItem {
+  variantId: number;
+  productId: number;
+  productName: string;
+  variantName: string | null;
+  sku: string | null;
+  contifico: ExternalHealthStatus;
+  meta: ExternalHealthStatus;
+  contificoId: string | null;
+  metaRetailerId: string | null;
+}
+
+export interface ExternalHealthResult {
+  checkedAt: string;
+  counts: {
+    contificoMissing: number;
+    contificoInactive: number;
+    contificoMismatch: number;
+    metaMissing: number;
+    totalIssues: number;
+    warnings: number;
+  };
+  items: ExternalHealthItem[];
+  warnings: string[];
+}
+
+export type ExternalRepairSource = 'meta' | 'contifico';
+export type ExternalRepairAction =
+  | 'republish'
+  | 'recreate'
+  | 'reactivate'
+  | 'unmap';
+
+export interface ExternalRepairInput {
+  variantId: number;
+  source: ExternalRepairSource;
+  action: ExternalRepairAction;
 }
 
 export interface CreateProductPayload {

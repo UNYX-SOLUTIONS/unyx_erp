@@ -31,7 +31,7 @@ interface DataTableProps<TData> {
   selectedRowId?: string;
   getRowId?: (row: TData) => string;
   expandedRowId?: string | null;
-  renderExpandedRow?: (row: TData) => React.ReactNode;
+  renderExpandedRows?: (row: TData) => React.ReactNode;
   isLoading?: boolean;
   skeletonRows?: number;
   emptyState?: React.ReactNode;
@@ -48,7 +48,7 @@ export function DataTable<TData>({
   selectedRowId,
   getRowId,
   expandedRowId,
-  renderExpandedRow,
+  renderExpandedRows,
   isLoading = false,
   skeletonRows = 8,
   emptyState,
@@ -108,8 +108,8 @@ export function DataTable<TData>({
                 <React.Fragment key={row.id}>
                   <TableRow
                     onClick={onRowClick ? () => onRowClick(row.original) : undefined}
-                    data-expanded={renderExpandedRow ? String(isExpanded) : undefined}
-                    aria-expanded={renderExpandedRow ? isExpanded : undefined}
+                    data-expanded={renderExpandedRows ? String(isExpanded) : undefined}
+                    aria-expanded={renderExpandedRows ? isExpanded : undefined}
                     className={cn(
                       'group border-gray-100 dark:border-slate-800 transition-colors hover:bg-gray-50 dark:hover:bg-slate-800/50',
                       onRowClick && 'cursor-pointer',
@@ -123,13 +123,9 @@ export function DataTable<TData>({
                       </TableCell>
                     ))}
                   </TableRow>
-                  {isExpanded && renderExpandedRow && (
-                    <TableRow className="border-gray-100 bg-gray-50/70 hover:bg-gray-50/70 dark:border-slate-800 dark:bg-slate-800/40 dark:hover:bg-slate-800/40">
-                      <TableCell colSpan={row.getVisibleCells().length} className="p-0">
-                        {renderExpandedRow(row.original)}
-                      </TableCell>
-                    </TableRow>
-                  )}
+                  {isExpanded && renderExpandedRows
+                    ? renderExpandedRows(row.original)
+                    : null}
                 </React.Fragment>
               );
             })

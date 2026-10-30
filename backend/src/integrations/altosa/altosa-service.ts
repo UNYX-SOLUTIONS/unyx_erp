@@ -9,6 +9,9 @@ import type {
   AltosaUpdateProductBody,
   AltosaUpdateVariantBody,
   AltosaVariantBody,
+  AltosaWarrantiesQuery,
+  AltosaWarrantyCreateBody,
+  AltosaWarrantyUpdateBody,
 } from './altosa-schema';
 
 export async function listProducts(query: AltosaProductsQuery) {
@@ -43,8 +46,29 @@ export async function listLocations(query: AltosaActiveQuery) {
   return altosaGet<unknown>('/api/v1/locations', { active: query.active });
 }
 
-export async function listWarranties(query: AltosaActiveQuery) {
-  return altosaGet<unknown>('/api/v1/warranties', { active: query.active });
+export async function listWarranties(query: AltosaWarrantiesQuery) {
+  return altosaGet<unknown>('/api/v1/warranties', {
+    active: query.active === undefined ? 'all' : query.active ? 'true' : 'false',
+  });
+}
+
+export async function createWarranty(input: AltosaWarrantyCreateBody) {
+  return altosaRequest<unknown>('POST', '/api/v1/warranties', {
+    body: input,
+  });
+}
+
+export async function updateWarranty(
+  id: number,
+  input: AltosaWarrantyUpdateBody
+) {
+  return altosaRequest<unknown>('PATCH', `/api/v1/warranties/${id}`, {
+    body: input,
+  });
+}
+
+export async function deleteWarranty(id: number) {
+  return altosaRequest<unknown>('DELETE', `/api/v1/warranties/${id}`);
 }
 
 export async function listDocuments(query: AltosaDocumentsQuery) {

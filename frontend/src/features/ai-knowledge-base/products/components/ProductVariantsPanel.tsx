@@ -1,102 +1,268 @@
 'use client';
 
-import Image from 'next/image';
-import { ImageIcon, PackageOpen, Pencil } from 'lucide-react';
+import { useState } from 'react';
+import { AlertTriangle, Package, PackageOpen, SquarePen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { TableCell, TableRow } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/formatters';
-import type { Product } from '../types/product.types';
+import { cn } from '@/lib/utils';
+import type { Product, VariantDto } from '../types/product.types';
+import { useExternalHealth } from '../hooks/useExternalHealth';
+import { ContificoMappingDialog } from './detail/sections/ContificoMappingDialog';
+import { MetaMappingDialog } from './detail/sections/MetaMappingDialog';
+import { ExternalHealthDialog } from './ExternalHealthDialog';
 
 interface ProductVariantsPanelProps {
   product: Product;
   onEditVariant: (variantId: string) => void;
 }
 
-export function ProductVariantsPanel({ product, onEditVariant }: ProductVariantsPanelProps) {
-  const variants = product.variantDetails;
+function VariantStatus({ variant }: { variant: VariantDto }) {
+  if (!variant.isActive) {
+    return (
+      <StatusBadge variant="neutral" dot>
+        Inactiva
+      </StatusBadge>
+    );
+  }
+
+  if (!variant.contificoId) {
+    return (
+      <StatusBadge
+        variant="warning"
+        className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300"
+      >
+        <span className="flex flex-col items-start leading-tight">
+          <span className="text-[10px] font-semibold uppercase tracking-wider opacity-80">
+            Falta precio
+          </span>
+          <span className="text-xs font-medium">Contifico</span>
+        </span>
+      </StatusBadge>
+    );
+  }
+
+  if (variant.price === null || variant.price <= 0) {
+    return (
+      <StatusBadge variant="warning" dot>
+        Falta precio
+      </StatusBadge>
+    );
+  }
 
   return (
-    <div className="border-l-2 border-l-blue-500/60 px-6 py-4">
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-slate-400">
-          Variantes del producto
-        </p>
-        <span className="text-xs text-gray-500 dark:text-slate-400">
-          {variants.length} {variants.length === 1 ? 'variante' : 'variantes'}
-        </span>
-      </div>
+    <StatusBadge variant="info" dot>
+      Válido
+    </StatusBadge>
+  );
+}
 
+export function ProductVariantsPanel({ product, onEditVariant }: ProductVariantsPanelProps) {
+  const variants = product.variantDetails;
+  const [contificoVariant, setContificoVariant] = useState<VariantDto | null>(null);
+  const [metaVariant, setMetaVariant] = useState<VariantDto | null>(null);
+  const [healthOpen, setHealthOpen] = useState(false);
+  const healthQuery = useExternalHealth();
+  const healthByVariant = new Map(
+    (healthQuery.data?.data.items ?? []).map((item) => [
+      String(item.variantId),
+      item,
+    ])
+  );
+
+  const healthChip = (
+    label: string,
+    tone: 'danger' | 'warning'
+  ) => (
+    <button
+      type="button"
+      onClick={() => setHealthOpen(true)}
+      title="Ver y reparar mapeos externos"
+      className={
+        tone === 'danger'
+          ? 'inline-flex h-7 items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2 text-xs font-medium text-rose-700 hover:bg-rose-100 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300'
+          : 'inline-flex h-7 items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300'
+      }
+    >
+      <AlertTriangle className="h-3.5 w-3.5" />
+      {label}
+    </button>
+  );
+
+  return (
+    <>
       {variants.length === 0 ? (
-        <div className="flex items-center gap-2 rounded-md border border-dashed border-gray-300 px-4 py-6 text-sm text-gray-500 dark:border-slate-700 dark:text-slate-400">
-          <PackageOpen className="h-4 w-4" />
-          Este producto todavía no tiene variantes registradas.
-        </div>
+        <TableRow className="hover:bg-transparent">
+          <TableCell
+            colSpan={7}
+            className="border-l-2 border-l-blue-500/60 px-4 py-4 pl-16" // <-- pl-16 agregado
+          >
+            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400">
+              <PackageOpen className="h-4 w-4" />
+              Este producto todavía no tiene variantes registradas.
+            </div>
+          </TableCell>
+        </TableRow>
       ) : (
-        <ul className="divide-y divide-gray-200 dark:divide-slate-800">
-          {variants.map((variant) => (
-            <li
-              key={variant.id}
-              className="flex flex-wrap items-center gap-3 py-3 first:pt-1 last:pb-1"
+        variants.map((variant, index) => {
+          const health = healthByVariant.get(variant.id);
+          return (
+          <TableRow
+            key={variant.id}
+            className={cn(
+              'border-b border-gray-100 hover:bg-transparent dark:border-slate-800/60',
+              index % 2 === 0 ? 'bg-slate-50/80 dark:bg-slate-900/50' : 'bg-white dark:bg-slate-900'
+            )}
+          >
+            {/* Variante: ocupa Producto + Variantes para alinear el precio */}
+            <TableCell
+              colSpan={2}
+              className="border-l-2 border-l-blue-500/60 px-4 py-3 pl-16" // <-- pl-16 agregado
             >
-              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md border border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-800">
-                {variant.imageUrl ? (
-                  <Image
-                    src={variant.imageUrl}
-                    alt={`Imagen de ${variant.name}`}
-                    fill
-                    sizes="40px"
-                    className="object-cover"
-                  />
-                ) : (
-                  <ImageIcon className="absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 text-gray-300 dark:text-slate-600" />
-                )}
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-gray-900 dark:text-slate-100">
-                  {variant.name}
-                </p>
-                <p className="mt-0.5 text-xs text-gray-500 dark:text-slate-400">{variant.sku}</p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                {variant.metaRetailerId && (
-                  <StatusBadge variant="info">
-                    <span title={variant.metaRetailerId}>Meta</span>
-                  </StatusBadge>
-                )}
-                {variant.contificoId && (
-                  <StatusBadge variant="info">
-                    <span title={variant.contificoId}>Contífico</span>
-                  </StatusBadge>
-                )}
-                <StatusBadge variant={variant.isActive ? 'approved' : 'neutral'} dot>
-                  {variant.isActive ? 'Activa' : 'Inactiva'}
-                </StatusBadge>
-                <span className="w-24 text-right text-sm font-medium text-gray-900 dark:text-slate-100">
-                  {variant.price === null ? (
-                    <span className="text-xs font-normal text-gray-400 dark:text-slate-500">
-                      Sin precio
-                    </span>
-                  ) : (
-                    formatCurrency(variant.price)
-                  )}
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-gray-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500">
+                  <Package className="h-4 w-4" />
                 </span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onEditVariant(variant.id)}
-                  className="gap-1.5 border-gray-300 text-gray-700 dark:border-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                  Editar variante
-                </Button>
+                <div className="min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => onEditVariant(variant.id)}
+                    title="Editar variante"
+                    className="truncate text-sm font-semibold leading-tight text-gray-900 dark:text-slate-100 hover:text-blue-700 hover:underline dark:hover:text-blue-400"
+                  >
+                    {variant.name || 'Variante sin nombre'}
+                  </button>
+                  <p className="mt-0.5 break-all text-left text-xs font-medium text-gray-500 underline-offset-2 dark:text-slate-400">
+                    {variant.sku || 'Sin SKU'}
+                  </p>
+                </div>
               </div>
-            </li>
-          ))}
-        </ul>
+            </TableCell>
+
+            {/* Precio: misma columna que la fila principal */}
+            <TableCell className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-slate-100">
+              {variant.price === null ? (
+                <span className="text-xs font-normal text-gray-400 dark:text-slate-500">—</span>
+              ) : (
+                formatCurrency(variant.price)
+              )}
+            </TableCell>
+
+            {/* Validación */}
+            <TableCell className="px-4 py-3">
+              <VariantStatus variant={variant} />
+            </TableCell>
+
+            {/* Sincronización */}
+            <TableCell className="px-4 py-3">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {health?.contifico === 'missing' ? (
+                  healthChip('Contifico eliminado', 'danger')
+                ) : health?.contifico === 'mismatch' ? (
+                  healthChip('Contifico desactualizado', 'warning')
+                ) : health?.contifico === 'inactive' ? (
+                  healthChip('Contifico inactivo', 'warning')
+                ) : variant.contificoId ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setContificoVariant(variant)}
+                    className="h-7 gap-1 border-blue-200 bg-blue-50/60 px-2 text-xs text-blue-700 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300"
+                  >
+                    <span className="text-blue-500">✓</span> Contifico
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setContificoVariant(variant)}
+                    className="h-7 gap-1 border-gray-200 px-2 text-xs text-gray-600 hover:bg-gray-50 dark:border-slate-700 dark:text-slate-300"
+                  >
+                    + Contifico
+                  </Button>
+                )}
+
+                {health?.meta === 'missing' ? (
+                  healthChip('Meta eliminado', 'danger')
+                ) : variant.metaRetailerId ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMetaVariant(variant)}
+                    className="h-7 gap-1 border-gray-200 px-2 text-xs text-gray-600 hover:bg-gray-50 dark:border-slate-700 dark:text-slate-300"
+                  >
+                    <span className="text-gray-400">✓</span> Meta
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMetaVariant(variant)}
+                    className="h-7 gap-1 border-gray-200 px-2 text-xs text-gray-600 hover:bg-gray-50 dark:border-slate-700 dark:text-slate-300"
+                  >
+                    + Meta
+                  </Button>
+                )}
+              </div>
+            </TableCell>
+
+            {/* Stock */}
+            <TableCell className="whitespace-nowrap px-4 py-3 text-xs text-gray-500 dark:text-slate-400">
+              Stock:{' '}
+              <span className="font-medium text-gray-700 dark:text-slate-200">
+                {variant.stock} uds
+              </span>
+            </TableCell>
+
+            {/* Acción */}
+            <TableCell className="px-4 py-3 text-right">
+              <button
+                type="button"
+                onClick={() => onEditVariant(variant.id)}
+                className="text-sm font-medium text-gray-600 transition-colors hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 pr-2"
+              >
+                <SquarePen className="h-4 w-4" />
+              </button>
+            </TableCell>
+          </TableRow>
+          );
+        })
       )}
-    </div>
+
+      {contificoVariant && (
+        <ContificoMappingDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) {
+              setContificoVariant(null);
+            }
+          }}
+          productId={product.id}
+          variantId={contificoVariant.id}
+          variantName={contificoVariant.name}
+          sku={contificoVariant.sku}
+          selectedContificoSku={contificoVariant.contificoSku ?? null}
+        />
+      )}
+
+      {metaVariant && (
+        <MetaMappingDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) {
+              setMetaVariant(null);
+            }
+          }}
+          productId={product.id}
+          variantId={metaVariant.id}
+          variantName={metaVariant.name}
+          sku={metaVariant.sku}
+          selectedRetailerId={metaVariant.metaRetailerId ?? null}
+        />
+      )}
+
+      <ExternalHealthDialog open={healthOpen} onOpenChange={setHealthOpen} />
+    </>
   );
 }

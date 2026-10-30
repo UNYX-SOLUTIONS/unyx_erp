@@ -26,8 +26,7 @@ import { usePermission } from '@/hooks/usePermission';
 import { getApiErrorMessage } from '@/lib/utils';
 import { getMetaCatalogItem } from '../../../api/products.api';
 import { useUpdateVariantMetaMapping } from '../../../hooks/useUpdateVariantMetaMapping';
-import { MetaCatalogPicker } from './MetaCatalogPicker';
-import type { MetaCatalogItem } from '../../../types/product.types';
+import { MetaMappingDialog } from './MetaMappingDialog';
 
 interface MetaMappingFieldProps {
   productId: string;
@@ -88,22 +87,6 @@ export function MetaMappingField({
       ? 'Mapeado (manual)'
       : 'Mapeado (auto)'
     : 'Sin mapear';
-
-  const assign = async (item: MetaCatalogItem) => {
-    const response = await updateMapping
-      .mutateAsync({
-        variantId,
-        payload: { metaRetailerId: item.retailerId },
-      })
-      .catch(() => null);
-    if (!response) {
-      return;
-    }
-    setRetailerId(response.data.metaRetailerId ?? item.retailerId);
-    setMappingLocked(response.data.metaMappingLocked ?? true);
-    setPickerOpen(false);
-    toast.success('Mapeo de Meta asignado');
-  };
 
   const confirmMappingChange = async () => {
     if (!confirmAction) {
@@ -286,35 +269,15 @@ export function MetaMappingField({
         </div>
       </FormField>
 
-      <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-xl overflow-hidden sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle>Catálogo Meta / WhatsApp</DialogTitle>
-            <DialogDescription>
-              Selecciona el ítem de Meta que corresponde a {variantName || 'esta variante'}
-              {sku ? ` (${sku})` : ''}.
-            </DialogDescription>
-          </DialogHeader>
-          <MetaCatalogPicker
-            selectedRetailerId={retailerId}
-            isSaving={isSaving}
-            onSelect={(item) => {
-              void assign(item);
-            }}
-          />
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setPickerOpen(false)}
-              disabled={isSaving}
-              className="border-gray-300 text-gray-700 dark:border-slate-700 dark:text-slate-300"
-            >
-              Cerrar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <MetaMappingDialog
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        productId={productId}
+        variantId={variantId}
+        variantName={variantName}
+        sku={sku}
+        selectedRetailerId={retailerId}
+      />
 
       <Dialog
         open={confirmAction !== null}

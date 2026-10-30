@@ -120,6 +120,26 @@ bash scripts/contifico-sync.sh --apply --prune            # reconciliación manu
 La respuesta incluye `products.{fetched,created,updated,ignored,skipped,pruned}`
 y `variants.{created,updated,skipped,deactivated}`.
 
+- `updated` es la cantidad de variantes que el sync **reescribe** (precio/stock/
+  specs/mapeo), no la cantidad de diferencias. Una corrida con `updated: 783`
+  significa que las 783 se enlazaron y se actualizaron; no que haya 783 cambios.
+- `ignored: 0` + `created: 0` significa que todo el catálogo de Contifico ya
+  existe en Altosa. No hace falta `--create-missing`.
+- `skipped` cuenta variantes que no se procesaron por duplicado/SKU inválido.
+- Verificación de mapeo persistido (Altosa):
+
+```sql
+SELECT
+  count(*) AS total,
+  count(contifico_id) AS con_contifico_id,
+  count(contifico_sku) AS con_contifico_sku
+FROM product_variants;
+```
+
+Si `con_contifico_id` es 0 después de un `--apply`, revisa que el `--apply` se
+haya ejecutado (el `--dry-run` no escribe) y que el token de Altosa sea el
+correcto.
+
 ## Endpoints
 
 ### Altosa (requieren `x-api-key`)

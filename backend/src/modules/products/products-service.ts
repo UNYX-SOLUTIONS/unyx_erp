@@ -201,7 +201,11 @@ export async function getProductById(id: string): Promise<ProductDetailDto> {
 
 export async function createProduct(
   input: CreateProductInput,
-  options: { syncExternals?: boolean; writeThroughContifico?: boolean } = {}
+  options: {
+    syncExternals?: boolean;
+    writeThroughMeta?: boolean;
+    writeThroughContifico?: boolean;
+  } = {}
 ): Promise<ProductDetailDto> {
   const companyId = await resolveCompanyId();
 
@@ -284,6 +288,7 @@ export async function createProduct(
 
   await syncLocalProductToAltosa(product.id, {
     syncExternals: options.syncExternals ?? false,
+    writeThroughMeta: options.writeThroughMeta ?? false,
     writeThroughContifico: options.writeThroughContifico ?? false,
   });
   return getProductById(product.id);
@@ -292,7 +297,7 @@ export async function createProduct(
 export async function updateProduct(
   id: string,
   input: UpdateProductInput,
-  options: { writeThroughContifico?: boolean } = {}
+  options: { writeThroughMeta?: boolean; writeThroughContifico?: boolean } = {}
 ): Promise<ProductDetailDto> {
   const companyId = await resolveCompanyId();
 
@@ -357,6 +362,7 @@ export async function updateProduct(
 
   await syncLocalProductToAltosa(product.id, {
     updateTaxonomy: taxonomyChanged,
+    writeThroughMeta: options.writeThroughMeta ?? false,
     writeThroughContifico: options.writeThroughContifico ?? false,
   });
   return getProductById(id);

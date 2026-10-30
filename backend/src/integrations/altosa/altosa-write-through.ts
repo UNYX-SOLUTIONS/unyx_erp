@@ -186,7 +186,7 @@ export async function createProduct(input: AltosaCreateProductBody): Promise<unk
     // El alta desde el ERP valida/duplica y publica la primera variante en
     // Meta/Contifico dentro de Altosa. El sync masivo de Contifico no usa
     // estos flags.
-    { syncExternals: true, writeThroughContifico: true }
+    { syncExternals: true, writeThroughMeta: true, writeThroughContifico: true }
   );
 
   const lookupSku = variants?.[0]?.sku || sku;
@@ -222,12 +222,14 @@ export async function updateProduct(
     input.sku !== undefined &&
     sku &&
     input.sku !== sku &&
-    current.variantes?.some((variant) => variant.contificoId)
+    current.variantes?.some(
+      (variant) => variant.contificoId || variant.metaRetailerId
+    )
   ) {
     throw new ApiError(
       StatusCodes.CONFLICT,
-      'El SKU de un producto con variantes mapeadas a Contifico no se puede cambiar desde el ERP. Cámbialo en Contifico o quita el mapeo primero.',
-      'CONTIFICO_PRODUCT_SKU_LOCKED'
+      'El SKU de un producto con variantes mapeadas a Contifico/Meta no se puede cambiar desde el ERP. Cámbialo en el catálogo externo o quita el mapeo primero.',
+      'EXTERNAL_PRODUCT_SKU_LOCKED'
     );
   }
 
@@ -236,44 +238,51 @@ export async function updateProduct(
     return data;
   }
 
-  await productsService.updateProduct(
-    local.id,
-    {
-      ...(input.sku !== undefined ? { sku: input.sku } : {}),
-      ...(input.nombre !== undefined ? { name: input.nombre } : {}),
-      ...(input.line !== undefined ? { line: input.line } : {}),
-      ...(input.category !== undefined ? { category: input.category } : {}),
-      ...(input.subcategory !== undefined ? { subcategory: input.subcategory } : {}),
-      ...(input.usoRecomendado !== undefined
-        ? { description: input.usoRecomendado ?? undefined }
-        : {}),
-      ...(input.descripcion !== undefined
-        ? { commercialDescription: input.descripcion ?? undefined }
-        : {}),
-      ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
-    },
-    // Las variantes ya mapeadas se actualizan en Contifico desde Altosa.
-    { writeThroughContifico: true }
-  );
-
-  // Un update explícito desde el ERP sí puede cambiar la taxonomía de Altosa.
-  await syncLocalProductToAltosa(local.id, {
-    updateTaxonomy: true,
-    writeThroughContifico: true,
+  await productsService.updateProduct(local.id, {
+    ...(input.sku !== undefined ? { sku: input.sku } : {}),
+    ...(input.nombre !== undefined ? { name: input.nombre } : {}),
+    ...(input.line !== undefined ? { line: input.line } : {}),
+    ...(input.category !== undefined ? { category: input.category } : {}),
+    ...(input.subcategory !== undefined ? { subcategory: input.subcategory } : {}),
+    ...(input.usoRecomendado !== undefined
+      ? { description: input.usoRecomendado ?? undefined }
+      : {}),
+    ...(input.descripcion !== undefined
+      ? { commercialDescription: input.descripcion ?? undefined }
+      : {}),
+    ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
   });
 
+  // Un update explícito desde el ERP sí puede cambiar la taxonomía de Altosa.
+  await syncLocalProductToAltosa(local.id, { updateTaxonomy: true });
+
   if (
+    input.nombre !== undefined ||
+    input.descripcion !== undefined ||
+    input.usoRecomendado !== undefined ||
     input.subcategoryId !== undefined ||
     input.estadoId !== undefined ||
-    input.kommoTemplateId !== undefined
+    input.kommoTemplateId !== undefined ||
+    input.isActive !== undefined
   ) {
-    await altosaService.updateProduct(altosaId, {
-      ...(input.subcategoryId !== undefined ? { subcategoryId: input.subcategoryId } : {}),
-      ...(input.estadoId !== undefined ? { estadoId: input.estadoId } : {}),
-      ...(input.kommoTemplateId !== undefined
-        ? { kommoTemplateId: input.kommoTemplateId }
-        : {}),
-    });
+    try {
+      await altosaService.updateProduct(altosaId, {
+        ...(input.nombre !== undefined ? { nombre: input.nombre } : {}),
+        ...(input.descripcion !== undefined ? { descripcion: input.descripcion } : {}),
+        ...(input.usoRecomendado !== undefined
+          ? { usoRecomendado: input.usoRecomendado }
+          : {}),
+        ...(input.subcategoryId !== undefined ? { subcategoryId: input.subcategoryId } : {}),
+        ...(input.estadoId !== undefined ? { estadoId: input.estadoId } : {}),
+        ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+        ...(input.kommoTemplateId !== undefined
+          ? { kommoTemplateId: input.kommoTemplateId }
+          : {}),
+      });
+    } catch (error) {
+      await markProductUnsynced(local.id);
+      throw error;
+    }
   }
 
   const { data } = await altosaService.getProductById(altosaId);
@@ -299,18 +308,11 @@ export async function deleteProduct(altosaId: number): Promise<unknown> {
   return data;
 }
 
-export async function deleteVariant(variantId: number, productId?: number): Promise<unknown> {
-  if (productId) {
-    const current = await getAltosaProduct(productId);
-    const index = current.variantes?.findIndex((variant) => variant.id === variantId) ?? -1;
-    if (index === 0) {
-      throw new ApiError(
-        StatusCodes.CONFLICT,
-        'No se puede eliminar la variante principal de un producto sincronizado con Contifico. Desactiva el producto en su lugar.',
-        'CONTIFICO_PRIMARY_VARIANT_LOCKED'
-      );
-    }
-  }
+export async function deleteVariant(
+  variantId: number,
+  productId?: number
+): Promise<unknown> {
+  void productId;
 
   const { data } = await altosaService.deleteVariant(variantId);
   return data;
@@ -343,6 +345,20 @@ export async function updateVariant(
   const rawVariant =
     current?.variantes?.find((variant) => variant.id === variantId) ?? null;
   const sku = rawVariant?.sku ?? (current ? primarySku(current) : null);
+
+  if (
+    rawVariant &&
+    input.sku !== undefined &&
+    input.sku !== rawVariant.sku &&
+    (rawVariant.contificoId || rawVariant.metaRetailerId)
+  ) {
+    throw new ApiError(
+      StatusCodes.CONFLICT,
+      'El SKU de una variante mapeada a Contifico/Meta no se puede cambiar desde el ERP. Actualízalo en el catálogo externo o quita el mapeo primero.',
+      'EXTERNAL_VARIANT_SKU_LOCKED'
+    );
+  }
+
   const local = sku ? await findLocalProductBySku(sku) : null;
   const localVariant = local?.variants.find(
     (variant) => variant.sku === (rawVariant?.sku ?? sku)
@@ -363,7 +379,11 @@ export async function updateVariant(
 
   let data: unknown;
   try {
-    ({ data } = await altosaService.updateVariant(variantId, input));
+    ({ data } = await altosaService.updateVariant(variantId, {
+      ...input,
+      writeThroughMeta: true,
+      writeThroughContifico: true,
+    }));
   } catch (error) {
     // El update local ya se aplicó; marcamos el producto para que el sync
     // idempotente de Contifico/Altosa lo reintente y no quede deriva silenciosa.

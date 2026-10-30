@@ -117,6 +117,7 @@ export async function syncLocalProductToAltosa(
     updateTaxonomy?: boolean;
     matchByName?: boolean;
     syncExternals?: boolean;
+    writeThroughMeta?: boolean;
     writeThroughContifico?: boolean;
   } = {}
 ): Promise<boolean> {
@@ -141,6 +142,7 @@ export async function syncLocalProductToAltosa(
           {
             matchByName: options.matchByName ?? false,
             syncExternals: options.syncExternals ?? false,
+            writeThroughMeta: options.writeThroughMeta ?? false,
             writeThroughContifico: options.writeThroughContifico ?? false,
           }
         ),

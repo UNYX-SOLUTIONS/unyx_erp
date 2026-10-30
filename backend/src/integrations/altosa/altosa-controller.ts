@@ -10,14 +10,19 @@ import type {
   AltosaActiveQuery,
   AltosaCreateProductBody,
   AltosaDocumentsQuery,
+  AltosaExternalHealthQuery,
   AltosaExternalImportItem,
   AltosaExternalPendingQuery,
+  AltosaExternalRepairBody,
   AltosaMetaCatalogItemQuery,
   AltosaMetaCatalogSearchQuery,
   AltosaProductsQuery,
   AltosaUpdateProductBody,
   AltosaUpdateVariantBody,
   AltosaVariantBody,
+  AltosaWarrantiesQuery,
+  AltosaWarrantyCreateBody,
+  AltosaWarrantyUpdateBody,
 } from './altosa-schema';
 
 export const listProducts = asyncHandler(async (req: Request, res: Response) => {
@@ -54,8 +59,28 @@ export const listLocations = asyncHandler(async (req: Request, res: Response) =>
 });
 
 export const listWarranties = asyncHandler(async (req: Request, res: Response) => {
-  const query = req.query as unknown as AltosaActiveQuery;
+  const query = req.query as unknown as AltosaWarrantiesQuery;
   const { data } = await altosaService.listWarranties(query);
+  sendSuccess(res, data);
+});
+
+export const createWarranty = asyncHandler(async (req: Request, res: Response) => {
+  const input = req.body as AltosaWarrantyCreateBody;
+  const { data } = await altosaService.createWarranty(input);
+  sendSuccess(res, data, undefined, StatusCodes.CREATED);
+});
+
+export const updateWarranty = asyncHandler(async (req: Request, res: Response) => {
+  const input = req.body as AltosaWarrantyUpdateBody;
+  const { data } = await altosaService.updateWarranty(
+    Number(req.params.id),
+    input
+  );
+  sendSuccess(res, data);
+});
+
+export const deleteWarranty = asyncHandler(async (req: Request, res: Response) => {
+  const { data } = await altosaService.deleteWarranty(Number(req.params.id));
   sendSuccess(res, data);
 });
 
@@ -91,7 +116,8 @@ export const createVariant = asyncHandler(async (req: Request, res: Response) =>
   const { data } = await altosaService.createVariant(Number(req.params.id), {
     ...input,
     // Una variante nueva del ERP se crea también como producto plano en
-    // Contifico (si está configurado). La lógica vive en Altosa.
+    // Contifico y, si aplica, se publica en Meta. La lógica vive en Altosa.
+    writeThroughMeta: true,
     writeThroughContifico: true,
   });
   sendSuccess(res, data, undefined, StatusCodes.CREATED);
@@ -151,3 +177,17 @@ export const importExternalItems = asyncHandler(async (req: Request, res: Respon
   const data = await altosaExternalService.importExternalItems(items);
   sendSuccess(res, data, undefined, StatusCodes.CREATED);
 });
+
+export const getExternalHealth = asyncHandler(async (req: Request, res: Response) => {
+  const query = req.query as unknown as AltosaExternalHealthQuery;
+  const data = await altosaExternalService.getExternalHealth(query);
+  sendSuccess(res, data);
+});
+
+export const repairExternalMapping = asyncHandler(
+  async (req: Request, res: Response) => {
+    const input = req.body as AltosaExternalRepairBody;
+    const data = await altosaExternalService.repairExternalMapping(input);
+    sendSuccess(res, data);
+  }
+);

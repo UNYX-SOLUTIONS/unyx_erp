@@ -38,8 +38,26 @@ export const altosaActiveQuerySchema = z.object({
     .transform((value) => value === 'true'),
 });
 
+export const altosaWarrantiesQuerySchema = z.object({
+  active: z
+    .enum(['all', 'true', 'false'])
+    .default('all')
+    .transform((value) => (value === 'all' ? undefined : value === 'true')),
+});
+
 const optionalUrl = z.string().trim().url().max(500).optional().or(z.literal(''));
 const optionalExternalUrl = z.string().trim().max(1000).nullable().optional();
+
+export const altosaWarrantyCreateBodySchema = z.object({
+  meses: z.number().int().min(0).max(1200).nullable().optional(),
+  especial: z.string().trim().max(2000).nullable().optional(),
+  observaciones: z.string().trim().max(4000).nullable().optional(),
+  fuenteUrl: optionalUrl.nullable().optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const altosaWarrantyUpdateBodySchema =
+  altosaWarrantyCreateBodySchema.partial();
 
 export const altosaVariantBodySchema = z.object({
   sku: z.string().trim().max(80).optional(),
@@ -66,7 +84,7 @@ export const altosaVariantBodySchema = z.object({
   alturaAsientoCm: z.string().trim().max(50).optional(),
   anchoAsientoCm: z.coerce.number().min(0).max(100000).optional(),
   pesoKg: z.coerce.number().min(0).max(100000).optional(),
-  garantiaId: z.coerce.number().int().positive().optional(),
+  garantiaId: z.coerce.number().int().positive().nullable().optional(),
   catalogoId: z.coerce.number().int().positive().optional(),
   estadoId: z.coerce.number().int().positive().max(32767).optional(),
   kommoTemplateId: z.string().trim().min(1).max(80).nullable().optional(),
@@ -74,6 +92,7 @@ export const altosaVariantBodySchema = z.object({
   metaMappingLocked: z.boolean().optional(),
   contificoId: z.string().trim().max(100).nullable().optional(),
   contificoSku: z.string().trim().max(120).nullable().optional(),
+  writeThroughMeta: z.boolean().optional(),
   writeThroughContifico: z.boolean().optional(),
 });
 
@@ -149,6 +168,7 @@ export const altosaSyncProductSchema = z.object({
 export const altosaSyncProductsBodySchema = z.object({
   items: z.array(altosaSyncProductSchema).min(1).max(100),
   syncExternals: z.boolean().optional().default(false),
+  writeThroughMeta: z.boolean().optional().default(false),
   writeThroughContifico: z.boolean().optional().default(false),
 });
 
@@ -181,10 +201,25 @@ export const altosaExternalImportBodySchema = z.object({
   items: z.array(altosaExternalImportItemSchema).min(1).max(100),
 });
 
+export const altosaExternalHealthQuerySchema = z.object({
+  refresh: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+});
+
+export const altosaExternalRepairBodySchema = z.object({
+  variantId: z.coerce.number().int().positive(),
+  source: z.enum(['meta', 'contifico']),
+  action: z.enum(['republish', 'recreate', 'reactivate', 'unmap']),
+});
+
 export type AltosaSyncVariant = z.infer<typeof altosaSyncVariantSchema>;
 export type AltosaSyncProduct = z.infer<typeof altosaSyncProductSchema>;
 export type AltosaExternalPendingQuery = z.infer<typeof altosaExternalPendingQuerySchema>;
 export type AltosaExternalImportItem = z.infer<typeof altosaExternalImportItemSchema>;
+export type AltosaExternalHealthQuery = z.infer<typeof altosaExternalHealthQuerySchema>;
+export type AltosaExternalRepairBody = z.infer<typeof altosaExternalRepairBodySchema>;
 
 export type AltosaVariantBody = z.infer<typeof altosaVariantBodySchema>;
 export type AltosaUpdateVariantBody = z.infer<typeof altosaUpdateVariantBodySchema>;
@@ -194,5 +229,8 @@ export type AltosaUpdateProductBody = z.infer<typeof altosaUpdateProductBodySche
 export type AltosaProductsQuery = z.infer<typeof altosaProductsQuerySchema>;
 export type AltosaDocumentsQuery = z.infer<typeof altosaDocumentsQuerySchema>;
 export type AltosaActiveQuery = z.infer<typeof altosaActiveQuerySchema>;
+export type AltosaWarrantiesQuery = z.infer<typeof altosaWarrantiesQuerySchema>;
+export type AltosaWarrantyCreateBody = z.infer<typeof altosaWarrantyCreateBodySchema>;
+export type AltosaWarrantyUpdateBody = z.infer<typeof altosaWarrantyUpdateBodySchema>;
 export type AltosaMetaCatalogSearchQuery = z.infer<typeof altosaMetaCatalogSearchQuerySchema>;
 export type AltosaMetaCatalogItemQuery = z.infer<typeof altosaMetaCatalogItemQuerySchema>;

@@ -23,9 +23,7 @@ import { useUpdateProduct } from '../../hooks/useUpdateProduct';
 import { useUpdateVariant } from '../../hooks/useUpdateVariant';
 import { useProductDetailStore } from '../../stores/product-detail-store';
 import { GeneralTab } from './tabs/GeneralTab';
-import { SpecificationsTab } from './tabs/SpecificationsTab';
 import { VariantsTab } from './tabs/VariantsTab';
-import { WarrantyTab } from './tabs/WarrantyTab';
 import { ProductDetailFooter } from './ProductDetailFooter';
 import { ProductDetailHeader } from './ProductDetailHeader';
 import { ProductDetailTabs, type DetailTab } from './ProductDetailTabs';
@@ -150,6 +148,7 @@ export function ProductDetailSheet() {
           description: variant.description || undefined,
           imageUrl: variant.imageUrl ?? '',
           kommoTemplateId: variant.kommoTemplateId ?? null,
+          garantiaId: variant.garantiaId ?? null,
         };
 
         if (!variant.id) {
@@ -247,8 +246,6 @@ export function ProductDetailSheet() {
                     focusVariantId={focusVariantId}
                   />
                 )}
-                {activeTab === 'specifications' && <SpecificationsTab />}
-                {activeTab === 'warranty' && <WarrantyTab />}
               </div>
               <ProductDetailFooter
                 lastUpdate={{ label: formatLastUpdate(product.updatedAt) }}
