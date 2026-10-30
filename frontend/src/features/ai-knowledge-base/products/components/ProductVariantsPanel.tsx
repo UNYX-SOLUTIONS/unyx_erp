@@ -75,38 +75,43 @@ export function ProductVariantsPanel({ product, onEditVariant }: ProductVariants
               <div
                 key={variant.id}
                 className={cn(
-                  'grid grid-cols-[minmax(120px,0.9fr)_minmax(170px,1.4fr)_78px_92px_120px_auto_92px_58px] items-center gap-3 px-4 py-3',
+                  // Cambiamos px-4 por pl-6 pr-4 para dar más espacio a la izquierda
+                  'grid grid-cols-[minmax(220px,1.5fr)_78px_92px_120px_auto_92px_58px] items-center gap-3 pl-6 pr-4 py-3',
                   index % 2 === 0
                     ? 'bg-slate-50/80 dark:bg-slate-900/50'
                     : 'bg-white dark:bg-slate-900',
                   'border-b border-gray-100 dark:border-slate-800/60'
                 )}
               >
-                {/* Imagen de la variante */}
-                <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-md bg-gray-100 dark:bg-slate-800">
-                  {variant.imageUrl ? (
-                    <Image
-                      src={variant.imageUrl}
-                      alt={variant.name}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <PackageOpen className="h-4 w-4 text-gray-400 dark:text-slate-500" />
-                  )}
-                </div>
-                {/* Nombre y SKU de la Variante*/}
-                <div className="flex min-w-0 items-center gap-2 flex-col">
-                  <p className="min-w-0 text-sm font-semibold leading-tight text-gray-900 dark:text-slate-100">
-                    {variant.name}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => onEditVariant(variant.id)}
-                    title="Editar variante"
-                    className="break-all text-left text-xs font-medium text-gray-600 underline-offset-2 hover:text-blue-700 hover:underline dark:text-slate-300 dark:hover:text-blue-400"
-                  >
-                    {variant.sku || 'Sin SKU'}
-                  </button>
+                {/* Columna 1: Imagen + Nombre + SKU juntos */}
+                <div className="flex items-center gap-3 min-w-0">
+                  {/* Imagen */}
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-gray-100 dark:bg-slate-800">
+                    {variant.imageUrl ? (
+                      <Image
+                        src={variant.imageUrl}
+                        alt={variant.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <PackageOpen className="h-4 w-4 text-gray-400 dark:text-slate-500" />
+                    )}
+                  </div>
+                  
+                  {/* Textos */}
+                  <div className="flex flex-col min-w-0">
+                    <p className="truncate text-sm font-semibold leading-tight text-gray-900 dark:text-slate-100">
+                      {variant.name}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => onEditVariant(variant.id)}
+                      title="Editar variante"
+                      className="truncate text-left text-xs font-medium text-gray-600 underline-offset-2 hover:text-blue-700 hover:underline dark:text-slate-300 dark:hover:text-blue-400 mt-0.5"
+                    >
+                      {variant.sku || 'Sin SKU'}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Precio */}
