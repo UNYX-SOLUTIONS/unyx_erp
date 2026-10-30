@@ -1,15 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { Edit3, Package, PackageOpen, SquarePen } from 'lucide-react';
+import { AlertTriangle, Package, PackageOpen, SquarePen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type { Product, VariantDto } from '../types/product.types';
+import { useExternalHealth } from '../hooks/useExternalHealth';
 import { ContificoMappingDialog } from './detail/sections/ContificoMappingDialog';
 import { MetaMappingDialog } from './detail/sections/MetaMappingDialog';
+import { ExternalHealthDialog } from './ExternalHealthDialog';
 
 interface ProductVariantsPanelProps {
   product: Product;
@@ -60,6 +62,33 @@ export function ProductVariantsPanel({ product, onEditVariant }: ProductVariants
   const variants = product.variantDetails;
   const [contificoVariant, setContificoVariant] = useState<VariantDto | null>(null);
   const [metaVariant, setMetaVariant] = useState<VariantDto | null>(null);
+  const [healthOpen, setHealthOpen] = useState(false);
+  const healthQuery = useExternalHealth();
+  const healthByVariant = new Map(
+    (healthQuery.data?.data.items ?? []).map((item) => [
+      String(item.variantId),
+      item,
+    ])
+  );
+
+  const healthChip = (
+    label: string,
+    tone: 'danger' | 'warning'
+  ) => (
+    <button
+      type="button"
+      onClick={() => setHealthOpen(true)}
+      title="Ver y reparar mapeos externos"
+      className={
+        tone === 'danger'
+          ? 'inline-flex h-7 items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2 text-xs font-medium text-rose-700 hover:bg-rose-100 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300'
+          : 'inline-flex h-7 items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300'
+      }
+    >
+      <AlertTriangle className="h-3.5 w-3.5" />
+      {label}
+    </button>
+  );
 
   return (
     <>
@@ -76,7 +105,9 @@ export function ProductVariantsPanel({ product, onEditVariant }: ProductVariants
           </TableCell>
         </TableRow>
       ) : (
-        variants.map((variant, index) => (
+        variants.map((variant, index) => {
+          const health = healthByVariant.get(variant.id);
+          return (
           <TableRow
             key={variant.id}
             className={cn(
@@ -126,7 +157,13 @@ export function ProductVariantsPanel({ product, onEditVariant }: ProductVariants
             {/* Sincronización */}
             <TableCell className="px-4 py-3">
               <div className="flex flex-wrap items-center gap-1.5">
-                {variant.contificoId ? (
+                {health?.contifico === 'missing' ? (
+                  healthChip('Contifico eliminado', 'danger')
+                ) : health?.contifico === 'mismatch' ? (
+                  healthChip('Contifico desactualizado', 'warning')
+                ) : health?.contifico === 'inactive' ? (
+                  healthChip('Contifico inactivo', 'warning')
+                ) : variant.contificoId ? (
                   <Button
                     variant="outline"
                     size="sm"
@@ -146,7 +183,9 @@ export function ProductVariantsPanel({ product, onEditVariant }: ProductVariants
                   </Button>
                 )}
 
-                {variant.metaRetailerId ? (
+                {health?.meta === 'missing' ? (
+                  healthChip('Meta eliminado', 'danger')
+                ) : variant.metaRetailerId ? (
                   <Button
                     variant="outline"
                     size="sm"
@@ -187,7 +226,8 @@ export function ProductVariantsPanel({ product, onEditVariant }: ProductVariants
               </button>
             </TableCell>
           </TableRow>
-        ))
+          );
+        })
       )}
 
       {contificoVariant && (
@@ -221,6 +261,8 @@ export function ProductVariantsPanel({ product, onEditVariant }: ProductVariants
           selectedRetailerId={metaVariant.metaRetailerId ?? null}
         />
       )}
+
+      <ExternalHealthDialog open={healthOpen} onOpenChange={setHealthOpen} />
     </>
   );
 }

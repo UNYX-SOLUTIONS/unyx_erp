@@ -190,6 +190,53 @@ export interface ContificoCatalogItem {
   isActive: boolean;
 }
 
+export type ExternalHealthStatus =
+  | 'ok'
+  | 'inactive'
+  | 'missing'
+  | 'mismatch'
+  | 'unmapped'
+  | 'unknown';
+
+export interface ExternalHealthItem {
+  variantId: number;
+  productId: number;
+  productName: string;
+  variantName: string | null;
+  sku: string | null;
+  contifico: ExternalHealthStatus;
+  meta: ExternalHealthStatus;
+  contificoId: string | null;
+  metaRetailerId: string | null;
+}
+
+export interface ExternalHealthResult {
+  checkedAt: string;
+  counts: {
+    contificoMissing: number;
+    contificoInactive: number;
+    contificoMismatch: number;
+    metaMissing: number;
+    totalIssues: number;
+    warnings: number;
+  };
+  items: ExternalHealthItem[];
+  warnings: string[];
+}
+
+export type ExternalRepairSource = 'meta' | 'contifico';
+export type ExternalRepairAction =
+  | 'republish'
+  | 'recreate'
+  | 'reactivate'
+  | 'unmap';
+
+export interface ExternalRepairInput {
+  variantId: number;
+  source: ExternalRepairSource;
+  action: ExternalRepairAction;
+}
+
 export interface CreateProductPayload {
   sku: string;
   name: string;

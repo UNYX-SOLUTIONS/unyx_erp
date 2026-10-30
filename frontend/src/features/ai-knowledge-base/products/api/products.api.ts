@@ -10,9 +10,11 @@ import type {
   CreateProductPayload,
   CreateVariantPayload,
   ContificoCatalogItem,
+  ExternalHealthResult,
   ExternalImportResult,
   ExternalPendingItem,
   ExternalPendingResult,
+  ExternalRepairInput,
   ExternalSource,
   KommoTemplateDto,
   MetaCatalogItem,
@@ -389,6 +391,30 @@ export async function importExternalItems(
     `${BASE}/external/import`,
     { items },
     { timeout: 120_000 }
+  );
+  return response.data;
+}
+
+export async function getExternalHealth(params?: {
+  refresh?: boolean;
+}): Promise<ApiResponse<ExternalHealthResult>> {
+  const response = await apiClient.get<ApiResponse<ExternalHealthResult>>(
+    `${BASE}/external/health`,
+    {
+      params: { refresh: params?.refresh ? 'true' : 'false' },
+      timeout: 150_000,
+    }
+  );
+  return response.data;
+}
+
+export async function repairExternalMapping(
+  input: ExternalRepairInput
+): Promise<ApiResponse<Record<string, unknown>>> {
+  const response = await apiClient.post<ApiResponse<Record<string, unknown>>>(
+    `${BASE}/external/repair`,
+    input,
+    { timeout: 60_000 }
   );
   return response.data;
 }

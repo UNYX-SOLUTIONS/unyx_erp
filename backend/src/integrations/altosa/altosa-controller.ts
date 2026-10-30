@@ -10,8 +10,10 @@ import type {
   AltosaActiveQuery,
   AltosaCreateProductBody,
   AltosaDocumentsQuery,
+  AltosaExternalHealthQuery,
   AltosaExternalImportItem,
   AltosaExternalPendingQuery,
+  AltosaExternalRepairBody,
   AltosaMetaCatalogItemQuery,
   AltosaMetaCatalogSearchQuery,
   AltosaProductsQuery,
@@ -175,3 +177,17 @@ export const importExternalItems = asyncHandler(async (req: Request, res: Respon
   const data = await altosaExternalService.importExternalItems(items);
   sendSuccess(res, data, undefined, StatusCodes.CREATED);
 });
+
+export const getExternalHealth = asyncHandler(async (req: Request, res: Response) => {
+  const query = req.query as unknown as AltosaExternalHealthQuery;
+  const data = await altosaExternalService.getExternalHealth(query);
+  sendSuccess(res, data);
+});
+
+export const repairExternalMapping = asyncHandler(
+  async (req: Request, res: Response) => {
+    const input = req.body as AltosaExternalRepairBody;
+    const data = await altosaExternalService.repairExternalMapping(input);
+    sendSuccess(res, data);
+  }
+);

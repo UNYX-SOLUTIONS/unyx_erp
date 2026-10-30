@@ -4,6 +4,7 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useProductDetailStore } from '../stores/product-detail-store';
 import { ProductDetailSheet } from './detail/ProductDetailSheet';
+import { ExternalHealthButton } from './ExternalHealthButton';
 import { ExternalSyncButton } from './ExternalSyncButton';
 import { ProductsSummaryIndicators } from './ProductsSummaryIndicators';
 import { ProductsTable } from './ProductsTable';
@@ -25,6 +26,7 @@ export function ProductsPageContent() {
         </div>
         <div className="flex flex-wrap items-center gap-4">
           <ProductsSummaryIndicators />
+          <ExternalHealthButton />
           <ExternalSyncButton />
           <Button
             onClick={openCreate}

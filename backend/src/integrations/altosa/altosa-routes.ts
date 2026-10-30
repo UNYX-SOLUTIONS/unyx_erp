@@ -10,8 +10,10 @@ import {
   altosaActiveQuerySchema,
   altosaCreateProductBodySchema,
   altosaDocumentsQuerySchema,
+  altosaExternalHealthQuerySchema,
   altosaExternalImportBodySchema,
   altosaExternalPendingQuerySchema,
+  altosaExternalRepairBodySchema,
   altosaIdParamSchema,
   altosaMetaCatalogItemQuerySchema,
   altosaMetaCatalogSearchQuerySchema,
@@ -128,6 +130,18 @@ altosaRoutes.post(
   requirePermission('products.create'),
   validate(altosaExternalImportBodySchema),
   altosaController.importExternalItems
+);
+altosaRoutes.get(
+  '/external/health',
+  requirePermission('products.read'),
+  validate(altosaExternalHealthQuerySchema, 'query'),
+  altosaController.getExternalHealth
+);
+altosaRoutes.post(
+  '/external/repair',
+  requirePermission('products.update'),
+  validate(altosaExternalRepairBodySchema),
+  altosaController.repairExternalMapping
 );
 
 altosaRoutes.get('/categories', altosaController.listCategories);

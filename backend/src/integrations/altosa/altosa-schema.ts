@@ -201,10 +201,25 @@ export const altosaExternalImportBodySchema = z.object({
   items: z.array(altosaExternalImportItemSchema).min(1).max(100),
 });
 
+export const altosaExternalHealthQuerySchema = z.object({
+  refresh: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+});
+
+export const altosaExternalRepairBodySchema = z.object({
+  variantId: z.coerce.number().int().positive(),
+  source: z.enum(['meta', 'contifico']),
+  action: z.enum(['republish', 'recreate', 'reactivate', 'unmap']),
+});
+
 export type AltosaSyncVariant = z.infer<typeof altosaSyncVariantSchema>;
 export type AltosaSyncProduct = z.infer<typeof altosaSyncProductSchema>;
 export type AltosaExternalPendingQuery = z.infer<typeof altosaExternalPendingQuerySchema>;
 export type AltosaExternalImportItem = z.infer<typeof altosaExternalImportItemSchema>;
+export type AltosaExternalHealthQuery = z.infer<typeof altosaExternalHealthQuerySchema>;
+export type AltosaExternalRepairBody = z.infer<typeof altosaExternalRepairBodySchema>;
 
 export type AltosaVariantBody = z.infer<typeof altosaVariantBodySchema>;
 export type AltosaUpdateVariantBody = z.infer<typeof altosaUpdateVariantBodySchema>;
