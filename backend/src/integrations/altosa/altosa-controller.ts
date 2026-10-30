@@ -18,6 +18,9 @@ import type {
   AltosaUpdateProductBody,
   AltosaUpdateVariantBody,
   AltosaVariantBody,
+  AltosaWarrantiesQuery,
+  AltosaWarrantyCreateBody,
+  AltosaWarrantyUpdateBody,
 } from './altosa-schema';
 
 export const listProducts = asyncHandler(async (req: Request, res: Response) => {
@@ -54,8 +57,28 @@ export const listLocations = asyncHandler(async (req: Request, res: Response) =>
 });
 
 export const listWarranties = asyncHandler(async (req: Request, res: Response) => {
-  const query = req.query as unknown as AltosaActiveQuery;
+  const query = req.query as unknown as AltosaWarrantiesQuery;
   const { data } = await altosaService.listWarranties(query);
+  sendSuccess(res, data);
+});
+
+export const createWarranty = asyncHandler(async (req: Request, res: Response) => {
+  const input = req.body as AltosaWarrantyCreateBody;
+  const { data } = await altosaService.createWarranty(input);
+  sendSuccess(res, data, undefined, StatusCodes.CREATED);
+});
+
+export const updateWarranty = asyncHandler(async (req: Request, res: Response) => {
+  const input = req.body as AltosaWarrantyUpdateBody;
+  const { data } = await altosaService.updateWarranty(
+    Number(req.params.id),
+    input
+  );
+  sendSuccess(res, data);
+});
+
+export const deleteWarranty = asyncHandler(async (req: Request, res: Response) => {
+  const { data } = await altosaService.deleteWarranty(Number(req.params.id));
   sendSuccess(res, data);
 });
 

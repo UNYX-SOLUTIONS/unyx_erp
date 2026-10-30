@@ -21,6 +21,9 @@ import {
   altosaUpdateVariantBodySchema,
   altosaVariantBodySchema,
   altosaVariantProductQuerySchema,
+  altosaWarrantiesQuerySchema,
+  altosaWarrantyCreateBodySchema,
+  altosaWarrantyUpdateBodySchema,
 } from './altosa-schema';
 
 export const altosaRoutes = Router();
@@ -140,8 +143,27 @@ altosaRoutes.get(
 );
 altosaRoutes.get(
   '/warranties',
-  validate(altosaActiveQuerySchema, 'query'),
+  validate(altosaWarrantiesQuerySchema, 'query'),
   altosaController.listWarranties
+);
+altosaRoutes.post(
+  '/warranties',
+  requirePermission('products.create'),
+  validate(altosaWarrantyCreateBodySchema),
+  altosaController.createWarranty
+);
+altosaRoutes.patch(
+  '/warranties/:id',
+  requirePermission('products.update'),
+  validate(altosaIdParamSchema, 'params'),
+  validate(altosaWarrantyUpdateBodySchema),
+  altosaController.updateWarranty
+);
+altosaRoutes.delete(
+  '/warranties/:id',
+  requirePermission('products.update'),
+  validate(altosaIdParamSchema, 'params'),
+  altosaController.deleteWarranty
 );
 altosaRoutes.get(
   '/documents',

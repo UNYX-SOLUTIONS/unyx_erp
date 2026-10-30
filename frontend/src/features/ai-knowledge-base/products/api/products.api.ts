@@ -142,6 +142,7 @@ function variantCreateBody(payload: CreateVariantPayload) {
     precioUsd: payload.price ?? undefined,
     imagenUrl: payload.imageUrl || undefined,
     kommoTemplateId: payload.kommoTemplateId ?? undefined,
+    garantiaId: payload.garantiaId ?? null,
   };
 }
 
@@ -179,6 +180,9 @@ function variantUpdateBody(payload: UpdateVariantPayload) {
   }
   if (payload.contificoSku !== undefined) {
     body.contificoSku = payload.contificoSku;
+  }
+  if (payload.garantiaId !== undefined) {
+    body.garantiaId = payload.garantiaId;
   }
   return body;
 }

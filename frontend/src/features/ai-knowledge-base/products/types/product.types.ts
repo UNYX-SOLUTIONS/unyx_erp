@@ -8,7 +8,7 @@ export type ProductSyncStatus = 'synced' | 'notSynced';
 
 export type ProductLine = string;
 
-export type ProductDetailTab = 'general' | 'variants' | 'specifications' | 'warranty';
+export type ProductDetailTab = 'general' | 'variants';
 
 export interface ProductVariantInfo {
   count: number;
@@ -53,6 +53,7 @@ export interface VariantDto {
   metaMappingLocked?: boolean;
   contificoId?: string | null;
   contificoSku?: string | null;
+  garantiaId?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -128,6 +129,7 @@ export interface CreateVariantPayload {
   isActive?: boolean;
   sortOrder?: number;
   kommoTemplateId?: string | null;
+  garantiaId?: number | null;
 }
 
 export type UpdateVariantPayload = Partial<CreateVariantPayload> & {

@@ -22,6 +22,7 @@ export const variantSchema = z.object({
   imageUrl: z.string().trim().optional().or(z.literal('')),
   isActive: z.boolean(),
   kommoTemplateId: z.string().nullable().optional(),
+  garantiaId: z.number().int().positive().nullable().optional(),
 });
 
 export const variantsSchema = z.object({

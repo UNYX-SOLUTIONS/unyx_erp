@@ -238,47 +238,51 @@ export async function updateProduct(
     return data;
   }
 
-  await productsService.updateProduct(
-    local.id,
-    {
-      ...(input.sku !== undefined ? { sku: input.sku } : {}),
-      ...(input.nombre !== undefined ? { name: input.nombre } : {}),
-      ...(input.line !== undefined ? { line: input.line } : {}),
-      ...(input.category !== undefined ? { category: input.category } : {}),
-      ...(input.subcategory !== undefined ? { subcategory: input.subcategory } : {}),
-      ...(input.usoRecomendado !== undefined
-        ? { description: input.usoRecomendado ?? undefined }
-        : {}),
-      ...(input.descripcion !== undefined
-        ? { commercialDescription: input.descripcion ?? undefined }
-        : {}),
-      ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
-    },
-    // Las variantes ya mapeadas se actualizan en Meta y Contifico desde Altosa.
-    { writeThroughMeta: true, writeThroughContifico: true }
-  );
-
-  // Un update explícito desde el ERP sí puede cambiar la taxonomía de Altosa.
-  await syncLocalProductToAltosa(local.id, {
-    updateTaxonomy: true,
-    writeThroughMeta: true,
-    writeThroughContifico: true,
+  await productsService.updateProduct(local.id, {
+    ...(input.sku !== undefined ? { sku: input.sku } : {}),
+    ...(input.nombre !== undefined ? { name: input.nombre } : {}),
+    ...(input.line !== undefined ? { line: input.line } : {}),
+    ...(input.category !== undefined ? { category: input.category } : {}),
+    ...(input.subcategory !== undefined ? { subcategory: input.subcategory } : {}),
+    ...(input.usoRecomendado !== undefined
+      ? { description: input.usoRecomendado ?? undefined }
+      : {}),
+    ...(input.descripcion !== undefined
+      ? { commercialDescription: input.descripcion ?? undefined }
+      : {}),
+    ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
   });
 
+  // Un update explícito desde el ERP sí puede cambiar la taxonomía de Altosa.
+  await syncLocalProductToAltosa(local.id, { updateTaxonomy: true });
+
   if (
+    input.nombre !== undefined ||
+    input.descripcion !== undefined ||
+    input.usoRecomendado !== undefined ||
     input.subcategoryId !== undefined ||
     input.estadoId !== undefined ||
     input.kommoTemplateId !== undefined ||
     input.isActive !== undefined
   ) {
-    await altosaService.updateProduct(altosaId, {
-      ...(input.subcategoryId !== undefined ? { subcategoryId: input.subcategoryId } : {}),
-      ...(input.estadoId !== undefined ? { estadoId: input.estadoId } : {}),
-      ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
-      ...(input.kommoTemplateId !== undefined
-        ? { kommoTemplateId: input.kommoTemplateId }
-        : {}),
-    });
+    try {
+      await altosaService.updateProduct(altosaId, {
+        ...(input.nombre !== undefined ? { nombre: input.nombre } : {}),
+        ...(input.descripcion !== undefined ? { descripcion: input.descripcion } : {}),
+        ...(input.usoRecomendado !== undefined
+          ? { usoRecomendado: input.usoRecomendado }
+          : {}),
+        ...(input.subcategoryId !== undefined ? { subcategoryId: input.subcategoryId } : {}),
+        ...(input.estadoId !== undefined ? { estadoId: input.estadoId } : {}),
+        ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+        ...(input.kommoTemplateId !== undefined
+          ? { kommoTemplateId: input.kommoTemplateId }
+          : {}),
+      });
+    } catch (error) {
+      await markProductUnsynced(local.id);
+      throw error;
+    }
   }
 
   const { data } = await altosaService.getProductById(altosaId);

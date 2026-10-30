@@ -50,6 +50,7 @@ export function VariantsTab({
       imageUrl: '',
       isActive: true,
       kommoTemplateId: null,
+      garantiaId: null,
     });
     setAutoOpenIndex(nextIndex);
   };

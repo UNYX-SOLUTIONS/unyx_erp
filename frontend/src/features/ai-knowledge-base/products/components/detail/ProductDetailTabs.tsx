@@ -1,7 +1,7 @@
 'use client';
 
 import type { LucideIcon } from 'lucide-react';
-import { CircleDot, ShieldCheck, SlidersHorizontal, Tags } from 'lucide-react';
+import { CircleDot, Tags } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ProductDetailTab } from '../../types/product.types';
 
@@ -16,8 +16,6 @@ interface TabConfig {
 const TABS: TabConfig[] = [
   { id: 'general', label: 'General', icon: CircleDot },
   { id: 'variants', label: 'Variantes y precios', icon: Tags },
-  { id: 'specifications', label: 'Especificaciones', icon: SlidersHorizontal },
-  { id: 'warranty', label: 'Fuente y garantía', icon: ShieldCheck },
 ];
 
 interface ProductDetailTabsProps {

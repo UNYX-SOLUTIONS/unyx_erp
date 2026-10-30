@@ -23,6 +23,8 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { useUploadVariantImage } from '../../../hooks/useUploadVariantImage';
+import { useWarranties } from '../../../../warranties/hooks/useWarranties';
+import { warrantyLabel } from '../../../../warranties/lib/warranty-label';
 import { compressImage } from '../../../lib/compress-image';
 import { ColorInput } from '../ColorInput';
 import { CurrencyInput } from '../CurrencyInput';
@@ -74,6 +76,7 @@ export function VariantCard({
   const cardRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadImage = useUploadVariantImage();
+  const warrantiesQuery = useWarranties('all');
 
   // Estado local para manejar el acordeón (abierto/cerrado)
   const [isOpen, setIsOpen] = useState(defaultOpen ?? (index === 0 || isFocused));
@@ -279,16 +282,56 @@ export function VariantCard({
               />
             </FormField>
 
-            {/* Sección especial de Garantía (Visual de la imagen) */}
-            <div className="sm:col-span-2 mt-2 rounded-lg border border-gray-200 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/50 p-4">
-               <div className="flex items-center gap-2 mb-3">
-                  <ShieldCheck className="h-4 w-4 text-blue-600" />
-                  <h5 className="text-xs font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wide">Garantía específica de la variante</h5>
-                  <span className="ml-auto text-xs text-gray-500">Aplicable al asistente IA y cotizaciones</span>
-               </div>
-               {/* Aquí irían tus inputs de garantía, los simulo con un texto informativo si no los tienes en el form */}
-               <p className="text-xs text-gray-500">Configuración de garantía (pendiente de mapear en el formulario).</p>
-            </div>
+            {/* Sección especial de Garantía */}
+            <FormField
+              label="Garantía"
+              htmlFor={`variant-${index}-warranty`}
+              className="sm:col-span-2"
+              error={errors?.garantiaId?.message}
+            >
+              <div className="relative">
+                <ShieldCheck className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-600" />
+                <Controller
+                  control={control}
+                  name={`variants.${index}.garantiaId`}
+                  render={({ field }) => (
+                    <select
+                      id={`variant-${index}-warranty`}
+                      value={field.value ?? ''}
+                      onChange={(event) =>
+                        field.onChange(
+                          event.target.value ? Number(event.target.value) : null
+                        )
+                      }
+                      onBlur={field.onBlur}
+                      disabled={isBusy}
+                      className={`${detailInputClassName} appearance-none pl-9 pr-9`}
+                    >
+                      <option value="">Sin garantía</option>
+                      {(warrantiesQuery.data?.data ?? []).map((warranty) => (
+                        <option
+                          key={warranty.id}
+                          value={warranty.id}
+                          disabled={
+                            !warranty.isActive &&
+                            Number(field.value) !== warranty.id
+                          }
+                        >
+                          {warrantyLabel(warranty)}
+                          {warranty.isActive ? '' : ' (inactiva)'}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                />
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              </div>
+              {warrantiesQuery.isError && (
+                <p className="text-xs text-amber-600">
+                  No se pudieron cargar las garantías.
+                </p>
+              )}
+            </FormField>
 
             {/* Integraciones (Kommo, Meta, Contifico) */}
             <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2 pt-4 border-t border-gray-100 dark:border-slate-800">

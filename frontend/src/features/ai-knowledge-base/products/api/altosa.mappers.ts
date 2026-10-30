@@ -155,6 +155,7 @@ export function mapAltosaVariant(
     metaMappingLocked: variante.metaMappingLocked ?? false,
     contificoId: variante.contificoId ?? null,
     contificoSku: variante.contificoSku ?? null,
+    garantiaId: variante.garantia?.id ?? null,
     createdAt: updatedAt,
     updatedAt,
   };
