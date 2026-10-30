@@ -126,7 +126,7 @@ export function ProductsTable() {
             setExpandedProductId((current) => (current === product.id ? null : product.id))
           }
           expandedRowId={expandedProductId}
-          renderExpandedRow={(product) => (
+          renderExpandedRows={(product) => (
             <ProductVariantsPanel
               product={product}
               onEditVariant={(variantId) =>
