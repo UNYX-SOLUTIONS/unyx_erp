@@ -39,6 +39,7 @@ export interface AltosaVariantDto {
   estructura: string | null;
   usoRecomendado: string | null;
   especificacionesAdicionales: string | null;
+  especificaciones?: { stock?: number | string; [key: string]: unknown } | null;
   apilable: string | null;
   proteccionUv: string | null;
   resistenciaIntemperie: string | null;
@@ -136,6 +137,8 @@ export function mapAltosaVariant(
   index: number
 ): VariantDto {
   const updatedAt = variante.updatedAt;
+  const rawStock = variante.especificaciones?.stock;
+  const stock = typeof rawStock === 'number' ? rawStock : Number(rawStock ?? 0) || 0;
   return {
     id: String(variante.id),
     productId,
@@ -144,7 +147,7 @@ export function mapAltosaVariant(
     color: variante.color,
     colorHex: null,
     price: variante.precioUsd,
-    stock: 0,
+    stock,
     imageUrl: variante.imagenUrl,
     description: variante.descripcion,
     isActive: variante.isActive,
