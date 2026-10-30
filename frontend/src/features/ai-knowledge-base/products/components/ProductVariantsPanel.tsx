@@ -76,7 +76,7 @@ export function ProductVariantsPanel({ product, onEditVariant }: ProductVariants
                 key={variant.id}
                 className={cn(
                   // Cambiamos px-4 por pl-6 pr-4 para dar más espacio a la izquierda
-                  'grid grid-cols-[minmax(220px,1.5fr)_78px_92px_120px_auto_92px_58px] items-center gap-3 pl-6 pr-4 py-3',
+                  'grid grid-cols-[minmax(220px,1.5fr)_78px_92px_120px_auto_92px_58px] items-center gap-3 pl-16 pr-4 py-3',
                   index % 2 === 0
                     ? 'bg-slate-50/80 dark:bg-slate-900/50'
                     : 'bg-white dark:bg-slate-900',
