@@ -8,7 +8,10 @@ const nextConfig = {
     remotePatterns: [
       { protocol: 'http', hostname: 'localhost' },
       { protocol: 'https', hostname: '**.unyxsolutions.com' },
+      { protocol: 'https', hostname: 'unyxsolutions.com' },
       { protocol: 'https', hostname: '**.altosamobiliario.com' },
+      { protocol: 'https', hostname: 'altosamobiliario.com' },
+      { protocol: 'https', hostname: 'api.altosamobiliario.com' },
     ],
   },
   async rewrites() {
