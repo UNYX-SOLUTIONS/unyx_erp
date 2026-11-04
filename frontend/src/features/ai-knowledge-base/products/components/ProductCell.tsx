@@ -21,7 +21,16 @@ export function ProductCell({ product }: { product: Product }) {
         </span>
       )}
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-gray-900 dark:text-slate-100">{product.name}</p>
+        <div className="flex min-w-0 items-center gap-2">
+          <p className="min-w-0 flex-1 truncate text-sm font-medium text-gray-900 dark:text-slate-100">
+            {product.name}
+          </p>
+          {product.isActive === false ? (
+            <span className="shrink-0 rounded border border-gray-200 bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
+              Inactivo
+            </span>
+          ) : null}
+        </div>
         <p className="mt-0.5 text-xs text-gray-500 dark:text-slate-400">{product.sku}</p>
         <p className="mt-0.5 text-xs text-blue-600">{product.line}</p>
       </div>

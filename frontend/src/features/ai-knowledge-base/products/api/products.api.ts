@@ -49,13 +49,19 @@ function buildMeta(page: number, limit: number, total: number) {
   };
 }
 
-async function fetchAllProducts(): Promise<AltosaProductDto[]> {
+export async function fetchAllProducts(): Promise<AltosaProductDto[]> {
   const all: AltosaProductDto[] = [];
   let page = 1;
 
   for (;;) {
     const response = await apiClient.get<ApiResponse<AltosaProductDto[]>>(`${BASE}/products`, {
-      params: { page, pageSize: PAGE_SIZE, withVariants: 'true', active: 'true' },
+      params: {
+        page,
+        pageSize: PAGE_SIZE,
+        withVariants: 'true',
+        active: 'all',
+        includeInactiveVariants: 'true',
+      },
     });
 
     all.push(...response.data.data);
@@ -116,9 +122,12 @@ function toProductDetail(dto: AltosaProductDto): ProductDetailDto {
   };
 }
 
-export async function listProducts(params: ProductListParams): Promise<ApiResponse<ProductDto[]>> {
-  const products = (await fetchAllProducts()).map(mapAltosaProduct);
-  const filtered = products.filter((product) => matchesFilters(product, params));
+export function buildProductListResponse(
+  products: AltosaProductDto[],
+  params: ProductListParams
+): ApiResponse<ProductDto[]> {
+  const mapped = products.map(mapAltosaProduct);
+  const filtered = mapped.filter((product) => matchesFilters(product, params));
 
   const page = params.page ?? 1;
   const limit = params.limit ?? 20;
@@ -129,6 +138,10 @@ export async function listProducts(params: ProductListParams): Promise<ApiRespon
     data: filtered.slice(start, start + limit),
     meta: buildMeta(page, limit, filtered.length),
   };
+}
+
+export async function listProducts(params: ProductListParams): Promise<ApiResponse<ProductDto[]>> {
+  return buildProductListResponse(await fetchAllProducts(), params);
 }
 
 export async function getProductById(id: string): Promise<ApiResponse<ProductDetailDto>> {

@@ -32,6 +32,7 @@ interface DataTableProps<TData> {
   getRowId?: (row: TData) => string;
   expandedRowId?: string | null;
   renderExpandedRows?: (row: TData) => React.ReactNode;
+  getRowClassName?: (row: TData) => string | undefined;
   isLoading?: boolean;
   skeletonRows?: number;
   emptyState?: React.ReactNode;
@@ -49,6 +50,7 @@ export function DataTable<TData>({
   getRowId,
   expandedRowId,
   renderExpandedRows,
+  getRowClassName,
   isLoading = false,
   skeletonRows = 8,
   emptyState,
@@ -114,7 +116,8 @@ export function DataTable<TData>({
                       'group border-gray-100 dark:border-slate-800 transition-colors hover:bg-gray-50 dark:hover:bg-slate-800/50',
                       onRowClick && 'cursor-pointer',
                       isExpanded && 'bg-gray-50/70 dark:bg-slate-800/40',
-                      isSelected && 'border-l-2 border-l-blue-600 bg-blue-50/50 hover:bg-blue-50/50'
+                      isSelected && 'border-l-2 border-l-blue-600 bg-blue-50/50 hover:bg-blue-50/50',
+                      getRowClassName?.(row.original)
                     )}
                   >
                     {row.getVisibleCells().map((cell) => (

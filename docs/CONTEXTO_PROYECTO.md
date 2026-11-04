@@ -231,7 +231,7 @@ Reglas actuales:
 - Las variantes nuevas creadas por el reconciliador Meta quedan inactivas.
 - Los productos nuevos creados desde Meta quedan inactivos bajo la categoría `Meta` / `Catálogo Meta`.
 
-La lista actual del ERP filtra `active=true`, por lo que los 816 productos inactivos no se ven. Falta una vista/filtro de inactivos/pendientes para revisarlos y aprobarlos.
+La lista del ERP usa `active=all`: muestra activos e inactivos. Los inactivos se ven con fila atenuada en gris y badge `Inactivo`; sus variantes inactivas también se muestran atenuadas con badge `Inactiva`. Queda pendiente un filtro explícito activos/inactivos si se necesita.
 
 ---
 
@@ -539,7 +539,7 @@ POST   /api/v1/integrations/kommo/sync-templates
 
 Notas de UI:
 
-- La lista de productos filtra `active=true`.
+- La lista de productos usa `active=all` y muestra activos e inactivos; los inactivos se atenúan en gris.
 - La variante tiene sección “Catálogo Meta / WhatsApp”.
 - El botón “Agregar variante” crea un borrador local; el POST real ocurre al guardar.
 - Las variantes nuevas desde la UI se crean en Altosa; no en Contifico/Meta.
@@ -640,7 +640,7 @@ Contexto:
 - Meta se mapea en product_variants.meta_retailer_id. El token de Meta vive solo en Altosa.
 - Contifico y Meta todavía no tienen write-through completo desde el ERP.
 - Hay 417 variantes mapeadas de 452 items Meta; quedan 33 casos.
-- Hay 816 productos inactivos y la lista actual solo muestra activos.
+- Hay 816 productos inactivos; la lista ya los muestra atenuados en gris para revisión/aprobación.
 
 Objetivo de esta tarea:
 [describir la tarea concreta, por ejemplo: agregar filtro de inactivos, flujo de aprobación, mejorar sección Meta, etc.]
