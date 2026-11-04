@@ -61,6 +61,7 @@ export const altosaWarrantyUpdateBodySchema =
 
 export const altosaVariantBodySchema = z.object({
   sku: z.string().trim().max(80).optional(),
+  nombre: z.string().trim().min(1).max(300).optional(),
   color: z.string().trim().max(80).optional(),
   descripcion: z.string().trim().max(2000).optional(),
   precioUsd: z.coerce.number().min(0).max(1_000_000).optional(),
@@ -143,6 +144,7 @@ export const altosaVariantProductQuerySchema = z.object({
 
 export const altosaSyncVariantSchema = z.object({
   sku: z.string().trim().min(1).max(80),
+  nombre: z.string().trim().min(1).max(300).nullable().optional(),
   color: z.string().trim().max(80).nullable().optional(),
   descripcion: z.string().trim().max(2000).nullable().optional(),
   precioUsd: z.number().min(0).max(1_000_000).nullable().optional(),

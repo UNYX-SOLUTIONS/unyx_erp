@@ -197,11 +197,11 @@ export function VariantCard({
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             
             {/* Fila 1: Nombre y SKU (Ocultos en el form si ya están en el header, pero editables aquí) */}
-            <FormField label="NOMBRE DE VARIANTE" required htmlFor={`variant-${index}-name`} error={errors?.name?.message}>
+            <FormField label="NOMBRE COMPLETO DE LA VARIANTE" required htmlFor={`variant-${index}-name`} error={errors?.name?.message}>
               <input
                 id={`variant-${index}-name`}
                 className={detailInputClassName}
-                placeholder="Ej: Tapiz Blanco"
+                placeholder="Ej: Silla Sandy Gris"
                 {...register(`variants.${index}.name`)}
               />
             </FormField>

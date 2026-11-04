@@ -61,7 +61,8 @@ export function buildAltosaPayloadFromLocal(
               : null);
           return {
             sku: variant.sku,
-            color: variant.name,
+            nombre: variant.name,
+            color: variant.color ?? variant.name,
             descripcion: variant.description,
             precioUsd: variant.price === null ? null : Number(variant.price),
             imagenUrl: variant.imageUrl,
@@ -78,6 +79,7 @@ export function buildAltosaPayloadFromLocal(
       : [
           {
             sku: product.sku,
+            nombre: product.name,
             color: 'Estándar',
             descripcion: product.description,
             precioUsd: null,

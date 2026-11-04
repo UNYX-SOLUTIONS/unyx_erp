@@ -18,6 +18,8 @@ import type {
 interface AltosaVariantRaw {
   id: number;
   sku: string | null;
+  nombre?: string | null;
+  color?: string | null;
   metaRetailerId?: string | null;
   metaMappingLocked?: boolean | null;
   contificoId?: string | null;
@@ -153,7 +155,7 @@ function mapVariantCreate(
   }
   return variants.map((variant, index) => ({
     ...(variant.sku ? { sku: variant.sku } : {}),
-    name: variant.color || variant.sku || `Variante ${index + 1}`,
+    name: variant.nombre || variant.color || variant.sku || `Variante ${index + 1}`,
     color: variant.color,
     price: variant.precioUsd ?? null,
     stock: 0,
@@ -366,7 +368,12 @@ export async function updateVariant(
 
   const localUpdate = {
     ...(input.sku !== undefined ? { sku: input.sku } : {}),
-    ...(input.color !== undefined ? { name: input.color, color: input.color } : {}),
+    ...(input.nombre !== undefined
+      ? { name: input.nombre }
+      : input.color !== undefined
+        ? { name: input.color }
+        : {}),
+    ...(input.color !== undefined ? { color: input.color } : {}),
     ...(input.descripcion !== undefined ? { description: input.descripcion } : {}),
     ...(input.precioUsd !== undefined ? { price: input.precioUsd } : {}),
     ...(input.imagenUrl !== undefined ? { imageUrl: input.imagenUrl } : {}),

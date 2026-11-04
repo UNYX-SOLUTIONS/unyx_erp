@@ -130,7 +130,7 @@ También contiene `kb_products`/`kb_product_variants` como **staging técnico** 
 
 ### Altosa
 
-La API de Altosa es el backend del catálogo. PostgreSQL Altosa es la **base de conocimiento de todos los productos y variantes**: producto, variante, color, SKU, precio, imágenes, `meta_retailer_id`, plantillas Kommo y datos relacionados.
+La API de Altosa es el backend del catálogo. PostgreSQL Altosa es la **base de conocimiento de todos los productos y variantes**: producto, variante, `nombre` completo de variante, color, SKU, precio, imágenes, `meta_retailer_id`, plantillas Kommo y datos relacionados.
 
 ### Contifico
 
@@ -341,6 +341,7 @@ product_variants
   descripcion
   url_producto
   sku
+  nombre
   color
   precio_usd
   material
@@ -356,6 +357,8 @@ product_variants
   meta_mapping_locked
   created_at / updated_at
 ```
+
+`nombre` es el nombre completo visible de la variante (`producto + color/atributo`; para `Estándar` o sin color, el nombre del producto). El ERP lo usa para mostrar la fila de variante; `color` queda como atributo de color/mapeo. Las 1.200 variantes existentes se llenan con `backfill:variant-names` y las altas nuevas lo generan automáticamente.
 
 `meta_retailer_id` está en la variante porque el item de Meta representa una combinación producto + color.
 
@@ -465,6 +468,16 @@ docker compose --env-file .env.production -f docker-compose.prod.yml \
   exec -T unyx-backend node dist/scripts/backfill-altosa-mappings.js
 ```
 
+### Backfill de nombre de variante
+
+```text
+scripts/backfill-variant-names.sh              # dry-run + reporte CSV
+scripts/backfill-variant-names.sh --apply      # llena solo nombres vacíos
+scripts/backfill-variant-names.sh --force --apply  # regenera todos
+```
+
+Regla: `producto + color/atributo`; si el color es `Estándar` o no existe, usa el nombre del producto. Para variantes sin color de productos con varias variantes usa el slug de `url_producto` como nombre real (`/producto/base-redonda-eco/` → `Base Redonda Eco`, `/producto/base-cruz-corta/` → `Base Cruz Corta`); si no hay URL, usa los fallbacks de material/dimensión. Si dos variantes del mismo producto quedan con el mismo nombre, se agrega el SKU. El deploy (`update.sh`) lo ejecuta automáticamente con `--apply`; es idempotente y no sobreescribe nombres existentes.
+
 ### Reset de Altosa
 
 Backup aprobado:
@@ -479,7 +492,7 @@ Script:
 scripts/reset-altosa-db.sh
 ```
 
-Restaura la misma base `altosa` con 110 productos / 241 variantes activas, aplica Meta/Kommo, reinicia secuencias y verifica conteos. El backup tiene secuencias en 1; el script ya las corrige. No usar `prisma migrate`.
+Restaura la misma base `altosa` con 110 productos / 241 variantes activas, aplica Meta/Kommo/Nombre de variante, reinicia secuencias y verifica conteos. El backup tiene secuencias en 1; el script ya las corrige. No usar `prisma migrate`.
 
 ---
 
