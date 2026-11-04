@@ -29,6 +29,7 @@ export interface AltosaCatalogoDto {
 export interface AltosaVariantDto {
   id: number;
   sku: string | null;
+  nombre?: string | null;
   color: string | null;
   descripcion: string | null;
   precioUsd: number | null;
@@ -126,6 +127,7 @@ function buildKeywords(product: AltosaProductDto): string[] {
   add(product.subcategoria.nombre);
   add(product.usoRecomendado);
   for (const variante of product.variantes ?? []) {
+    add(variante.nombre);
     add(variante.color);
   }
   return Array.from(parts);
@@ -143,7 +145,10 @@ export function mapAltosaVariant(
     id: String(variante.id),
     productId,
     sku: variante.sku ?? `ALT-${productId}-V${index + 1}`,
-    name: variante.color?.trim() || `Variante ${index + 1}`,
+    name:
+      variante.nombre?.trim() ||
+      variante.color?.trim() ||
+      `Variante ${index + 1}`,
     color: variante.color,
     colorHex: null,
     price: variante.precioUsd,

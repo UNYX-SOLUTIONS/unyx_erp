@@ -139,7 +139,8 @@ export async function getProductById(id: string): Promise<ApiResponse<ProductDet
 function variantCreateBody(payload: CreateVariantPayload) {
   return {
     sku: payload.sku || undefined,
-    color: payload.color || payload.name || undefined,
+    nombre: payload.name.trim() || undefined,
+    color: payload.color?.trim() || undefined,
     descripcion: payload.description || undefined,
     precioUsd: payload.price ?? undefined,
     imagenUrl: payload.imageUrl || undefined,
@@ -153,8 +154,11 @@ function variantUpdateBody(payload: UpdateVariantPayload) {
   if (payload.sku !== undefined) {
     body.sku = payload.sku || undefined;
   }
-  if (payload.color !== undefined || payload.name !== undefined) {
-    body.color = payload.color || payload.name || undefined;
+  if (payload.name !== undefined) {
+    body.nombre = payload.name.trim() || undefined;
+  }
+  if (payload.color !== undefined) {
+    body.color = payload.color.trim() || undefined;
   }
   if (payload.description !== undefined) {
     body.descripcion = payload.description || undefined;

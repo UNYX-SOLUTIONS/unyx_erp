@@ -37,14 +37,13 @@ export function VariantsTab({
   const isBusy = addVariant.isPending || updateVariant.isPending || deleteVariant.isPending;
 
   const handleAdd = () => {
-    const nextNumber = fields.length + 1;
     const nextIndex = fields.length;
     variantsArray.append({
       id: '',
-      name: `Variante ${nextNumber}`,
+      name: product.name,
       sku: '',
       color: '#9CA3AF',
-      colorLabel: `Variante ${nextNumber}`,
+      colorLabel: '',
       price: 0,
       description: '',
       imageUrl: '',

@@ -47,7 +47,7 @@ function buildVariantsDefaults(product: ProductDetailDto): VariantsFormValues {
       name: variant.name,
       sku: variant.sku,
       color: variant.colorHex ?? '#9CA3AF',
-      colorLabel: variant.color ?? variant.name,
+      colorLabel: variant.color ?? '',
       price: variant.price ?? 0,
       description: variant.description ?? '',
       imageUrl: variant.imageUrl ?? '',
