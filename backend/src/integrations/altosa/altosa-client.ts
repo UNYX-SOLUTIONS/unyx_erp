@@ -106,6 +106,60 @@ export async function altosaGet<T>(
   return altosaRequest<T>('GET', path, { query, ...options });
 }
 
+/**
+ * Igual que altosaGet, pero para respuestas de texto/CSV (feed de Meta).
+ */
+export async function altosaGetText(
+  path: string,
+  query?: Record<string, string | number | boolean | undefined>,
+  options?: { timeoutMs?: number }
+): Promise<string> {
+  const apiKey = requireApiKey();
+  const url = new URL(path, env.ALTOSA_API_URL);
+  if (query) {
+    for (const [key, value] of Object.entries(query)) {
+      if (value !== undefined && value !== '') {
+        url.searchParams.set(key, String(value));
+      }
+    }
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), options?.timeoutMs ?? 30_000);
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'x-api-key': apiKey },
+      signal: controller.signal,
+    });
+    const text = await response.text();
+    if (!response.ok) {
+      let message = `El API de Altosa respondió con estado ${response.status}.`;
+      try {
+        const body = JSON.parse(text) as { message?: string };
+        message = body.message ?? message;
+      } catch {
+        // Respuesta no JSON; se usa el mensaje genérico.
+      }
+      throw new ApiError(
+        response.status === 401 || response.status === 503 ? response.status : 502,
+        message,
+        'ALTOSA_FEED_ERROR'
+      );
+    }
+    return text;
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new ApiError(504, 'Tiempo de espera agotado consultando el feed de Altosa.', 'ALTOSA_TIMEOUT');
+    }
+    throw new ApiError(502, 'No se pudo conectar con el feed de Altosa.', 'ALTOSA_UNREACHABLE');
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export interface AltosaUploadFile {
   buffer: Buffer;
   originalname: string;

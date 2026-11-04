@@ -6,6 +6,7 @@ import { useProductDetailStore } from '../stores/product-detail-store';
 import { ProductDetailSheet } from './detail/ProductDetailSheet';
 import { ExternalHealthButton } from './ExternalHealthButton';
 import { ExternalSyncButton } from './ExternalSyncButton';
+import { MetaFeedDownloadButton } from './MetaFeedDownloadButton';
 import { ProductsSummaryIndicators } from './ProductsSummaryIndicators';
 import { ProductsTable } from './ProductsTable';
 
@@ -28,6 +29,7 @@ export function ProductsPageContent() {
           <ProductsSummaryIndicators />
           <ExternalHealthButton />
           <ExternalSyncButton />
+          <MetaFeedDownloadButton />
           <Button
             onClick={openCreate}
             className="gap-1.5 bg-blue-600 text-white hover:bg-blue-700"

@@ -115,6 +115,10 @@ export const altosaMetaCatalogItemQuerySchema = z.object({
   retailerId: z.string().trim().min(1).max(100),
 });
 
+export const altosaMetaFeedQuerySchema = z.object({
+  scope: z.enum(['published', 'meta', 'active', 'all']).default('published'),
+});
+
 export const altosaCreateProductBodySchema = z.object({
   sku: z.string().trim().min(1).max(80).optional(),
   nombre: z.string().trim().min(1).max(200),
@@ -241,3 +245,4 @@ export type AltosaWarrantyCreateBody = z.infer<typeof altosaWarrantyCreateBodySc
 export type AltosaWarrantyUpdateBody = z.infer<typeof altosaWarrantyUpdateBodySchema>;
 export type AltosaMetaCatalogSearchQuery = z.infer<typeof altosaMetaCatalogSearchQuerySchema>;
 export type AltosaMetaCatalogItemQuery = z.infer<typeof altosaMetaCatalogItemQuerySchema>;
+export type AltosaMetaFeedQuery = z.infer<typeof altosaMetaFeedQuerySchema>;

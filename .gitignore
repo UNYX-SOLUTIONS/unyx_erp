@@ -18,3 +18,5 @@ coverage/
 .vscode/
 .idea/
 prisma/migrations/dev.db*
+data/woocommerce-reconcile*.csv
+data/woocommerce-reconcile*.json

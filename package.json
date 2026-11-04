@@ -22,6 +22,7 @@
     "db:migrate": "pnpm --filter backend prisma:migrate",
     "db:seed": "pnpm --filter backend prisma:seed",
     "db:studio": "pnpm --filter backend prisma:studio",
+    "woo:reconcile": "node scripts/woocommerce-reconcile.mjs",
     "clean": "rimraf node_modules backend/node_modules frontend/node_modules backend/dist frontend/.next"
   },
   "devDependencies": {
