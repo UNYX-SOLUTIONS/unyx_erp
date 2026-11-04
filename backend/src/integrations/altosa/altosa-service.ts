@@ -21,8 +21,9 @@ export async function listProducts(query: AltosaProductsQuery) {
     search: query.search,
     categoryId: query.categoryId,
     subcategoryId: query.subcategoryId,
-    active: true,
+    active: query.active,
     withVariants: query.withVariants,
+    includeInactiveVariants: query.includeInactiveVariants ? 'true' : 'false',
   });
 }
 

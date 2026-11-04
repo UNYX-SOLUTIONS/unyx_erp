@@ -1,13 +1,21 @@
 'use client';
 
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { listProducts } from '../api/products.api';
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { buildProductListResponse, fetchAllProducts } from '../api/products.api';
 import type { ProductListParams } from '../types/product.types';
 
 export function useProducts(params: ProductListParams) {
-  return useQuery({
-    queryKey: ['products', params],
-    queryFn: () => listProducts(params),
-    placeholderData: keepPreviousData,
+  const query = useQuery({
+    queryKey: ['products', 'all'],
+    queryFn: fetchAllProducts,
+    staleTime: 30_000,
   });
+
+  const data = useMemo(
+    () => (query.data ? buildProductListResponse(query.data, params) : undefined),
+    [query.data, params]
+  );
+
+  return { ...query, data };
 }

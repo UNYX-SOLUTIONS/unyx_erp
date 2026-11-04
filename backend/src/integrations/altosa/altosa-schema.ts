@@ -14,7 +14,12 @@ export const altosaProductsQuerySchema = z.object({
   search: z.string().trim().max(120).optional(),
   categoryId: z.coerce.number().int().positive().optional(),
   subcategoryId: z.coerce.number().int().positive().optional(),
+  active: z.enum(['all', 'true', 'false']).default('all'),
   withVariants: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+  includeInactiveVariants: z
     .enum(['true', 'false'])
     .default('false')
     .transform((value) => value === 'true'),

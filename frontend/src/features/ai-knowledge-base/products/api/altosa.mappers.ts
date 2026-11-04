@@ -171,7 +171,9 @@ export function mapAltosaVariant(
 
 export function mapAltosaProduct(product: AltosaProductDto): ProductDto {
   const variantes = product.variantes ?? [];
-  const precios = variantes
+  const activeVariants = variantes.filter((variante) => variante.isActive);
+  const pricingVariants = activeVariants.length > 0 ? activeVariants : variantes;
+  const precios = pricingVariants
     .map((variante) => variante.precioUsd)
     .filter((precio): precio is number => precio !== null);
 
@@ -197,8 +199,8 @@ export function mapAltosaProduct(product: AltosaProductDto): ProductDto {
     isActive: product.isActive,
     variantCount: variantes.length,
     price: precios.length > 0 ? Math.min(...precios) : null,
-    priceFrom: variantes.length > 1,
-    primaryColor: variantes[0]?.color ?? null,
+    priceFrom: pricingVariants.length > 1,
+    primaryColor: pricingVariants[0]?.color ?? null,
     variants: variantes.map((variante, index) =>
       mapAltosaVariant(variante, String(product.id), index)
     ),

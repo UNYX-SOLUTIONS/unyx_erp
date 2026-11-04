@@ -26,6 +26,7 @@ export interface Product {
   sku: string;
   line: string;
   thumbnailUrl?: string | null;
+  isActive?: boolean;
   variants: ProductVariantInfo;
   variantDetails: VariantDto[];
   price: number | null;

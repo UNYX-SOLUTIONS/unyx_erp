@@ -136,6 +136,11 @@ export function ProductsTable() {
           )}
           selectedRowId={isDetailOpen ? (openedProductId ?? undefined) : undefined}
           getRowId={(product) => product.id}
+          getRowClassName={(product) =>
+            product.isActive === false
+              ? 'opacity-60 grayscale bg-gray-50/60 dark:bg-slate-900/40'
+              : undefined
+          }
           emptyState={
             <DataTableEmptyState
               icon={Package}

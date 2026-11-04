@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { AlertTriangle, Package, PackageOpen, SquarePen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -112,7 +113,9 @@ export function ProductVariantsPanel({ product, onEditVariant }: ProductVariants
             key={variant.id}
             className={cn(
               'border-b border-gray-100 hover:bg-transparent dark:border-slate-800/60',
-              index % 2 === 0 ? 'bg-slate-50/80 dark:bg-slate-900/50' : 'bg-white dark:bg-slate-900'
+              index % 2 === 0 ? 'bg-slate-50/80 dark:bg-slate-900/50' : 'bg-white dark:bg-slate-900',
+              (product.isActive === false || !variant.isActive) &&
+                'opacity-60 grayscale bg-gray-50/70 dark:bg-slate-900/40'
             )}
           >
             {/* Variante: ocupa Producto + Variantes para alinear el precio */}
@@ -121,9 +124,20 @@ export function ProductVariantsPanel({ product, onEditVariant }: ProductVariants
               className="border-l-2 border-l-blue-500/60 px-4 py-3 pl-16" // <-- pl-16 agregado
             >
               <div className="flex min-w-0 items-center gap-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-gray-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500">
-                  <Package className="h-4 w-4" />
-                </span>
+                {variant.imageUrl ? (
+                  <Image
+                    src={variant.imageUrl}
+                    alt={variant.name}
+                    width={36}
+                    height={36}
+                    sizes="36px"
+                    className="h-9 w-9 shrink-0 rounded-md border border-gray-200 object-cover dark:border-slate-700"
+                  />
+                ) : (
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-gray-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500">
+                    <Package className="h-4 w-4" />
+                  </span>
+                )}
                 <div className="min-w-0">
                   <button
                     type="button"
