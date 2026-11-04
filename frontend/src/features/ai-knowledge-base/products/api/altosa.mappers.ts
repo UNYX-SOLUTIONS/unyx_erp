@@ -185,7 +185,9 @@ export function mapAltosaProduct(product: AltosaProductDto): ProductDto {
     description: product.usoRecomendado,
     commercialDescription: product.descripcion,
     keywords: buildKeywords(product),
-    thumbnailUrl: variantes[0]?.imagenUrl ?? null,
+    thumbnailUrl:
+      variantes.find((variante) => Boolean(variante.imagenUrl?.trim()))
+        ?.imagenUrl ?? null,
     sourceUrl: variantes[0]?.urlProducto ?? null,
     validation: aggregateValidation([
       product.estado?.estado,
