@@ -108,14 +108,27 @@ export function ProductVariantsPanel({ product, onEditVariant }: ProductVariants
       ) : (
         variants.map((variant, index) => {
           const health = healthByVariant.get(variant.id);
+          const stockSource = !variant.contificoId
+            ? 'Local / sin mapeo'
+            : health?.contifico === 'missing'
+              ? 'Contifico (no encontrado)'
+              : health?.contifico === 'inactive'
+                ? 'Contifico (inactivo)'
+                : health?.contifico === 'mismatch'
+                  ? 'Contifico (desactualizado)'
+                  : 'Contifico';
+          const stockSourceClass = !variant.contificoId
+            ? 'text-gray-400 dark:text-slate-500'
+            : health?.contifico && health.contifico !== 'ok'
+              ? 'text-amber-600 dark:text-amber-400'
+              : 'text-blue-600 dark:text-blue-400';
           return (
           <TableRow
             key={variant.id}
             className={cn(
               'border-b border-gray-100 hover:bg-transparent dark:border-slate-800/60',
               index % 2 === 0 ? 'bg-slate-50/80 dark:bg-slate-900/50' : 'bg-white dark:bg-slate-900',
-              (product.isActive === false || !variant.isActive) &&
-                'opacity-60 grayscale bg-gray-50/70 dark:bg-slate-900/40'
+              !variant.isActive && 'bg-slate-100/70 dark:bg-slate-900/50'
             )}
           >
             {/* Variante: ocupa Producto + Variantes para alinear el precio */}
@@ -172,7 +185,7 @@ export function ProductVariantsPanel({ product, onEditVariant }: ProductVariants
             <TableCell className="px-4 py-3">
               <div className="flex flex-wrap items-center gap-1.5">
                 {health?.contifico === 'missing' ? (
-                  healthChip('Contifico eliminado', 'danger')
+                  healthChip('Contifico no encontrado', 'warning')
                 ) : health?.contifico === 'mismatch' ? (
                   healthChip('Contifico desactualizado', 'warning')
                 ) : health?.contifico === 'inactive' ? (
@@ -223,10 +236,27 @@ export function ProductVariantsPanel({ product, onEditVariant }: ProductVariants
 
             {/* Stock */}
             <TableCell className="whitespace-nowrap px-4 py-3 text-xs text-gray-500 dark:text-slate-400">
-              Stock:{' '}
-              <span className="font-medium text-gray-700 dark:text-slate-200">
-                {variant.stock} uds
-              </span>
+              <div className="flex flex-col">
+                <span>
+                  Stock:{' '}
+                  <span className="font-medium text-gray-700 dark:text-slate-200">
+                    {variant.stock} uds
+                  </span>
+                </span>
+                <span
+                  className={cn(
+                    'text-[10px] font-medium uppercase tracking-wide',
+                    stockSourceClass
+                  )}
+                  title={
+                    variant.contificoId
+                      ? 'Stock sincronizado desde Contifico'
+                      : 'Stock local de Altosa; la variante no está mapeada a Contifico'
+                  }
+                >
+                  {stockSource}
+                </span>
+              </div>
             </TableCell>
 
             {/* Acción */}

@@ -77,6 +77,13 @@ export async function fetchAllProducts(): Promise<AltosaProductDto[]> {
 }
 
 function matchesFilters(product: ProductDto, params: ProductListParams): boolean {
+  const activeFilter = params.active ?? 'active';
+  if (activeFilter === 'active' && !product.isActive) {
+    return false;
+  }
+  if (activeFilter === 'inactive' && product.isActive) {
+    return false;
+  }
   if (params.validation && product.validation !== params.validation) {
     return false;
   }

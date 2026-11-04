@@ -231,7 +231,7 @@ Reglas actuales:
 - Las variantes nuevas creadas por el reconciliador Meta quedan inactivas.
 - Los productos nuevos creados desde Meta quedan inactivos bajo la categoría `Meta` / `Catálogo Meta`.
 
-La lista del ERP usa `active=all`: muestra activos e inactivos. Los inactivos se ven con fila atenuada en gris y badge `Inactivo`; sus variantes inactivas también se muestran atenuadas con badge `Inactiva`. Queda pendiente un filtro explícito activos/inactivos si se necesita.
+El ERP descarga todos los productos (`active=all`) y filtra en cliente. Por defecto el dropdown `Actividad` muestra `Activos`; el usuario puede elegir `Inactivos` o `Todos`. Los inactivos se ven con fondo suave y badge `Inactivo`, sin atenuar texto ni imágenes; sus variantes inactivas muestran badge `Inactiva`.
 
 ---
 
@@ -539,7 +539,7 @@ POST   /api/v1/integrations/kommo/sync-templates
 
 Notas de UI:
 
-- La lista de productos usa `active=all` y muestra activos e inactivos; los inactivos se atenúan en gris.
+- La lista de productos descarga `active=all` y filtra en cliente; por defecto muestra `Activos` y el dropdown `Actividad` permite `Inactivos`/`Todos`. Los inactivos usan fondo suave + badge, sin atenuar texto/imágenes.
 - La variante tiene sección “Catálogo Meta / WhatsApp”.
 - El botón “Agregar variante” crea un borrador local; el POST real ocurre al guardar.
 - Las variantes nuevas desde la UI se crean en Altosa; no en Contifico/Meta.
@@ -640,7 +640,7 @@ Contexto:
 - Meta se mapea en product_variants.meta_retailer_id. El token de Meta vive solo en Altosa.
 - Contifico y Meta todavía no tienen write-through completo desde el ERP.
 - Hay 417 variantes mapeadas de 452 items Meta; quedan 33 casos.
-- Hay 816 productos inactivos; la lista ya los muestra atenuados en gris para revisión/aprobación.
+- Hay 816 productos inactivos; se pueden revisar con el filtro `Actividad` → `Inactivos`/`Todos`, con fondo suave y badge.
 
 Objetivo de esta tarea:
 [describir la tarea concreta, por ejemplo: agregar filtro de inactivos, flujo de aprobación, mejorar sección Meta, etc.]

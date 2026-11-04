@@ -133,13 +133,32 @@ function buildKeywords(product: AltosaProductDto): string[] {
   return Array.from(parts);
 }
 
+function parseAdditionalSpecs(
+  raw: string | null | undefined
+): Record<string, unknown> {
+  if (!raw) {
+    return {};
+  }
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
 export function mapAltosaVariant(
   variante: AltosaVariantDto,
   productId: string,
   index: number
 ): VariantDto {
   const updatedAt = variante.updatedAt;
-  const rawStock = variante.especificaciones?.stock;
+  const specs =
+    variante.especificaciones ??
+    parseAdditionalSpecs(variante.especificacionesAdicionales);
+  const rawStock = specs.stock;
   const stock = typeof rawStock === 'number' ? rawStock : Number(rawStock ?? 0) || 0;
   return {
     id: String(variante.id),
@@ -173,6 +192,11 @@ export function mapAltosaProduct(product: AltosaProductDto): ProductDto {
   const variantes = product.variantes ?? [];
   const activeVariants = variantes.filter((variante) => variante.isActive);
   const pricingVariants = activeVariants.length > 0 ? activeVariants : variantes;
+  const allExternallyMapped =
+    activeVariants.length > 0 &&
+    activeVariants.every((variante) =>
+      Boolean(variante.contificoId || variante.metaRetailerId)
+    );
   const precios = pricingVariants
     .map((variante) => variante.precioUsd)
     .filter((precio): precio is number => precio !== null);
@@ -195,7 +219,7 @@ export function mapAltosaProduct(product: AltosaProductDto): ProductDto {
       product.estado?.estado,
       ...variantes.map((variante) => variante.estado?.estado),
     ]),
-    syncStatus: 'SINCRONIZADO',
+    syncStatus: allExternallyMapped ? 'SINCRONIZADO' : 'SIN_SINCRONIZAR',
     isActive: product.isActive,
     variantCount: variantes.length,
     price: precios.length > 0 ? Math.min(...precios) : null,
