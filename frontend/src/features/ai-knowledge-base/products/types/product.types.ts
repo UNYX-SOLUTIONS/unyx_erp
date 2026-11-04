@@ -117,6 +117,7 @@ export interface ProductListParams {
   validation?: KbValidationStatus;
   syncStatus?: KbSyncStatus;
   line?: string;
+  active?: 'active' | 'inactive' | 'all';
 }
 
 export interface CreateVariantPayload {

@@ -17,6 +17,7 @@ import {
   altosaIdParamSchema,
   altosaMetaCatalogItemQuerySchema,
   altosaMetaCatalogSearchQuerySchema,
+  altosaMetaFeedQuerySchema,
   altosaProductsQuerySchema,
   altosaSkuParamSchema,
   altosaUpdateProductBodySchema,
@@ -117,6 +118,12 @@ altosaRoutes.get(
   requirePermission('products.read'),
   validate(altosaMetaCatalogItemQuerySchema, 'query'),
   altosaController.getMetaCatalogItem
+);
+altosaRoutes.get(
+  '/meta-feed.csv',
+  requirePermission('products.read'),
+  validate(altosaMetaFeedQuerySchema, 'query'),
+  altosaController.downloadMetaFeed
 );
 
 altosaRoutes.get(

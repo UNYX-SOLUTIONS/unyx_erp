@@ -24,6 +24,7 @@ export function ProductsTable() {
   const [validation, setValidation] = useState(ALL);
   const [sync, setSync] = useState(ALL);
   const [line, setLine] = useState(ALL);
+  const [active, setActive] = useState('active');
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
 
@@ -36,11 +37,12 @@ export function ProductsTable() {
       page: pagination.pageIndex + 1,
       limit: pagination.pageSize,
       ...(debouncedSearch ? { search: debouncedSearch } : {}),
+      active: active as ProductListParams['active'],
       ...(validation !== ALL ? { validation: validation as ProductListParams['validation'] } : {}),
       ...(sync !== ALL ? { syncStatus: sync as ProductListParams['syncStatus'] } : {}),
       ...(line !== ALL ? { line } : {}),
     }),
-    [pagination, debouncedSearch, validation, sync, line]
+    [pagination, debouncedSearch, active, validation, sync, line]
   );
 
   const { data, isLoading, isError, isFetching, refetch } = useProducts(params);
@@ -70,6 +72,11 @@ export function ProductsTable() {
     resetPage();
   };
 
+  const handleActiveChange = (value: string) => {
+    setActive(value);
+    resetPage();
+  };
+
   if (isError) {
     return (
       <div className="space-y-4">
@@ -82,6 +89,8 @@ export function ProductsTable() {
           onSyncChange={handleSyncChange}
           line={line}
           onLineChange={handleLineChange}
+          active={active}
+          onActiveChange={handleActiveChange}
         />
         <div className="rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900">
           <DataTableEmptyState
@@ -114,6 +123,8 @@ export function ProductsTable() {
         onSyncChange={handleSyncChange}
         line={line}
         onLineChange={handleLineChange}
+        active={active}
+        onActiveChange={handleActiveChange}
       />
 
       <div>
@@ -138,7 +149,7 @@ export function ProductsTable() {
           getRowId={(product) => product.id}
           getRowClassName={(product) =>
             product.isActive === false
-              ? 'opacity-60 grayscale bg-gray-50/60 dark:bg-slate-900/40'
+              ? 'bg-slate-50/70 hover:bg-slate-100/70 dark:bg-slate-900/40 dark:hover:bg-slate-800/50'
               : undefined
           }
           emptyState={

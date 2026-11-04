@@ -1,10 +1,17 @@
-import { altosaGet, altosaRequest, altosaUpload, type AltosaUploadFile } from './altosa-client';
+import {
+  altosaGet,
+  altosaGetText,
+  altosaRequest,
+  altosaUpload,
+  type AltosaUploadFile,
+} from './altosa-client';
 import type {
   AltosaActiveQuery,
   AltosaCreateProductBody,
   AltosaDocumentsQuery,
   AltosaMetaCatalogItemQuery,
   AltosaMetaCatalogSearchQuery,
+  AltosaMetaFeedQuery,
   AltosaProductsQuery,
   AltosaUpdateProductBody,
   AltosaUpdateVariantBody,
@@ -151,5 +158,13 @@ export async function getMetaCatalogItem(query: AltosaMetaCatalogItemQuery) {
       retailerId: query.retailerId,
     },
     { timeoutMs: 30_000 }
+  );
+}
+
+export async function getMetaFeed(query: AltosaMetaFeedQuery): Promise<string> {
+  return altosaGetText(
+    '/feeds/meta-catalog.csv',
+    { scope: query.scope },
+    { timeoutMs: 60_000 }
   );
 }

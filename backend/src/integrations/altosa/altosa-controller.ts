@@ -16,6 +16,7 @@ import type {
   AltosaExternalRepairBody,
   AltosaMetaCatalogItemQuery,
   AltosaMetaCatalogSearchQuery,
+  AltosaMetaFeedQuery,
   AltosaProductsQuery,
   AltosaUpdateProductBody,
   AltosaUpdateVariantBody,
@@ -164,6 +165,19 @@ export const getMetaCatalogItem = asyncHandler(async (req: Request, res: Respons
   const query = req.query as unknown as AltosaMetaCatalogItemQuery;
   const { data } = await altosaService.getMetaCatalogItem(query);
   sendSuccess(res, data);
+});
+
+export const downloadMetaFeed = asyncHandler(async (req: Request, res: Response) => {
+  const query = req.query as unknown as AltosaMetaFeedQuery;
+  const csv = await altosaService.getMetaFeed(query);
+  res.status(StatusCodes.OK);
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader(
+    'Content-Disposition',
+    'attachment; filename="altosa-meta-catalog.csv"'
+  );
+  res.setHeader('Cache-Control', 'no-store');
+  res.send(csv);
 });
 
 export const getExternalPending = asyncHandler(async (req: Request, res: Response) => {

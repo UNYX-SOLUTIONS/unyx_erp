@@ -231,7 +231,7 @@ Reglas actuales:
 - Las variantes nuevas creadas por el reconciliador Meta quedan inactivas.
 - Los productos nuevos creados desde Meta quedan inactivos bajo la categoría `Meta` / `Catálogo Meta`.
 
-La lista del ERP usa `active=all`: muestra activos e inactivos. Los inactivos se ven con fila atenuada en gris y badge `Inactivo`; sus variantes inactivas también se muestran atenuadas con badge `Inactiva`. Queda pendiente un filtro explícito activos/inactivos si se necesita.
+El ERP descarga todos los productos (`active=all`) y filtra en cliente. Por defecto el dropdown `Actividad` muestra `Activos`; el usuario puede elegir `Inactivos` o `Todos`. Los inactivos se ven con fondo suave y badge `Inactivo`, sin atenuar texto ni imágenes; sus variantes inactivas muestran badge `Inactiva`.
 
 ---
 
@@ -478,6 +478,35 @@ scripts/backfill-variant-names.sh --force --apply  # regenera todos
 
 Regla: `producto + color/atributo`; si el color es `Estándar` o no existe, usa el nombre del producto. Para variantes sin color de productos con varias variantes usa el slug de `url_producto` como nombre real (`/producto/base-redonda-eco/` → `Base Redonda Eco`, `/producto/base-cruz-corta/` → `Base Cruz Corta`); si no hay URL, usa los fallbacks de material/dimensión. Si dos variantes del mismo producto quedan con el mismo nombre, se agrega el SKU. El deploy (`update.sh`) lo ejecuta automáticamente con `--apply`; es idempotente y no sobreescribe nombres existentes.
 
+### Feed CSV para Meta (Commerce Manager)
+
+Altosa expone un feed CSV de solo lectura para que Meta lo use como origen de datos:
+
+- URL: `https://api.altosamobiliario.com/feeds/meta-catalog.csv`
+- Auth: Basic Auth con `META_FEED_USER` / `META_FEED_PASSWORD` del `.env` de Altosa. El BFF del ERP también puede leerlo con `x-api-key`.
+- Scopes: `published` (default: `meta_retailer_id` o variantes activas), `meta`, `active`, `all`.
+- Columnas: las de `meta_plantilla_catalogo.csv` (id, title, description, availability, condition, price, link, image_link, brand, etc.).
+- El ERP tiene el botón **Descargar CSV Meta** (BFF `/api/v1/integrations/altosa/meta-feed.csv?scope=published`) para revisar el archivo antes de conectarlo.
+
+Configuración en el VPS:
+
+```bash
+cd /docker/altosa_infrastructure
+printf '\nMETA_FEED_USER=altosa-meta\nMETA_FEED_PASSWORD=%s\n' "$(openssl rand -base64 36)" >> .env
+sudo bash update.sh --api-only
+grep -E '^META_FEED_(USER|PASSWORD)=' .env
+```
+
+En Commerce Manager: elige **Utiliza una URL**, pega la URL, usuario y contraseña. Primero usa **Actualiza tu lista de datos** para validar; luego **Reemplaza tu lista de datos** si quieres que Meta elimine los ítems que ya no estén en el feed.
+
+### Reconciliación WooCommerce
+
+`scripts/woocommerce-reconcile.mjs` cruza `woo_commerce/productos_woocommerce.json` contra Altosa por `WC-<id de Woo>` (`meta_retailer_id`), slug y nombre. Es dry-run por defecto; `--apply` crea los faltantes en la subcategoría **Catálogo Meta** con `meta_retailer_id`, precio, imagen, URL y stock de Woo.
+
+Resultado del 2026-11-04: 417 existentes + 31 creados con meta ID + 8 creados sin meta ID (aún no existen en Meta) + 2 duplicados existentes (Romeo Beige/Gris) = los 458 productos Woo están representados en Altosa. Los 8 sin meta ID se publican con su SKU estable `WC-<id>` y se pueden mapear cuando existan en Meta.
+
+Estado actual de Altosa: **966 productos / 1.239 variantes**, de las cuales **448 tienen `meta_retailer_id`** y **8 quedaron sin meta ID** (se publican con SKU `WC-<id>`).
+
 ### Reset de Altosa
 
 Backup aprobado:
@@ -539,7 +568,7 @@ POST   /api/v1/integrations/kommo/sync-templates
 
 Notas de UI:
 
-- La lista de productos usa `active=all` y muestra activos e inactivos; los inactivos se atenúan en gris.
+- La lista de productos descarga `active=all` y filtra en cliente; por defecto muestra `Activos` y el dropdown `Actividad` permite `Inactivos`/`Todos`. Los inactivos usan fondo suave + badge, sin atenuar texto/imágenes.
 - La variante tiene sección “Catálogo Meta / WhatsApp”.
 - El botón “Agregar variante” crea un borrador local; el POST real ocurre al guardar.
 - Las variantes nuevas desde la UI se crean en Altosa; no en Contifico/Meta.
@@ -640,7 +669,7 @@ Contexto:
 - Meta se mapea en product_variants.meta_retailer_id. El token de Meta vive solo en Altosa.
 - Contifico y Meta todavía no tienen write-through completo desde el ERP.
 - Hay 417 variantes mapeadas de 452 items Meta; quedan 33 casos.
-- Hay 816 productos inactivos; la lista ya los muestra atenuados en gris para revisión/aprobación.
+- Hay 816 productos inactivos; se pueden revisar con el filtro `Actividad` → `Inactivos`/`Todos`, con fondo suave y badge.
 
 Objetivo de esta tarea:
 [describir la tarea concreta, por ejemplo: agregar filtro de inactivos, flujo de aprobación, mejorar sección Meta, etc.]

@@ -54,7 +54,7 @@ function statusChip(
 function contificoChip(status: ExternalHealthStatus) {
   switch (status) {
     case 'missing':
-      return statusChip('Contifico eliminado', 'danger');
+      return statusChip('Contifico no encontrado', 'warning');
     case 'inactive':
       return statusChip('Contifico inactivo', 'warning');
     case 'mismatch':
@@ -168,8 +168,10 @@ export function ExternalHealthDialog({
             Salud de mapeos externos
           </DialogTitle>
           <DialogDescription>
-            Detecta variantes mapeadas a Meta o Contifico que fueron eliminadas,
-            desactivadas o cuyo ID quedó desactualizado en el catálogo externo.
+            Detecta variantes cuyo mapeo a Meta o Contifico no se pudo encontrar,
+            está inactivo o quedó desactualizado. Un producto puede no aparecer
+            porque fue eliminado, renombrado, recreado con otro ID o porque está
+            en otra empresa/API key de Contifico.
           </DialogDescription>
         </DialogHeader>
 
@@ -179,8 +181,8 @@ export function ExternalHealthDialog({
               {data.counts.totalIssues} incidencia(s)
             </span>
             {data.counts.contificoMissing > 0 && (
-              <span className="rounded-full bg-rose-50 px-2.5 py-1 font-medium text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">
-                Contifico faltantes: {data.counts.contificoMissing}
+              <span className="rounded-full bg-amber-50 px-2.5 py-1 font-medium text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
+                Contifico no encontrados: {data.counts.contificoMissing}
               </span>
             )}
             {data.counts.contificoInactive > 0 && (
@@ -263,7 +265,7 @@ export function ExternalHealthDialog({
                             item,
                             'contifico',
                             'recreate',
-                            'Actualizar mapeo Contifico'
+                            'Recrear en Contifico'
                           )}
                         {item.contifico === 'inactive' &&
                           actionButton(
