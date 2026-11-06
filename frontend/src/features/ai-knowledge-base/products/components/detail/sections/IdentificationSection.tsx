@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 import { FileText } from 'lucide-react';
 import {
@@ -10,28 +11,37 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { FormField, detailInputClassName } from '../FormField';
 import { SectionCard } from '../SectionCard';
+import { useCategories } from '../../../hooks/useCategories';
 import type { GeneralFormValues } from '../../../schemas/product-schema';
 
-const LINE_OPTIONS = [
-  'Sillas Tapizadas',
-  'Sillas de Plastico',
-  'Bases y mesas',
-  'Taburetes',
-  'Sillas de Oficina',
-  'Sillines',
-  'Mesas Auxiliares',
-  'Sillas de Espera',
-  'Sillas Ejecutivas',
-  'Sillas Operativas',
-  'Sillas Lounge',
-];
-
-export function IdentificationSection({ form }: { form: UseFormReturn<GeneralFormValues> }) {
-  const { register, control, watch, formState } = form;
+export function IdentificationSection({
+  form,
+  onToggleActive,
+}: {
+  form: UseFormReturn<GeneralFormValues>;
+  onToggleActive?: (isActive: boolean) => void | Promise<void>;
+}) {
+  const { register, control, watch, formState, setValue } = form;
+  const [confirmInactivateOpen, setConfirmInactivateOpen] = useState(false);
+  const { data: categories, isLoading: categoriesLoading } = useCategories();
+  const selectedCategoryId = watch('categoryId');
+  const selectedCategory = categories?.find(
+    (category) => category.id === selectedCategoryId
+  );
 
   return (
+    <>
     <SectionCard
       icon={FileText}
       title="Identificación del producto"
@@ -44,7 +54,14 @@ export function IdentificationSection({ form }: { form: UseFormReturn<GeneralFor
             render={({ field }) => (
               <Switch
                 checked={field.value}
-                onCheckedChange={field.onChange}
+                onCheckedChange={(value) => {
+                  if (!value) {
+                    setConfirmInactivateOpen(true);
+                    return;
+                  }
+                  field.onChange(true);
+                  void onToggleActive?.(true);
+                }}
                 aria-label="Activar o desactivar producto"
               />
             )}
@@ -84,61 +101,135 @@ export function IdentificationSection({ form }: { form: UseFormReturn<GeneralFor
           />
         </FormField>
 
-        <FormField label="Línea" required error={formState.errors.line?.message}>
-          <Controller
-            control={control}
-            name="line"
-            render={({ field }) => {
-              const options =
-                field.value && !LINE_OPTIONS.includes(field.value)
-                  ? [field.value, ...LINE_OPTIONS]
-                  : LINE_OPTIONS;
-              return (
-                <Select value={field.value || undefined} onValueChange={field.onChange}>
-                  <SelectTrigger className="h-10 border-gray-200 dark:border-slate-800">
-                    <SelectValue placeholder="Selecciona una línea" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {options.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              );
-            }}
-          />
-        </FormField>
-
         <FormField
           label="Categoría"
           required
-          htmlFor="detail-product-category"
-          error={formState.errors.category?.message}
+          error={formState.errors.categoryId?.message}
         >
-          <input
-            id="detail-product-category"
-            className={detailInputClassName}
-            placeholder="Ej: Sillas Tapizadas"
-            {...register('category')}
+          <Controller
+            control={control}
+            name="categoryId"
+            render={({ field }) => (
+              <Select
+                value={field.value ? String(field.value) : undefined}
+                onValueChange={(value) => {
+                  const id = Number(value);
+                  const category = categories?.find((item) => item.id === id);
+                  field.onChange(id);
+                  setValue('category', category?.nombre ?? '', {
+                    shouldDirty: true,
+                  });
+                  setValue('line', category?.nombre ?? '', {
+                    shouldDirty: true,
+                  });
+                  setValue('subcategoryId', 0, { shouldDirty: true });
+                  setValue('subcategory', '', { shouldDirty: true });
+                }}
+                disabled={categoriesLoading}
+              >
+                <SelectTrigger className="h-10 border-gray-200 dark:border-slate-800">
+                  <SelectValue
+                    placeholder={
+                      categoriesLoading
+                        ? 'Cargando categorías…'
+                        : 'Selecciona una categoría'
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories?.map((category) => (
+                    <SelectItem key={category.id} value={String(category.id)}>
+                      {category.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           />
         </FormField>
 
         <FormField
-          label="Subcategoría / Uso"
-          htmlFor="detail-product-subcategory"
-          className="sm:col-span-2"
-          error={formState.errors.subcategory?.message}
+          label="Subcategoría"
+          required
+          error={formState.errors.subcategoryId?.message}
         >
-          <input
-            id="detail-product-subcategory"
-            className={detailInputClassName}
-            placeholder="Ej: Interiores / Oficina ejecutiva y residencial"
-            {...register('subcategory')}
+          <Controller
+            control={control}
+            name="subcategoryId"
+            render={({ field }) => (
+              <Select
+                value={field.value ? String(field.value) : undefined}
+                onValueChange={(value) => {
+                  const id = Number(value);
+                  const subcategory = selectedCategory?.subcategorias.find(
+                    (item) => item.id === id
+                  );
+                  field.onChange(id);
+                  setValue('subcategory', subcategory?.nombre ?? '', {
+                    shouldDirty: true,
+                  });
+                }}
+                disabled={!selectedCategory}
+              >
+                <SelectTrigger className="h-10 border-gray-200 dark:border-slate-800">
+                  <SelectValue
+                    placeholder={
+                      selectedCategory
+                        ? 'Selecciona una subcategoría'
+                        : 'Primero selecciona una categoría'
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectedCategory?.subcategorias.map((subcategory) => (
+                    <SelectItem
+                      key={subcategory.id}
+                      value={String(subcategory.id)}
+                    >
+                      {subcategory.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           />
         </FormField>
       </div>
     </SectionCard>
+
+    <Dialog
+      open={confirmInactivateOpen}
+      onOpenChange={setConfirmInactivateOpen}
+    >
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Inactivar producto</DialogTitle>
+          <DialogDescription>
+            ¿Seguro que quieres inactivar este producto? Se inactivarán
+            automáticamente todas sus variantes.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setConfirmInactivateOpen(false)}
+            className="border-gray-300 text-gray-700 dark:text-slate-300"
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={() => {
+              form.setValue('isActive', false, { shouldDirty: true });
+              setConfirmInactivateOpen(false);
+              void onToggleActive?.(false);
+            }}
+            className="bg-red-600 text-white hover:bg-red-700"
+          >
+            Inactivar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

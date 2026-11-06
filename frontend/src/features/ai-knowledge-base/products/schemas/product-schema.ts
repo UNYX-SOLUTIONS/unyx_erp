@@ -3,9 +3,11 @@ import { z } from 'zod';
 export const generalSchema = z.object({
   name: z.string().trim().min(2, 'El nombre del producto es requerido'),
   sku: z.string().trim().min(2, 'El SKU es requerido'),
-  line: z.string().min(1, 'La línea es requerida'),
-  category: z.string().trim().min(2, 'La categoría es requerida'),
-  subcategory: z.string().trim().optional().or(z.literal('')),
+  categoryId: z.number().int().positive('Selecciona una categoría'),
+  subcategoryId: z.number().int().positive('Selecciona una subcategoría'),
+  line: z.string().optional().or(z.literal('')),
+  category: z.string().optional().or(z.literal('')),
+  subcategory: z.string().optional().or(z.literal('')),
   isActive: z.boolean(),
   commercialDescription: z.string().trim().max(1200).optional().or(z.literal('')),
   keywords: z.array(z.string()),
@@ -21,6 +23,7 @@ export const variantSchema = z.object({
   description: z.string().trim().optional().or(z.literal('')),
   imageUrl: z.string().trim().optional().or(z.literal('')),
   isActive: z.boolean(),
+  estadoId: z.number().int().optional(),
   kommoTemplateId: z.string().nullable().optional(),
   garantiaId: z.number().int().positive().nullable().optional(),
 });

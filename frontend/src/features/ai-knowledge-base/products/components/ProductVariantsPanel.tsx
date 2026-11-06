@@ -20,6 +20,14 @@ interface ProductVariantsPanelProps {
 }
 
 function VariantStatus({ variant }: { variant: VariantDto }) {
+  if (variant.estadoId === 3) {
+    return (
+      <StatusBadge variant="error" dot>
+        Anulada
+      </StatusBadge>
+    );
+  }
+
   if (!variant.isActive) {
     return (
       <StatusBadge variant="neutral" dot>
@@ -128,7 +136,9 @@ export function ProductVariantsPanel({ product, onEditVariant }: ProductVariants
             className={cn(
               'border-b border-gray-100 hover:bg-transparent dark:border-slate-800/60',
               index % 2 === 0 ? 'bg-slate-50/80 dark:bg-slate-900/50' : 'bg-white dark:bg-slate-900',
-              !variant.isActive && 'bg-slate-100/70 dark:bg-slate-900/50'
+              variant.estadoId === 3
+                ? 'bg-rose-50/50 dark:bg-rose-950/10'
+                : !variant.isActive && 'bg-slate-100/70 dark:bg-slate-900/50'
             )}
           >
             {/* Variante: ocupa Producto + Variantes para alinear el precio */}

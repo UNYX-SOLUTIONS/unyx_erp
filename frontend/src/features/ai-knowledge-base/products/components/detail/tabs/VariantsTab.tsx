@@ -83,10 +83,15 @@ export function VariantsTab({
       });
       return;
     }
-    updateVariant.mutate({
-      variantId: current.id,
-      payload: { isActive: !current.isActive },
+    const nextActive = !current.isActive;
+    form.setValue(`variants.${index}.isActive`, nextActive, {
+      shouldDirty: true,
     });
+    form.setValue(
+      `variants.${index}.estadoId`,
+      nextActive ? 1 : current.estadoId === 3 ? 3 : 2,
+      { shouldDirty: true }
+    );
   };
 
   return (

@@ -25,7 +25,11 @@ export function ProductCell({ product }: { product: Product }) {
           <p className="min-w-0 flex-1 truncate text-sm font-medium text-gray-900 dark:text-slate-100">
             {product.name}
           </p>
-          {product.isActive === false ? (
+          {product.estadoId === 3 ? (
+            <span className="shrink-0 rounded border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-600 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">
+              Anulado
+            </span>
+          ) : product.isActive === false ? (
             <span className="shrink-0 rounded border border-gray-200 bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
               Inactivo
             </span>

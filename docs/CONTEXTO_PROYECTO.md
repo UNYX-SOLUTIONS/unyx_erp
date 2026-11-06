@@ -134,7 +134,9 @@ La API de Altosa es el backend del catálogo. PostgreSQL Altosa es la **base de 
 
 ### Contifico
 
-La integración de Contifico vive en **Altosa** (`backend/src/modules/contifico`): cliente v1, sync nativo, búsqueda/importación y write-through. El token `CONTIFICO_API_KEY` está solo en el `.env` de Altosa. El sync corre en el VPS de Altosa (`scripts/contifico-sync.sh`) y escribe directamente en su PostgreSQL. El ERP solo hace proxy a `/api/v1/contifico/*` y ya no tiene credenciales de Contifico.
+La integración de Contifico vive en **Altosa** (`backend/src/modules/contifico`): listado/búsqueda/sync por **API v2**, categorías por v1 y write-through. El token `CONTIFICO_API_KEY` está solo en el `.env` de Altosa. El sync corre en el VPS de Altosa (`scripts/contifico-sync.sh`) y escribe directamente en su PostgreSQL. El ERP solo hace proxy a `/api/v1/contifico/*` y ya no tiene credenciales de Contifico.
+
+Importante: el endpoint v1 de productos devolvía solo **784** productos (incompleto); v2 devuelve **1.367** (incluye activos e inactivos). Por eso el listado, el buscador del selector y el sync ahora usan v2. La búsqueda por nombre usa `search` de v2; la búsqueda por SKU/código de barra cae al catálogo completo cacheado 30 s. Los productos que no existan en Altosa aparecerán como pendientes para importar.
 
 ### Meta
 
@@ -477,6 +479,19 @@ scripts/backfill-variant-names.sh --force --apply  # regenera todos
 ```
 
 Regla: `producto + color/atributo`; si el color es `Estándar` o no existe, usa el nombre del producto. Para variantes sin color de productos con varias variantes usa el slug de `url_producto` como nombre real (`/producto/base-redonda-eco/` → `Base Redonda Eco`, `/producto/base-cruz-corta/` → `Base Cruz Corta`); si no hay URL, usa los fallbacks de material/dimensión. Si dos variantes del mismo producto quedan con el mismo nombre, se agrega el SKU. El deploy (`update.sh`) lo ejecuta automáticamente con `--apply`; es idempotente y no sobreescribe nombres existentes.
+
+### CRUD de productos y estados
+
+Altosa es la fuente de verdad. El CRUD del ERP se apoya en la API de Altosa y en sus write-through a Meta/Contifico:
+
+- **Estados**: `1 = activo`, `2 = inactivo`, `3 = anulado`. `isActive` se deriva: solo el estado 1 está activo.
+- **Taxonomía**: el formulario usa dos dropdowns dependientes, **Categoría** y **Subcategoría**, desde `GET /api/v1/categories` (Altosa). Se guardan los IDs (`categoryId`/`subcategoryId`); Altosa deriva la categoría desde la subcategoría. El filtro de productos usa las categorías reales, no una lista fija.
+- **Palabras clave / sinónimos**: se guardan editables en `products.palabras_clave` (arreglo JSON). Si el producto nunca tuvo palabras propias (`NULL`), el ERP muestra sugerencias derivadas de nombre/categoría/variantes; al guardar quedan persistidas y se pueden borrar (`[]`).
+- **Crear/actualizar producto o variante**: Altosa guarda primero; los cambios de nombre, descripción, precio, imagen, stock/disponibilidad y estado se propagan a Meta/Contifico de forma best-effort. Si el catálogo externo falla, el cambio local no se pierde y la salud de mapeos reporta la diferencia.
+- **Eliminar en el ERP**: no borra físicamente ni en Altosa ni en Meta/Contifico. El producto y sus variantes pasan a estado 3 (anulados) y se desactivan en Meta/Contifico (availability `out of stock` / estado `I`). Aparecen en el filtro **Actividad → Anulados**.
+- **No existe borrado definitivo desde el ERP**: los ítems se conservan en Altosa y en los catálogos externos desactivados. Esto evita eliminar productos que puedan tener historial o relaciones en Contifico/Meta.
+- **Inactivar un producto** (estado 2) inactiva automáticamente todas sus variantes. Inactivar una variante solo afecta a esa variante. El toggle tiene confirmación antes de inactivar.
+- Editar un producto/variante anulado sin cambiar explícitamente de estado **no lo restaura**; para volver a activarlo se usa el toggle correspondiente.
 
 ### Feed CSV para Meta (Commerce Manager)
 

@@ -143,7 +143,10 @@ export const updateVariant = asyncHandler(async (req: Request, res: Response) =>
 
 export const deleteVariant = asyncHandler(async (req: Request, res: Response) => {
   const query = req.query as unknown as { productId?: number };
-  const data = await altosaWriteThrough.deleteVariant(Number(req.params.id), query.productId);
+  const data = await altosaWriteThrough.deleteVariant(
+    Number(req.params.id),
+    query.productId
+  );
   sendSuccess(res, data);
 });
 

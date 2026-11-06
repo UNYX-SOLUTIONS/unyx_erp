@@ -7,6 +7,7 @@ import {
   type AltosaVariantDto,
 } from './altosa.mappers';
 import type {
+  CategoryDto,
   CreateProductPayload,
   CreateVariantPayload,
   ContificoCatalogItem,
@@ -78,10 +79,14 @@ export async function fetchAllProducts(): Promise<AltosaProductDto[]> {
 
 function matchesFilters(product: ProductDto, params: ProductListParams): boolean {
   const activeFilter = params.active ?? 'active';
-  if (activeFilter === 'active' && !product.isActive) {
+  const estadoId = product.estadoId ?? (product.isActive ? 1 : 2);
+  if (activeFilter === 'active' && estadoId !== 1) {
     return false;
   }
-  if (activeFilter === 'inactive' && product.isActive) {
+  if (activeFilter === 'inactive' && estadoId !== 2) {
+    return false;
+  }
+  if (activeFilter === 'annulled' && estadoId !== 3) {
     return false;
   }
   if (params.validation && product.validation !== params.validation) {
@@ -149,6 +154,13 @@ export function buildProductListResponse(
 
 export async function listProducts(params: ProductListParams): Promise<ApiResponse<ProductDto[]>> {
   return buildProductListResponse(await fetchAllProducts(), params);
+}
+
+export async function listCategories(): Promise<ApiResponse<CategoryDto[]>> {
+  const response = await apiClient.get<ApiResponse<CategoryDto[]>>(
+    `${BASE}/categories`
+  );
+  return response.data;
 }
 
 export async function getProductById(id: string): Promise<ApiResponse<ProductDetailDto>> {
@@ -222,6 +234,9 @@ export async function createProduct(
     line: payload.line || undefined,
     category: payload.category || undefined,
     subcategory: payload.subcategory || undefined,
+    categoryId: payload.categoryId || undefined,
+    subcategoryId: payload.subcategoryId || undefined,
+    keywords: payload.keywords ?? undefined,
     descripcion: payload.commercialDescription || undefined,
     usoRecomendado: payload.description || undefined,
     variantes: (payload.variants ?? []).map(variantCreateBody),
@@ -250,6 +265,15 @@ export async function updateProduct(
   if (payload.subcategory !== undefined) {
     body.subcategory = payload.subcategory || undefined;
   }
+  if (payload.categoryId !== undefined) {
+    body.categoryId = payload.categoryId;
+  }
+  if (payload.subcategoryId !== undefined) {
+    body.subcategoryId = payload.subcategoryId;
+  }
+  if (payload.keywords !== undefined) {
+    body.keywords = payload.keywords;
+  }
   if (payload.commercialDescription !== undefined) {
     body.descripcion = payload.commercialDescription;
   }
@@ -265,7 +289,9 @@ export async function updateProduct(
 }
 
 export async function deleteProduct(id: string): Promise<ApiResponse<ProductDto>> {
-  const response = await apiClient.delete<ApiResponse<AltosaProductDto>>(`${BASE}/products/${id}`);
+  const response = await apiClient.delete<ApiResponse<AltosaProductDto>>(
+    `${BASE}/products/${id}`
+  );
   return { success: true, data: mapAltosaProduct(response.data.data) };
 }
 

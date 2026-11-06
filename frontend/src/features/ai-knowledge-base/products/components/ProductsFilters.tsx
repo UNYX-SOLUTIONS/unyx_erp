@@ -4,20 +4,7 @@ import { DataTableToolbar } from '@/components/data-table/DataTableToolbar';
 import { FilterSelect } from '@/components/filters/FilterSelect';
 import { SearchInput } from '@/components/filters/SearchInput';
 import { cn } from '@/lib/utils';
-
-export const PRODUCT_LINES = [
-  'Sillas Tapizadas',
-  'Sillas de Plastico',
-  'Bases y mesas',
-  'Taburetes',
-  'Sillas de Oficina',
-  'Sillines',
-  'Mesas Auxiliares',
-  'Sillas de Espera',
-  'Sillas Ejecutivas',
-  'Sillas Operativas',
-  'Sillas Lounge',
-];
+import { useCategories } from '../hooks/useCategories';
 
 const VALIDATION_OPTIONS = [
   { label: 'Todos los estados', value: 'all' },
@@ -35,11 +22,7 @@ const SYNC_OPTIONS = [
 const ACTIVE_OPTIONS = [
   { label: 'Activos', value: 'active' },
   { label: 'Inactivos', value: 'inactive' },
-];
-
-const LINE_OPTIONS = [
-  { label: 'Todas las líneas', value: 'all' },
-  ...PRODUCT_LINES.map((line) => ({ label: line, value: line })),
+  { label: 'Anulados', value: 'annulled' },
 ];
 
 interface ProductsFiltersProps {
@@ -67,12 +50,21 @@ export function ProductsFilters({
   active,
   onActiveChange,
 }: ProductsFiltersProps) {
+  const { data: categories } = useCategories();
+  const categoryOptions = [
+    { label: 'Todas las categorías', value: 'all' },
+    ...(categories ?? []).map((category) => ({
+      label: category.nombre,
+      value: category.nombre,
+    })),
+  ];
+
   return (
     <DataTableToolbar>
       <SearchInput
         value={search}
         onChange={onSearchChange}
-        placeholder="Buscar por SKU, nombre, categoría o línea"
+        placeholder="Buscar por SKU, nombre, categoría o subcategoría"
         className="min-w-[300px] max-w-[400px] flex-1"
       />
       <div className="flex items-center gap-2">
@@ -113,8 +105,8 @@ export function ProductsFilters({
         className="w-44"
       />
       <FilterSelect
-        label="Línea"
-        options={LINE_OPTIONS}
+        label="Categoría"
+        options={categoryOptions}
         value={line}
         onChange={onLineChange}
         className="w-52"

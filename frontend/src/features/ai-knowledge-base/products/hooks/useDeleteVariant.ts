@@ -13,10 +13,11 @@ export function useDeleteVariant(productId: string) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['product', productId] });
       void queryClient.invalidateQueries({ queryKey: ['products'] });
-      toast.success('Variante eliminada');
+      void queryClient.invalidateQueries({ queryKey: ['external-health'] });
+      toast.success('Variante anulada');
     },
     onError: (error) => {
-      toast.error(getApiErrorMessage(error, 'No se pudo eliminar la variante'));
+      toast.error(getApiErrorMessage(error, 'No se pudo anular la variante'));
     },
   });
 }

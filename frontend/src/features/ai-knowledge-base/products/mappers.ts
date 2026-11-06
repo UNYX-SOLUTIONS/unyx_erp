@@ -14,8 +14,11 @@ export function mapProductDtoToUi(dto: ProductDto): Product {
     name: dto.name,
     sku: dto.sku,
     line: dto.line ?? dto.category ?? '',
+    categoryId: dto.categoryId,
+    subcategoryId: dto.subcategoryId,
     thumbnailUrl: dto.thumbnailUrl,
     isActive: dto.isActive,
+    estadoId: dto.estadoId,
     variants: {
       count: dto.variantCount,
       ...(dto.primaryColor ? { label: dto.primaryColor } : {}),

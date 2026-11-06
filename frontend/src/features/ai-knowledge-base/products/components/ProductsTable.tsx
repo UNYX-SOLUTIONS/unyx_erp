@@ -24,7 +24,9 @@ export function ProductsTable() {
   const [validation, setValidation] = useState(ALL);
   const [sync, setSync] = useState(ALL);
   const [line, setLine] = useState(ALL);
-  const [active, setActive] = useState('active');
+  const [active, setActive] = useState<'active' | 'inactive' | 'annulled'>(
+    'active'
+  );
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
 
@@ -73,7 +75,7 @@ export function ProductsTable() {
   };
 
   const handleActiveChange = (value: string) => {
-    setActive(value);
+    setActive(value as 'active' | 'inactive' | 'annulled');
     resetPage();
   };
 
@@ -148,9 +150,11 @@ export function ProductsTable() {
           selectedRowId={isDetailOpen ? (openedProductId ?? undefined) : undefined}
           getRowId={(product) => product.id}
           getRowClassName={(product) =>
-            product.isActive === false
-              ? 'bg-slate-50/70 hover:bg-slate-100/70 dark:bg-slate-900/40 dark:hover:bg-slate-800/50'
-              : undefined
+            product.estadoId === 3
+              ? 'bg-rose-50/50 hover:bg-rose-50/70 dark:bg-rose-950/10 dark:hover:bg-rose-950/20'
+              : product.isActive === false
+                ? 'bg-slate-50/70 hover:bg-slate-100/70 dark:bg-slate-900/40 dark:hover:bg-slate-800/50'
+                : undefined
           }
           emptyState={
             <DataTableEmptyState

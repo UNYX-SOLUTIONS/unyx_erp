@@ -97,6 +97,8 @@ export function ProductDetailSheet() {
         line: values.line,
         category: values.category,
         subcategory: values.subcategory,
+        categoryId: values.categoryId,
+        subcategoryId: values.subcategoryId,
         commercialDescription: values.commercialDescription,
         keywords: values.keywords,
         isActive: values.isActive,
@@ -121,6 +123,8 @@ export function ProductDetailSheet() {
         line: values.line,
         category: values.category,
         subcategory: values.subcategory,
+        categoryId: values.categoryId,
+        subcategoryId: values.subcategoryId,
         commercialDescription: values.commercialDescription,
         keywords: values.keywords,
         isActive: values.isActive,
@@ -147,6 +151,7 @@ export function ProductDetailSheet() {
           price: variant.price,
           description: variant.description || undefined,
           imageUrl: variant.imageUrl ?? '',
+          isActive: variant.isActive,
           kommoTemplateId: variant.kommoTemplateId ?? null,
           garantiaId: variant.garantiaId ?? null,
         };
@@ -234,7 +239,9 @@ export function ProductDetailSheet() {
                 variantCount={variantsArray.fields.length}
               />
               <div className="flex-1 overflow-y-auto bg-white dark:bg-slate-900 px-6 py-6">
-                {activeTab === 'general' && <GeneralTab form={generalForm} />}
+                {activeTab === 'general' && (
+                  <GeneralTab form={generalForm} />
+                )}
                 {activeTab === 'variants' && (
                   <VariantsTab
                     product={product}
