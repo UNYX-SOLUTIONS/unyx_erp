@@ -1,5 +1,9 @@
 # Integración multi-base-de-datos: ERP Unyx ↔ Altosa
 
+> Actualizado 2026-11-06. Estado vigente y pendientes: `docs/HANDOFF_AI.md`.
+> Altosa PostgreSQL sigue siendo la fuente de verdad del catálogo. El ERP solo
+> habla con Altosa vía BFF.
+
 ## Flujo de datos
 
 ```
@@ -27,13 +31,32 @@ Regla de oro: **el frontend habla SOLO con el backend del ERP** (patrón BFF). E
 - Vars de entorno: `NODE_ENV`, `PORT` (4100), `DATABASE_URL`, `API_KEY` (≥16 chars).
 - Endpoints (todos requieren `x-api-key` excepto `/health`):
   - `GET /health`
-  - `GET /api/v1/products` — paginado (`page`, `pageSize`≤100, `search`, `categoryId`, `subcategoryId`, `active`, `withVariants`)
+  - `GET /api/v1/products` — paginado (`page`, `pageSize`≤100, `search`, `categoryId`, `subcategoryId`, `active=all|true|false`, `withVariants`, `includeInactiveVariants`)
   - `GET /api/v1/products/:id` · `GET /api/v1/products/sku/:sku`
   - `GET /api/v1/categories` · `/catalogs?active` · `/locations?active` · `/warranties?active`
   - `GET /api/v1/documents` — metadatos (sin `embedding`); `includeContent=true` para el texto
-  - `POST /api/v1/sync/products` — upsert masivo idempotente por SKU (usado por el ERP para replicar el staging local). El sync de Contifico ya vive en Altosa (`/api/v1/contifico/*`). Ver `docs/integracion-contifico.md`.
+  - `GET /api/v1/external/links` — variantes y sus IDs Meta/Contifico
+  - `GET /api/v1/external/health?refresh=true` — salud de mapeos (por ID/código/nombre)
+  - `GET /feeds/meta-catalog.csv` — feed CSV para Meta, Basic Auth o `x-api-key`
+  - `POST /api/v1/sync/products` — upsert masivo idempotente por SKU (legado). El sync de Contifico vive en Altosa (`/api/v1/contifico/*`). Ver `docs/integracion-contifico.md`.
 - Seguridad: sin puertos públicos (solo red `altosa_backend`), API key con comparación en tiempo constante, rate limit 600/15min, helmet, sin CORS, logs con redacción de `x-api-key`.
 - Prisma: `binaryTargets = [native, linux-musl-openssl-3.0.x]`; **no ejecutar `prisma migrate`** (las tablas las administra el pipeline n8n del cliente). La columna `embedding vector(1536)` no está en el modelo (usar SQL raw si se implementa búsqueda semántica).
+
+### Estado vigente del catálogo y CRUD
+
+- Altosa tiene 966 productos / 1.239 variantes (cifras 2026-11-06; recalcular).
+- `estado_id`: 1 activo, 2 inactivo, 3 anulado; `is_active` se deriva.
+- El ERP descarga `active=all` e `includeInactiveVariants=true`; el toggle
+  **Actividad** muestra Activos/Inactivos/Anulados.
+- **Eliminar = anular**: no se borra en Altosa/Meta/Contifico. No existe borrado
+  definitivo desde el ERP.
+- Inactivar producto inactiva todas sus variantes; inactivar variante solo esa.
+- Crear/editar/anular intenta write-through a Meta/Contifico (best-effort).
+- Quitar un mapeo es persistente: `meta_mapping_locked` / `contifico_mapping_locked`
+  evitan que los syncs lo vuelvan a crear. Guardar la variante no auto-mapea.
+- Categoría/Subcategoría se envían por ID; `products.palabras_clave` guarda los
+  sinónimos editables.
+- El feed CSV de Meta se sirve en `/feeds/meta-catalog.csv` (Basic Auth).
 
 ### 2. Backend del ERP — integración (backend/src/integrations/altosa/)
 
@@ -50,9 +73,10 @@ es la consola de administración y solo llama a Altosa. El flujo vigente está
 documentado en `docs/integracion-contifico.md`:
 
 - `scripts/contifico-sync.sh` (VPS de Altosa) hace el sync nativo contra su DB.
-- El frontend de productos **no se modificó**: sigue leyendo el BFF de Altosa.
-  El CRUD de la UI pasa por ese BFF, que crea/edita en Altosa; Altosa escribe en
-  Contifico.
+- El frontend de productos se rediseñó: filas expandibles con variantes, panel
+  de detalle con pestañas General/Variantes, toggles de estado con confirmación,
+  categoría/subcategoría, palabras clave y stock con fuente. Todo sigue leyendo
+  el BFF de Altosa; la UI nunca llama a Altosa directamente.
 - El ERP ya no tiene `CONTIFICO_API_KEY`; sus rutas `/integrations/contifico/*`
   son un proxy a Altosa.
 - El staging `kb_products`/`kb_product_variants` queda como legado; el backfill
@@ -154,7 +178,7 @@ misma ruta `/uploads` en Traefik; así la ERP puede mudarse de dominio sin rompe
 
 ## Pendientes / próximos pasos
 
-- CRUD de escritura en `altosa-api` con auditoría (productos/variantes ya operativos; el resto de la KB sigue en lectura).
+- Auditoría de escritura completa en `altosa-api` (productos/variantes ya operativos; el resto de la KB sigue en lectura).
 - Búsqueda semántica sobre `documents.embedding` (pgvector) vía endpoint dedicado.
 - Caché corta (30–60s) en el ERP para listados que vengan del cliente.
 - Eliminar `client-altosa`/ETL viejo tras validar en VPS.

@@ -63,7 +63,11 @@ function buildVariantsDefaults(product: ProductDetailDto): VariantsFormValues {
   };
 }
 
-export function useProductDetail(product: ProductDetailDto | null, isCreate = false) {
+export function useProductDetail(
+  product: ProductDetailDto | null,
+  isCreate = false,
+  isOpen = true
+) {
   const generalForm = useForm<GeneralFormValues>({
     resolver: zodResolver(generalSchema),
     defaultValues: EMPTY_GENERAL,
@@ -79,7 +83,13 @@ export function useProductDetail(product: ProductDetailDto | null, isCreate = fa
     name: 'variants',
   });
 
+  // Los refetch en segundo plano (p. ej. al quitar un mapeo) no deben borrar
+  // ediciones locales. Si el formulario está limpio, sí se sincroniza con la
+  // última versión del producto.
   useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
     if (isCreate) {
       generalForm.reset(createGeneralDefaults());
       variantsForm.reset({ variants: [] });
@@ -88,9 +98,12 @@ export function useProductDetail(product: ProductDetailDto | null, isCreate = fa
     if (!product) {
       return;
     }
+    if (generalForm.formState.isDirty || variantsForm.formState.isDirty) {
+      return;
+    }
     generalForm.reset(buildGeneralDefaults(product));
     variantsForm.reset(buildVariantsDefaults(product));
-  }, [isCreate, product, generalForm, variantsForm]);
+  }, [isCreate, isOpen, product, generalForm, variantsForm]);
 
   const resetAll = () => {
     if (isCreate || !product) {

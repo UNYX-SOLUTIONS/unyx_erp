@@ -16,6 +16,7 @@ interface ContificoMappingFieldProps {
   variantName: string;
   initialContificoId?: string | null;
   initialContificoSku?: string | null;
+  initialContificoMappingLocked?: boolean;
   isBusy?: boolean;
 }
 
@@ -26,18 +27,21 @@ export function ContificoMappingField({
   variantName,
   initialContificoId = null,
   initialContificoSku = null,
+  initialContificoMappingLocked = false,
   isBusy = false,
 }: ContificoMappingFieldProps) {
   const { can } = usePermission();
   const canEdit = can('products.update');
   const [contificoId, setContificoId] = useState<string | null>(initialContificoId);
   const [contificoSku, setContificoSku] = useState<string | null>(initialContificoSku);
+  const [mappingLocked, setMappingLocked] = useState(initialContificoMappingLocked);
   const [pickerOpen, setPickerOpen] = useState(false);
 
   useEffect(() => {
     setContificoId(initialContificoId);
     setContificoSku(initialContificoSku);
-  }, [initialContificoId, initialContificoSku]);
+    setMappingLocked(initialContificoMappingLocked);
+  }, [initialContificoId, initialContificoSku, initialContificoMappingLocked]);
 
   const updateMapping = useUpdateVariantContificoMapping(productId);
   const isDisabled = isBusy || updateMapping.isPending;
@@ -47,7 +51,11 @@ export function ContificoMappingField({
     const response = await updateMapping
       .mutateAsync({
         variantId,
-        payload: { contificoId: null, contificoSku: null },
+        payload: {
+          contificoId: null,
+          contificoSku: null,
+          contificoMappingLocked: true,
+        },
       })
       .catch(() => null);
     if (!response) {
@@ -55,7 +63,30 @@ export function ContificoMappingField({
     }
     setContificoId(null);
     setContificoSku(null);
+    setMappingLocked(true);
     toast.success('Mapeo de Contífico quitado');
+  };
+
+  const restoreAuto = async () => {
+    const response = await updateMapping
+      .mutateAsync({
+        variantId,
+        payload: {
+          contificoId: null,
+          contificoSku: null,
+          contificoMappingLocked: false,
+        },
+      })
+      .catch(() => null);
+    if (!response) {
+      return;
+    }
+    setContificoId(null);
+    setContificoSku(null);
+    setMappingLocked(false);
+    toast.success(
+      'Sync automático restaurado. La próxima corrida de Contifico podrá mapear la variante.'
+    );
   };
 
   return (
@@ -66,7 +97,13 @@ export function ContificoMappingField({
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
-                  {isMapped ? 'Mapeado' : 'Sin mapear'}
+                  {isMapped
+                    ? mappingLocked
+                      ? 'Mapeado (manual)'
+                      : 'Mapeado'
+                    : mappingLocked
+                      ? 'Sin mapear (manual)'
+                      : 'Sin mapear'}
                 </span>
                 {contificoSku ? (
                   <span className="truncate font-mono text-xs text-gray-700 dark:text-slate-300">
@@ -114,9 +151,28 @@ export function ContificoMappingField({
                     Quitar mapeo
                   </Button>
                 )}
+                {mappingLocked && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={restoreAuto}
+                    disabled={isDisabled}
+                    className="gap-1 text-gray-500 hover:text-sky-700 dark:text-slate-400"
+                  >
+                    Restaurar sync automático
+                  </Button>
+                )}
               </div>
             ) : null}
           </div>
+
+          {!isMapped && mappingLocked && (
+            <p className="mt-2 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+              Sin mapeo manual: el sync de Contifico no volverá a enlazar esta variante
+              hasta que restaures el modo automático.
+            </p>
+          )}
         </div>
       </FormField>
 

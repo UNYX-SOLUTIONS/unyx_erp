@@ -172,6 +172,7 @@ function variantCreateBody(payload: CreateVariantPayload) {
   return {
     sku: payload.sku || undefined,
     nombre: payload.name.trim() || undefined,
+    isActive: payload.isActive,
     color: payload.color?.trim() || undefined,
     descripcion: payload.description || undefined,
     precioUsd: payload.price ?? undefined,
@@ -218,6 +219,9 @@ function variantUpdateBody(payload: UpdateVariantPayload) {
   }
   if (payload.contificoSku !== undefined) {
     body.contificoSku = payload.contificoSku;
+  }
+  if (payload.contificoMappingLocked !== undefined) {
+    body.contificoMappingLocked = payload.contificoMappingLocked;
   }
   if (payload.garantiaId !== undefined) {
     body.garantiaId = payload.garantiaId;

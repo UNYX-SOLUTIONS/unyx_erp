@@ -66,6 +66,7 @@ export interface AltosaVariantDto {
   metaMappingLocked?: boolean;
   contificoId?: string | null;
   contificoSku?: string | null;
+  contificoMappingLocked?: boolean;
   updatedAt: string;
 }
 
@@ -184,6 +185,7 @@ export function mapAltosaVariant(
     metaMappingLocked: variante.metaMappingLocked ?? false,
     contificoId: variante.contificoId ?? null,
     contificoSku: variante.contificoSku ?? null,
+    contificoMappingLocked: variante.contificoMappingLocked ?? false,
     garantiaId: variante.garantia?.id ?? null,
     createdAt: updatedAt,
     updatedAt,

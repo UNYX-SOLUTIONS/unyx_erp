@@ -54,6 +54,7 @@ interface VariantCardProps {
   initialMetaMappingLocked?: boolean;
   initialContificoId?: string | null;
   initialContificoSku?: string | null;
+  initialContificoMappingLocked?: boolean;
   isFocused?: boolean;
   defaultOpen?: boolean;
   onDuplicate: (index: number) => void;
@@ -71,6 +72,7 @@ export function VariantCard({
   initialMetaMappingLocked = false,
   initialContificoId = null,
   initialContificoSku = null,
+  initialContificoMappingLocked = false,
   isFocused = false,
   defaultOpen,
   onDuplicate,
@@ -98,6 +100,8 @@ export function VariantCard({
 
   // Estado local para manejar el acordeón (abierto/cerrado)
   const [isOpen, setIsOpen] = useState(defaultOpen ?? (index === 0 || isFocused));
+  const isAnnulledVariant = variant?.estadoId === 3;
+  const isInactiveVariant = variant?.isActive === false && !isAnnulledVariant;
 
   useEffect(() => {
     if (!isFocused) return;
@@ -132,6 +136,10 @@ export function VariantCard({
         isOpen 
           ? 'border-blue-300 bg-white shadow-sm dark:border-blue-700 dark:bg-slate-900' 
           : 'border-gray-200 bg-gray-50/50 hover:bg-gray-50 dark:border-slate-800 dark:bg-slate-900/50 dark:hover:bg-slate-800/50',
+        isAnnulledVariant
+          ? 'border-rose-200 bg-rose-50/40 dark:border-rose-900/50 dark:bg-rose-950/10'
+          : isInactiveVariant &&
+              'border-slate-300 bg-slate-50/80 dark:border-slate-700 dark:bg-slate-900/60',
         isFocused && 'ring-2 ring-blue-500/30 border-blue-400 dark:border-blue-600'
       )}
     >
@@ -437,6 +445,7 @@ export function VariantCard({
                     variantName={variant.name}
                     initialContificoId={initialContificoId}
                     initialContificoSku={initialContificoSku}
+                    initialContificoMappingLocked={initialContificoMappingLocked}
                     isBusy={isBusy}
                   />
                 </>

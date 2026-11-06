@@ -1,7 +1,14 @@
 # Contexto del proyecto Unyx ERP + Altosa + Contifico + Meta + Kommo
 
 Documento de contexto para continuar el desarrollo, especialmente el frontend del ERP.
-Última actualización: 2026-10-29.
+
+> **Estado vigente: 2026-11-06.** Para retomar el proyecto, leer primero
+> [`docs/HANDOFF_AI.md`](./HANDOFF_AI.md). Este documento conserva contexto
+> histórico; algunas cifras y afirmaciones de las secciones 4, 11 y 17 son de
+> antes de la importación WooCommerce, del cambio a Contifico v2 y del rediseño
+> de estados (activo/inactivo/anulado). No usar esas cifras sin recalcularlas.
+
+Última actualización de este documento: 2026-11-06.
 
 ---
 
@@ -154,6 +161,32 @@ No está en estos repos. Usa el catálogo/Altosa y `COALESCE(meta_retailer_id, s
 
 ## 4. Estado actual del catálogo
 
+### Estado vigente (2026-11-06, verificado contra producción)
+
+```text
+Productos Altosa:            966
+  activos:                   151
+  inactivos:                 815
+
+Variantes Altosa:           1239
+  activas:                   284
+  inactivas:                 955
+  con meta_retailer_id:      447
+  con contifico_id:          780
+  activas con Meta:          193
+  activas con Contifico:      59
+  activas sin Contifico:     225
+  activas sin Meta:           91
+```
+
+- **Contifico v2** devuelve ~1.371 productos (1.367 únicos tras deduplicar); la API v1 devolvía solo 784 y estaba incompleta. El listado, búsqueda y sync usan v2.
+- WooCommerce: 458 productos representados = 417 existentes + 31 creados con `meta_retailer_id` + 8 creados sin meta ID + 2 duplicados existentes (Romeo Beige/Gris). Los 8 sin meta usan SKU `WC-<id>` en el feed.
+- Las cifras cambian con el uso del ERP. Recalcular antes de decisiones de datos con `/products` y `/external/links` (ver `HANDOFF_AI.md`).
+
+### Histórico: reconciliación Meta inicial (pre-Woo, pre-v2)
+
+La siguiente foto corresponde a la reconciliación inicial y no es el estado actual. Se conserva como contexto histórico.
+
 Última ejecución del reconciliador Meta:
 
 ```text
@@ -218,9 +251,21 @@ Si `activas_sin_mapear > 0`, esas variantes sí pueden fallar en WhatsApp por el
 
 ---
 
-## 5. Significado de `is_active`
+## 5. Significado de `is_active` y estados
 
-`is_active` es el interruptor de aprobación:
+### Estado vigente
+
+La columna de estado es `estado_id`:
+
+- `1 = activo` → `is_active = true`.
+- `2 = inactivo` → `is_active = false`.
+- `3 = anulado` → `is_active = false`; lista negra de anulados.
+
+`is_active` se deriva del estado. Inactivar un producto (2) inactiva todas sus variantes; inactivar una variante solo afecta a esa variante. Anular (3) manda a **Anulados** y desactiva en Meta/Contifico sin borrar. No existe borrado definitivo desde el ERP. Ver `HANDOFF_AI.md` §4.
+
+### Legado
+
+`is_active` fue el interruptor de aprobación:
 
 - `true`: producto/variante aprobado; la IA y los flujos de catálogo pueden usarlo.
 - `false`: producto/variante importado o pendiente; no debe recomendarse ni publicarse.
@@ -237,7 +282,18 @@ El ERP descarga todos los productos (`active=all`) y filtra en cliente. Por defe
 
 ---
 
-## 6. Mapeo Meta: estrategia actual
+## 6. Mapeo Meta: estrategia
+
+### Estado vigente (2026-11-06)
+
+- 447 variantes con `meta_retailer_id` en Altosa.
+- 8 productos Woo creados sin meta ID: se publican con su SKU `WC-<id>` y se pueden mapear cuando existan en Meta.
+- 2 duplicados Woo (Romeo Beige/Gris) ya tenían variante con otro meta ID; no se duplicaron.
+- El mapeo manual queda con `meta_mapping_locked=true`.
+- La salud externa busca por `contifico_id`/`meta_retailer_id`, código y nombre normalizado; `missing` se muestra como **no encontrado**, no como eliminado.
+- El feed CSV de Meta es el origen masivo: `https://api.altosamobiliario.com/feeds/meta-catalog.csv` (Basic Auth), con botón **Descargar CSV Meta** en el ERP.
+
+### Estrategia histórica (reconciliador inicial)
 
 Meta no trae SKU. El mapeo no debe basarse en SKU como entrada.
 
@@ -301,21 +357,21 @@ docker compose exec -T api node dist/scripts/backfill-meta-retailer-ids.js \
 | ERP frontend → ERP BFF | Funciona |
 | ERP BFF → API Altosa | Funciona |
 | API Altosa → PostgreSQL Altosa | Funciona |
-| Contifico → ERP staging → Altosa | Funciona; deuda técnica por el staging local |
-| Meta → Altosa (mapeo) | 417/452; 33 pendientes |
-| ERP → Altosa (edición) | Funciona en general |
-| ERP → Contifico | Parcial; falta CRUD completo de variantes/productos |
-| ERP → Meta | No implementado; solo existe mapeo |
-| Meta → Altosa (crear productos Meta-only) | Implementado por reconciliador; quedan inactivos |
+| Contifico ↔ Altosa (sync v2 + auditoría) | Funciona; v2 lista/busca/sincroniza (~1.367 productos) |
+| Meta → Altosa (mapeo) | 447 variantes con `meta_retailer_id`; 8 Woo sin meta ID usan SKU `WC-<id>`; 2 duplicados Romeo |
+| ERP → Altosa (CRUD) | Funciona: crear, editar, activar/inactivar, anular |
+| ERP → Contifico | Write-through best-effort al crear/editar/anular; sync y búsqueda vía Altosa |
+| ERP → Meta | Write-through best-effort al crear/editar/anular; mapeo manual y feed CSV |
+| Meta → Altosa (crear productos Meta-only) | Reconciliador disponible; los productos creados nacen inactivos |
 | Kommo | Plantillas en Altosa; ERP elige plantilla |
 
 ### Estado de escritura
 
-- Editar producto/variante en el ERP: actualiza Altosa vía API.
-- Crear producto: crea local + Altosa; no crea Meta.
-- Crear variante desde la UI: se crea en Altosa; no se crea en Contifico ni Meta.
-- Borrar variante: borra en Altosa; no borra en Meta/Contifico.
-- El write-through completo ERP → Contifico/Meta está pendiente.
+- Editar producto/variante en el ERP: actualiza Altosa y propaga a Meta/Contifico (best-effort; fallos solo en logs).
+- Crear producto: crea en Altosa e intenta publicarlo en Meta y crearlo/actualizarlo en Contifico.
+- Crear variante desde la UI: se crea en Altosa e intenta publicarse/crearse en Meta/Contifico.
+- Eliminar: **anula** (estado 3). No borra en Altosa ni en Meta/Contifico; Meta queda `out of stock` y Contifico `estado I`.
+- El write-through es best-effort: si el externo falla, el cambio local se conserva. La salud de mapeos no compara precio/descripción.
 
 ---
 
@@ -330,6 +386,8 @@ products
   producto (nombre genérico)
   descripcion
   uso_recomendado
+  palabras_clave (JSON editable)
+  id_sub_categoria → categoría/subcategoría
   estado_id
   is_active
   kommo_template_id
@@ -360,7 +418,13 @@ product_variants
   created_at / updated_at
 ```
 
-`nombre` es el nombre completo visible de la variante (`producto + color/atributo`; para `Estándar` o sin color, el nombre del producto). El ERP lo usa para mostrar la fila de variante; `color` queda como atributo de color/mapeo. Las 1.200 variantes existentes se llenan con `backfill:variant-names` y las altas nuevas lo generan automáticamente.
+`nombre` es el nombre completo visible de la variante (`producto + color/atributo`; para `Estándar` o sin color, el nombre del producto). El ERP lo usa para mostrar la fila de variante; `color` queda como atributo de color/mapeo. Las variantes existentes se llenan con `backfill-variant-names` y las altas nuevas lo generan automáticamente.
+
+`palabras_clave` es un arreglo JSON editable de sinónimos comerciales. `NULL` = nunca tuvo palabras propias (el ERP muestra sugerencias derivadas); `[]` = el usuario borró todas. Se usa en el buscador y está disponible para el asistente.
+
+`id_sub_categoria` es la fuente de la categoría/subcategoría: el formulario envía `categoryId`/`subcategoryId` y Altosa deriva la categoría. La columna `line` del frontend es un alias histórico de la categoría, no una taxonomía separada.
+
+El stock vive en `especificacionesAdicionales.stock`; el ERP lo parsea para mostrar `Stock: N uds` y la fuente (`Contifico` o `Local / sin mapeo`).
 
 `meta_retailer_id` está en la variante porque el item de Meta representa una combinación producto + color.
 
@@ -427,10 +491,16 @@ KOMMO_API_KEY
 META_CATALOG_ID=1524398256394561
 META_ACCESS_TOKEN
 META_API_VERSION=v26.0
+META_FEED_USER
+META_FEED_PASSWORD
 CONTIFICO_API_URL=https://api.contifico.com/sistema/api/v1
 CONTIFICO_API_KEY
 # CONTIFICO_API_TOKEN (opcional POS; no usado para inventario)
 ```
+
+- `META_FEED_USER`/`META_FEED_PASSWORD` protegen el feed CSV con Basic Auth. El BFF también puede leer el feed con `x-api-key`.
+- `CONTIFICO_API_URL` sigue en v1; el código usa v2 para listar/buscar/sincronizar productos y v1 para categorías y lectura/edición por ID. No cambiar solo la URL a v2 sin revisar el CRUD.
+- `docker-compose.yml` pasa `META_FEED_USER`/`META_FEED_PASSWORD` al contenedor `altosa-api`.
 
 Contratos entre proyectos:
 
@@ -442,6 +512,8 @@ Contratos entre proyectos:
 
 ### Deploy
 
+**Orden: Altosa primero, ERP después.** El ERP nuevo espera la semántica de estados y el catálogo v2 de Altosa.
+
 Altosa:
 
 ```bash
@@ -449,26 +521,33 @@ cd /docker/altosa_infrastructure
 git fetch origin
 git checkout main
 git pull --ff-only
+# .env: CONTIFICO_API_URL/KEY, META_*, y META_FEED_USER/PASSWORD para el feed
 sudo bash update.sh --api-only
-# configura CONTIFICO_API_URL/KEY en .env antes de este paso
+# update.sh aplica variant_nombre.sql y product_keywords.sql,
+# recompila la API y ejecuta el backfill de nombres.
 bash scripts/healthcheck.sh
+bash scripts/contifico-parity.sh --only-active --fail-on-mismatch
 bash scripts/contifico-sync.sh --dry-run --match-by-name
 ```
 
 ERP:
 
 ```bash
-cd /docker/unyx_erp
+cd /opt/unyx-erp
 git fetch origin
 git checkout main
 git pull --ff-only
 sudo bash deploy/deploy-prod.sh
 # Si solo cambiaron variables:
 sudo bash deploy/deploy-prod.sh --skip-build
-# Una sola vez tras migrar los mapeos legados:
+# Solo una vez, si aún no se migraron los mapeos legados:
 docker compose --env-file .env.production -f docker-compose.prod.yml \
   exec -T unyx-backend node dist/scripts/backfill-altosa-mappings.js
 ```
+
+Si el VPS del ERP usa `/docker/unyx_erp` en lugar de `/opt/unyx-erp`, ajusta la ruta. El deploy del ERP no aplica migraciones nuevas: las de catálogo viven en Altosa.
+
+Antes de desplegar, revisa `git status` en ambos repos: puede haber cambios locales sin commit (por ejemplo, `catalog-service.ts` en Altosa y estilos de variantes en el ERP). Los scripts de deploy suben el working tree; un deploy basado en git requiere commit/push.
 
 ### Backfill de nombre de variante
 
@@ -492,6 +571,19 @@ Altosa es la fuente de verdad. El CRUD del ERP se apoya en la API de Altosa y en
 - **No existe borrado definitivo desde el ERP**: los ítems se conservan en Altosa y en los catálogos externos desactivados. Esto evita eliminar productos que puedan tener historial o relaciones en Contifico/Meta.
 - **Inactivar un producto** (estado 2) inactiva automáticamente todas sus variantes. Inactivar una variante solo afecta a esa variante. El toggle tiene confirmación antes de inactivar.
 - Editar un producto/variante anulado sin cambiar explícitamente de estado **no lo restaura**; para volver a activarlo se usa el toggle correspondiente.
+- **Edición con mapeo externo**:
+  - Producto: nombre, descripción, categoría/subcategoría y estado se propagan a Meta/Contifico.
+  - Variante: nombre, color, descripción, precio, imagen y estado se propagan a Meta/Contifico.
+  - Meta recibe `price` en centavos y `availability`; Contifico recibe `estado` (`A`/`I`) y `categoria_id`.
+  - Cambiar el nombre del producto actualiza los nombres automáticos de las variantes; los nombres manuales se conservan.
+  - Cambiar el color de una variante con nombre automático actualiza el nombre; con nombre manual se conserva.
+  - El SKU de una variante mapeada no se puede cambiar desde Altosa.
+  - El formulario de variante envía `isActive`; crear una variante con `isActive=false` la crea inactiva.
+  - Las actualizaciones externas son best-effort: si Meta/Contifico falla, Altosa conserva el cambio y el error queda en logs. La salud no compara precio/descripción.
+- **Visual de estados**:
+  - Variante inactiva: fondo gris suave, borde izquierdo gris y badge **Inactiva** (tabla y VariantCard).
+  - Variante anulada: fondo rosa suave y badge **Anulada**.
+  - No se usa `grayscale` ni opacidad global; texto e imágenes se mantienen legibles.
 
 ### Feed CSV para Meta (Commerce Manager)
 
@@ -572,42 +664,67 @@ GET    /api/v1/integrations/altosa/products/:id
 GET    /api/v1/integrations/altosa/products/sku/:sku
 POST   /api/v1/integrations/altosa/products
 PATCH  /api/v1/integrations/altosa/products/:id
+DELETE /api/v1/integrations/altosa/products/:id        (anula; no borra)
 POST   /api/v1/integrations/altosa/products/:id/variants
 PATCH  /api/v1/integrations/altosa/variants/:id
-DELETE /api/v1/integrations/altosa/variants/:id
+DELETE /api/v1/integrations/altosa/variants/:id        (anula; no borra)
+GET    /api/v1/integrations/altosa/categories
+GET    /api/v1/integrations/altosa/external/links
+GET    /api/v1/integrations/altosa/external/health
 GET    /api/v1/integrations/altosa/meta/catalog/search
 GET    /api/v1/integrations/altosa/meta/catalog/item
+GET    /api/v1/integrations/altosa/meta-feed.csv?scope=published
 GET    /api/v1/integrations/altosa/kommo/templates
 POST   /api/v1/integrations/kommo/sync-templates
+GET    /api/v1/integrations/contifico/products?search=...
+GET    /api/v1/integrations/contifico/search
+POST   /api/v1/integrations/contifico/sync
 ```
 
 Notas de UI:
 
-- La lista de productos descarga `active=all` y filtra en cliente; por defecto muestra `Activos` y el dropdown `Actividad` permite `Inactivos`/`Todos`. Los inactivos usan fondo suave + badge, sin atenuar texto/imágenes.
-- La variante tiene sección “Catálogo Meta / WhatsApp”.
-- El botón “Agregar variante” crea un borrador local; el POST real ocurre al guardar.
-- Las variantes nuevas desde la UI se crean en Altosa; no en Contifico/Meta.
-- La sección Meta tiene buscador modal, preview y asignación manual; el backend deja `meta_mapping_locked=true` al asignar manualmente.
-- “Quitar mapeo” envía `metaRetailerId: null`; “Restaurar sync” envía `metaRetailerId: null, metaMappingLocked: false`.
+- La lista descarga `active=all` y filtra en cliente; por defecto muestra **Activos**. El toggle **Actividad** tiene **Activos / Inactivos / Anulados** (no hay “Todos” en la UI).
+- Los productos inactivos usan fondo suave + badge **Inactivo**; las variantes inactivas fondo gris suave + borde gris + badge **Inactiva**; las anuladas fondo rosa suave + badge **Anulada**. No se atenúa texto/imagen.
+- El formulario General tiene toggles de estado y dropdowns dependientes de **Categoría/Subcategoría** desde Altosa.
+- La sección **Palabras clave / sinónimos** es editable y persiste en `products.palabras_clave`.
+- La VariantCard muestra el switch Activo/Inactivo con confirmación antes de inactivar.
+- La fila de producto usa la primera variante con imagen; la VariantCard y la tabla usan la imagen de la variante.
+- El stock muestra la fuente: **Contifico**, **Contifico (no encontrado/inactivo/desactualizado)** o **Local / sin mapeo**.
+- La sección Meta tiene buscador modal, preview y asignación manual; el backend deja `meta_mapping_locked=true`.
+- “Quitar mapeo” envía `metaRetailerId: null` (y deja `metaMappingLocked=true`); “Restaurar sync” envía `metaRetailerId: null, metaMappingLocked: false`.
+- “Quitar mapeo” de Contífico envía `contificoId: null, contificoSku: null` y deja `contificoMappingLocked=true`; “Restaurar sync automático” envía `contificoMappingLocked: false`. Guardar la variante no vuelve a crear los mapeos quitados.
+- El botón **Descargar CSV Meta** llama a `/api/v1/integrations/altosa/meta-feed.csv?scope=published`.
+- “Agregar variante” crea un borrador local; el POST real ocurre al guardar.
 - Permisos: lectura `products.read`, edición `products.update`.
 - La auditoría de cambios Meta se registra en el backend.
 
 Pendientes frontend:
 
-1. Filtro/vista de productos inactivos/pendientes.
-2. Aprobación/activación de productos y variantes inactivas.
-3. Resolución de los 33 casos Meta pendientes.
-4. Mostrar estado de sincronización con Contifico/Meta.
-5. Aclarar en UI que crear/editar no replica automáticamente a Meta/Contifico todavía.
-6. Manejo de nuevas variantes: si el producto está aprobado, la variante nueva nace inactiva y requiere aprobación.
-7. Búsqueda/filtros por SKU, color, estado y fuente.
-8. Acciones masivas (activar/desactivar/Meta) con permisos y auditoría.
+1. Definir si se agrega una vista “Todos” o acciones masivas de estado.
+2. Resolver/importar los ~583 productos Contifico v2 que faltan en Altosa.
+3. Revisar las 225 variantes activas sin Contifico y las 91 activas sin Meta.
+4. Mejorar visibilidad de fallos de write-through (warnings en respuesta/toast); hoy van a logs.
+5. Evaluar `last_synced_at` para mostrar frescura real del sync.
+6. Resolver duplicados legacy Contifico/Meta y Woo Romeo Beige/Gris.
 
 ---
 
 ## 11. Pendientes y riesgos
 
-### Meta
+### Estado vigente (2026-11-06)
+
+- **Contifico**: v2 ve ~1.367 productos; ~583 no están en Altosa. Importar/revisar con `--create-missing` o la bandeja de pendientes. Liliana (`XS-2887T`) ya se puede buscar/mapear.
+- **Cobertura**: 225 variantes activas sin Contifico y 91 activas sin Meta. Decidir cuáles mapear/crear y cuáles dejar locales.
+- **Meta**: 447 mapeadas; 8 Woo sin meta ID se publican con SKU; 2 duplicados Romeo existentes. No hay borrado de Meta desde el ERP.
+- **Write-through**: crear/editar/anular se propaga a Meta/Contifico; las actualizaciones son best-effort y los fallos quedan en logs. La salud no compara precio/descripción.
+- **Feed Meta**: omite variantes sin precio/imagen/link; revisar `X-Feed-Skipped`. Basic Auth con `META_FEED_USER/PASSWORD`.
+- **Búsqueda Contifico por SKU**: ~20 s la primera vez (catálogo completo); por nombre es rápida; cache 30 s.
+- **Frescura del sync**: `updated_at` no se actualiza en el sync; no usarlo como indicador. Considerar `last_synced_at`.
+- **Borrado definitivo**: deshabilitado por diseño. Todo se conserva desactivado en Altosa/Meta/Contifico.
+
+### Histórico (pre-Woo/pre-v2)
+
+#### Meta
 
 - 29 conflictos: normalmente dos items Meta apuntando a la misma variante o variantes ya mapeadas. Revisar `meta-variant-report.csv` filtrado por `action=conflict`.
 - 2 `ambiguous_color`: misma familia de color, varias variantes (ej. Gris con/sin cabecera).
@@ -637,6 +754,18 @@ Pendientes frontend:
 
 ## 12. Roadmap sugerido
 
+### Vigente (2026-11-06)
+
+1. Importar/revisar los ~583 productos Contifico v2 faltantes y decidir política de stock local vs Contifico.
+2. Resolver las 225 variantes activas sin Contifico y las 91 sin Meta.
+3. Agregar warnings de write-through en API/UI y, si se desea, comparación de precio/descripción en health.
+4. Evaluar `last_synced_at` y monitoreo de frescura del sync.
+5. Resolver duplicados legacy Contifico/Meta y Woo Romeo Beige/Gris.
+6. Agregar vista “Todos”/acciones masivas de estado si el negocio lo necesita.
+7. Completar pruebas de producción del CRUD y del feed.
+
+### Histórico
+
 1. Cerrar los 33 casos Meta y validar `activas_sin_mapear`.
 2. Implementar en el frontend filtro de inactivos/pendientes y flujo de aprobación.
 3. Agregar `color_family`/`color_shade`, `product_external_refs` y caché `meta_catalog_items`.
@@ -652,17 +781,18 @@ Pendientes frontend:
 
 ## 13. Reglas para el desarrollo del frontend
 
-- No llamar directamente a la base de Altosa ni a la API de Meta desde el navegador.
+- No llamar directamente a la base de Altosa ni a las APIs de Meta/Contifico desde el navegador.
 - Usar siempre el BFF del ERP.
 - No hardcodear tokens ni claves.
 - No cambiar contratos del backend sin actualizar ambos lados.
 - Mantener textos en español y el estilo de componentes existente.
 - Respetar permisos `products.read` y `products.update`.
-- No asumir que crear/editar/eliminar en el ERP se replica a Meta/Contifico todavía.
-- No eliminar productos; desactivar.
+- Crear/editar sí intenta propagar a Meta/Contifico (best-effort); no asumir que un fallo externo bloqueó el cambio local: revisar logs/health.
+- No eliminar productos; anular. El borrado definitivo está deshabilitado.
 - No usar `--prune` ni scripts destructivos sin confirmación.
+- Para Contifico usar v2 en listado/búsqueda/sync; no volver a v1 para listar.
 - No tocar cambios pendientes de Kommo.
-- Ejecutar `pnpm type-check`, `pnpm lint` y `pnpm build` en el frontend antes de terminar.
+- Ejecutar `pnpm type-check`, `pnpm lint` y `pnpm build` en el frontend antes de terminar; en Altosa `pnpm type-check` y `pnpm build`.
 - No commitear salvo que se pida.
 
 ---
@@ -680,11 +810,13 @@ Contexto:
 - El frontend no lee ninguna base directamente: llama al BFF del ERP.
 - El BFF del ERP consume la API de Altosa; nunca se conecta directo a PostgreSQL de Altosa.
 - Altosa es la base del catálogo. El ERP backend es un BFF.
-- is_active=true significa aprobado; is_active=false significa pendiente/inactivo.
-- Meta se mapea en product_variants.meta_retailer_id. El token de Meta vive solo en Altosa.
-- Contifico y Meta todavía no tienen write-through completo desde el ERP.
-- Hay 417 variantes mapeadas de 452 items Meta; quedan 33 casos.
-- Hay 816 productos inactivos; se pueden revisar con el filtro `Actividad` → `Inactivos`/`Todos`, con fondo suave y badge.
+- `estado_id`: 1 activo, 2 inactivo, 3 anulado; `is_active` se deriva (solo estado 1).
+- Meta se mapea en `product_variants.meta_retailer_id`; el token vive solo en Altosa.
+- Crear/editar sí intenta write-through a Meta/Contifico (best-effort). El borrado definitivo está deshabilitado: solo se anula.
+- Contifico v2 es la fuente de listado/búsqueda/sync (~1.367 productos); v1 está incompleto (784).
+- Estado Altosa: 966 productos / 1.239 variantes; 447 con Meta; 225 variantes activas sin Contifico; 91 activas sin Meta.
+- Hay 815 productos inactivos; el toggle `Actividad` permite `Activos`/`Inactivos`/`Anulados`, con fondo suave y badge.
+- Categoría/Subcategoría vienen de `/api/v1/categories`; palabras clave se guardan en `products.palabras_clave`.
 
 Objetivo de esta tarea:
 [describir la tarea concreta, por ejemplo: agregar filtro de inactivos, flujo de aprobación, mejorar sección Meta, etc.]
@@ -712,7 +844,7 @@ Entregable:
 ERP frontend:
 
 ```bash
-cd /docker/unyx_erp/frontend
+cd /opt/unyx-erp/frontend
 pnpm type-check
 pnpm lint
 pnpm build
@@ -729,10 +861,44 @@ pnpm build
 ERP backend:
 
 ```bash
-cd /docker/unyx_erp/backend
+cd /opt/unyx-erp/backend
 pnpm type-check
-pnpm lint
 pnpm build
+```
+
+Deploy:
+
+```bash
+cd /docker/altosa_infrastructure
+sudo bash update.sh --api-only
+bash scripts/healthcheck.sh
+
+cd /opt/unyx-erp
+sudo bash deploy/deploy-prod.sh
+```
+
+Auditorías y reportes:
+
+```bash
+# Altosa vs Contifico
+cd /docker/altosa_infrastructure
+bash scripts/contifico-parity.sh --only-active --fail-on-mismatch
+bash scripts/contifico-parity.sh
+
+# Nombres de variante
+bash scripts/backfill-variant-names.sh
+bash scripts/backfill-variant-names.sh --apply
+
+# WooCommerce
+cd /opt/unyx-erp
+pnpm woo:reconcile
+pnpm woo:reconcile --apply
+
+# Feed Meta (Basic Auth)
+cd /docker/altosa_infrastructure
+set -a; . ./.env; set +a
+curl -sS -u "$META_FEED_USER:$META_FEED_PASSWORD" -D - -o /tmp/meta.csv \
+  "https://api.altosamobiliario.com/feeds/meta-catalog.csv?scope=published"
 ```
 
 ---
@@ -745,12 +911,17 @@ Altosa:
 backend/prisma/schema.prisma
 backend/prisma/sql/meta_retailer_id.sql
 backend/prisma/sql/kommo_templates.sql
+backend/prisma/sql/variant_nombre.sql
+backend/prisma/sql/product_keywords.sql
+backend/src/modules/meta-feed/
 backend/src/modules/meta/
 backend/src/scripts/sync-meta-mappings.ts
 backend/src/scripts/suggest-meta-mappings.ts
 backend/src/scripts/reconcile-meta-variants.ts
 backend/src/scripts/backfill-meta-retailer-ids.ts
 backend/src/scripts/seed-products.ts
+backend/src/scripts/backfill-variant-names.ts
+backend/src/scripts/audit-contifico-parity.ts
 backend/src/modules/contifico/contifico-client.ts
 backend/src/modules/contifico/contifico-catalog.ts
 backend/src/modules/contifico/contifico-service.ts
@@ -758,7 +929,11 @@ backend/src/modules/contifico/contifico-sync.ts
 backend/src/modules/contifico/contifico-routes.ts
 backend/prisma/sql/contifico_mapping.sql
 scripts/apply-contifico-migration.sh
+scripts/apply-variant-nombre-migration.sh
+scripts/apply-product-keywords-migration.sh
 scripts/contifico-sync.sh
+scripts/contifico-parity.sh
+scripts/backfill-variant-names.sh
 scripts/reset-altosa-db.sh
 ```
 
@@ -776,6 +951,7 @@ backend/src/integrations/altosa/altosa-routes.ts
 backend/src/integrations/altosa/altosa-schema.ts
 backend/scripts/backfill-altosa-mappings.ts
 deploy/deploy-prod.sh
+scripts/woocommerce-reconcile.mjs
 ```
 
 ERP frontend:
@@ -786,6 +962,8 @@ frontend/src/features/ai-knowledge-base/products/api/altosa.mappers.ts
 frontend/src/features/ai-knowledge-base/products/types/product.types.ts
 frontend/src/features/ai-knowledge-base/products/components/detail/ProductDetailSheet.tsx
 frontend/src/features/ai-knowledge-base/products/components/detail/sections/VariantCard.tsx
+frontend/src/features/ai-knowledge-base/products/components/ProductVariantsPanel.tsx
+frontend/src/features/ai-knowledge-base/products/components/MetaFeedDownloadButton.tsx
 frontend/src/features/ai-knowledge-base/products/components/detail/sections/MetaMappingField.tsx
 frontend/src/features/ai-knowledge-base/products/components/detail/sections/MetaCatalogPicker.tsx
 frontend/src/features/ai-knowledge-base/products/components/detail/sections/KommoTemplateField.tsx
@@ -798,15 +976,16 @@ frontend/src/features/ai-knowledge-base/products/hooks/
 
 ## 17. Resumen ejecutivo
 
-- El ERP es el sistema de gestión; su PostgreSQL interno es para auth, permisos, usuarios, auditoría y operaciones internas.
-- Altosa API + PostgreSQL Altosa es la **base de conocimiento del catálogo de productos y variantes**.
-- El ERP frontend/backend consume Altosa vía BFF; nunca accede directo a PostgreSQL Altosa.
-- Contifico cargó el inventario; 720 productos quedaron inactivos.
-- Meta se reconcilió: 417/452 mapeados/creados; 33 pendientes.
-- 96 productos Meta nuevos quedaron inactivos.
-- 110 aprobados originales siguen activos.
-- Falta vista de inactivos/aprobación en el frontend.
-- Falta write-through completo a Meta/Contifico.
+- El ERP es la consola de gestión; su PostgreSQL interno es para auth, permisos, usuarios, auditoría y operaciones internas.
+- Altosa API + PostgreSQL Altosa es la **base de verdad del catálogo**; el ERP solo habla con Altosa vía BFF.
+- Estado verificado 2026-11-06: **966 productos / 1.239 variantes**; 151 productos activos; 284 variantes activas; 447 con Meta; 780 con Contifico; 225 activas sin Contifico; 91 activas sin Meta.
+- Contifico v2 es la fuente de listado/búsqueda/sync (~1.367 productos); v1 está incompleto (784).
+- WooCommerce: 458 productos representados; 39 creados; 2 duplicados; 8 sin meta ID.
+- El CRUD de productos/variantes está implementado: crear, editar, activar/inactivar, anular (estado 3), sin borrado definitivo.
+- Editar producto/variante propaga a Meta/Contifico (nombre, descripción, precio, imagen, estado, categoría) de forma best-effort.
+- Categoría/subcategoría se seleccionan desde Altosa; las palabras clave son editables y persistentes.
+- El feed CSV de Meta está disponible y el ERP tiene botón de descarga.
+- Pendientes principales: importar los ~583 productos Contifico faltantes, resolver cobertura de variantes sin Contifico/Meta y agregar warnings/health de precio-descripción.
 - El modelo producto-variante es correcto; no hay que rediseñarlo.
-- Para escalar: mapeo determinista (SKU en custom_label_0), referencias externas, caché Meta, deduplicación y reglas de propiedad de campos.
+- Para escalar: mapeo determinista, referencias externas, caché Meta, deduplicación y reglas de propiedad de campos.
 ```

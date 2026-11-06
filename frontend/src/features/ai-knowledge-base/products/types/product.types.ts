@@ -65,6 +65,7 @@ export interface VariantDto {
   metaMappingLocked?: boolean;
   contificoId?: string | null;
   contificoSku?: string | null;
+  contificoMappingLocked?: boolean;
   garantiaId?: number | null;
   createdAt: string;
   updatedAt: string;
@@ -153,6 +154,7 @@ export type UpdateVariantPayload = Partial<CreateVariantPayload> & {
   metaMappingLocked?: boolean;
   contificoId?: string | null;
   contificoSku?: string | null;
+  contificoMappingLocked?: boolean;
 };
 
 export type ExternalSource = 'meta' | 'contifico';

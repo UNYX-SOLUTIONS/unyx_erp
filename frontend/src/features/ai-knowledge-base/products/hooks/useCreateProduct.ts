@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/utils';
 import { createProduct } from '../api/products.api';
 import type { CreateProductPayload } from '../types/product.types';
+import { markProductsListStale } from './product-cache';
 
 export function useCreateProduct() {
   const queryClient = useQueryClient();
@@ -12,8 +13,11 @@ export function useCreateProduct() {
   return useMutation({
     mutationFn: (payload: CreateProductPayload) => createProduct(payload),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['products'] });
-      void queryClient.invalidateQueries({ queryKey: ['external-pending'] });
+      markProductsListStale(queryClient);
+      void queryClient.invalidateQueries({
+        queryKey: ['external-pending'],
+        refetchType: 'none',
+      });
       toast.success('Producto creado');
     },
     onError: (error) => {

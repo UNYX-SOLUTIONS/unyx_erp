@@ -144,7 +144,14 @@ export function ProductVariantsPanel({ product, onEditVariant }: ProductVariants
             {/* Variante: ocupa Producto + Variantes para alinear el precio */}
             <TableCell
               colSpan={2}
-              className="border-l-2 border-l-blue-500/60 px-4 py-3 pl-16" // <-- pl-16 agregado
+              className={cn(
+                'border-l-2 px-4 py-3 pl-16',
+                variant.estadoId === 3
+                  ? 'border-l-rose-300/80 dark:border-l-rose-900'
+                  : variant.isActive
+                    ? 'border-l-blue-500/60'
+                    : 'border-l-slate-300/80 dark:border-l-slate-700'
+              )}
             >
               <div className="flex min-w-0 items-center gap-3">
                 {variant.imageUrl ? (
