@@ -3,6 +3,7 @@
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SheetTitle } from '@/components/ui/sheet';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { mapProductDtoToUi } from '../../mappers';
 import { SyncCell } from '../SyncCell';
 import { ValidationCell } from '../ValidationCell';
@@ -29,6 +30,15 @@ export function ProductDetailHeader({ product, onClose }: ProductDetailHeaderPro
         {product && ui ? (
           <>
             <div className="mt-1 flex flex-wrap items-center gap-2">
+              {ui.estadoId === 3 ? (
+                <StatusBadge variant="error" dot>
+                  Anulado
+                </StatusBadge>
+              ) : ui.estadoId === 2 ? (
+                <StatusBadge variant="neutral" dot>
+                  Inactivo
+                </StatusBadge>
+              ) : null}
               <ValidationCell status={ui.status} />
               <SyncCell status={ui.syncStatus} />
             </div>

@@ -13,7 +13,7 @@ export function MetaFeedDownloadButton() {
     setIsDownloading(true);
     try {
       const response = await apiClient.get(
-        '/integrations/altosa/meta-feed.csv',
+        '/api/v1/integrations/altosa/meta-feed.csv',
         {
           params: { scope: 'published' },
           responseType: 'blob',

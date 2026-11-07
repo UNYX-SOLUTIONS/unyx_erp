@@ -26,6 +26,7 @@ export function ProductActions({ product }: { product: Product }) {
   const openProductDetail = useProductDetailStore((state) => state.open);
   const deleteProduct = useDeleteProduct();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const isAnnulled = product.estadoId === 3;
 
   return (
     <div className="flex justify-end" onClick={(event) => event.stopPropagation()}>
@@ -49,22 +50,28 @@ export function ProductActions({ product }: { product: Product }) {
           >
             Ver variantes
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={() => setConfirmOpen(true)}
-            className="text-red-600 focus:text-red-600"
-          >
-            Eliminar
-          </DropdownMenuItem>
+          {!isAnnulled ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setConfirmOpen(true)}
+                className="text-red-600 focus:text-red-600"
+              >
+                Anular
+              </DropdownMenuItem>
+            </>
+          ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Eliminar producto</DialogTitle>
+            <DialogTitle>Anular producto</DialogTitle>
             <DialogDescription>
-              ¿Seguro que quieres eliminar «{product.name}»? Dejará de aparecer en el listado.
+              «{product.name}» y todas sus variantes pasarán a la lista de
+              anulados y se desactivarán en Contifico y Meta. No se borran de la
+              base de datos ni de los catálogos externos.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -77,12 +84,14 @@ export function ProductActions({ product }: { product: Product }) {
             </Button>
             <Button
               onClick={() =>
-                deleteProduct.mutate(product.id, { onSuccess: () => setConfirmOpen(false) })
+                deleteProduct.mutate(product.id, {
+                  onSuccess: () => setConfirmOpen(false),
+                })
               }
               disabled={deleteProduct.isPending}
               className="bg-red-600 text-white hover:bg-red-700"
             >
-              Eliminar
+              Anular
             </Button>
           </DialogFooter>
         </DialogContent>

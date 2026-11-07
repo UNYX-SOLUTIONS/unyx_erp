@@ -5,15 +5,16 @@ import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/utils';
 import { addVariant } from '../api/products.api';
 import type { CreateVariantPayload } from '../types/product.types';
+import { markProductsListStale, mergeVariantIntoProductCache } from './product-cache';
 
 export function useAddVariant(productId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (payload: CreateVariantPayload) => addVariant(productId, payload),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['product', productId] });
-      void queryClient.invalidateQueries({ queryKey: ['products'] });
+    onSuccess: (response) => {
+      mergeVariantIntoProductCache(queryClient, productId, response.data);
+      markProductsListStale(queryClient);
       toast.success('Variante agregada');
     },
     onError: (error) => {

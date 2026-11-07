@@ -261,7 +261,58 @@ docker compose --env-file .env.production -f docker-compose.prod.yml exec unyx-b
   node dist/scripts/etl-products.js --dry-run
 ```
 
-### 3.5 Verificación final
+### 3.5 Feed CSV para Meta (Commerce Manager)
+
+Altosa expone un feed de solo lectura para reemplazar a WooCommerce como origen
+de datos del catálogo de Meta:
+
+```text
+https://api.altosamobiliario.com/feeds/meta-catalog.csv
+```
+
+- Auth: **Basic Auth** con `META_FEED_USER` / `META_FEED_PASSWORD` del `.env` de
+  Altosa. El BFF del ERP puede leerlo con `x-api-key`.
+- `scope=published` (default): variantes con `meta_retailer_id` o activas.
+  También existen `meta`, `active` y `all`.
+- Columnas: las de `meta_plantilla_catalogo.csv`; precio con punto decimal.
+- El ERP tiene el botón **Descargar CSV Meta** (BFF
+  `/api/v1/integrations/altosa/meta-feed.csv?scope=published`).
+- El feed omite filas sin precio/imagen/link; revisar `X-Feed-Rows` y
+  `X-Feed-Skipped` o los logs de `altosa-api`.
+
+Configuración en el VPS de Altosa:
+
+```bash
+cd /docker/altosa_infrastructure
+grep -q '^META_FEED_USER=' .env || echo 'META_FEED_USER=altosa-meta' >> .env
+grep -q '^META_FEED_PASSWORD=' .env || echo "META_FEED_PASSWORD=$(openssl rand -base64 36)" >> .env
+sudo bash update.sh --api-only
+grep -E '^META_FEED_(USER|PASSWORD)=' .env
+```
+
+En Commerce Manager: **Utiliza una URL**, pegar la URL, usuario/clave. Primero
+**Actualiza tu lista de datos** para validar; después **Reemplaza tu lista de
+datos** si quieres eliminar lo que no esté en el feed.
+
+### 3.6 Sincronización Contifico v2
+
+La integración lista/busca/sincroniza con **API v2** porque v1 devuelve solo 784
+productos (incompleto); v2 devuelve ~1.371 (1.367 únicos). v1 se usa solo para
+categorías y lectura/actualización por ID.
+
+- La primera búsqueda por **SKU/código de barra** en el selector puede tardar
+  ~20 s porque v2 busca por nombre y se descarga el catálogo completo; luego
+  queda cacheado 30 s.
+- El sync descarga v2 en paralelo (~20 s).
+- `--create-missing` crea en Altosa los productos de Contifico que faltan
+  (inactivos); revisar siempre el dry-run antes.
+
+CRUD de productos: Altosa es la fuente de verdad. Crear/editar/anular desde el
+ERP intenta propagar a Meta/Contifico (best-effort). **No hay borrado
+definitivo**: anular deja el ítem desactivado en los catálogos externos. El ERP
+muestra Activos/Inactivos/Anulados en el toggle **Actividad**.
+
+### 3.7 Verificación final
 
 ```bash
 curl -s https://unyx-erp.example.com/api/v1/health

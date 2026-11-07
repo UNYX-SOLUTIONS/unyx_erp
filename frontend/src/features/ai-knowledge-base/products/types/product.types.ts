@@ -8,6 +8,12 @@ export type ProductSyncStatus = 'synced' | 'notSynced';
 
 export type ProductLine = string;
 
+export interface CategoryDto {
+  id: number;
+  nombre: string;
+  subcategorias: Array<{ id: number; nombre: string }>;
+}
+
 export type ProductDetailTab = 'general' | 'variants';
 
 export interface ProductVariantInfo {
@@ -25,8 +31,11 @@ export interface Product {
   name: string;
   sku: string;
   line: string;
+  categoryId?: number;
+  subcategoryId?: number;
   thumbnailUrl?: string | null;
   isActive?: boolean;
+  estadoId?: number;
   variants: ProductVariantInfo;
   variantDetails: VariantDto[];
   price: number | null;
@@ -48,6 +57,7 @@ export interface VariantDto {
   imageUrl: string | null;
   description: string | null;
   isActive: boolean;
+  estadoId?: number;
   sortOrder: number;
   kommoTemplateId?: string | null;
   kommoTemplate?: KommoTemplateDto | null;
@@ -55,6 +65,7 @@ export interface VariantDto {
   metaMappingLocked?: boolean;
   contificoId?: string | null;
   contificoSku?: string | null;
+  contificoMappingLocked?: boolean;
   garantiaId?: number | null;
   createdAt: string;
   updatedAt: string;
@@ -87,6 +98,8 @@ export interface ProductDto {
   line: string | null;
   category: string | null;
   subcategory: string | null;
+  categoryId: number;
+  subcategoryId: number;
   description: string | null;
   commercialDescription: string | null;
   keywords: string[];
@@ -95,6 +108,7 @@ export interface ProductDto {
   validation: KbValidationStatus;
   syncStatus: KbSyncStatus;
   isActive: boolean;
+  estadoId: number;
   variantCount: number;
   price: number | null;
   priceFrom: boolean;
@@ -117,7 +131,7 @@ export interface ProductListParams {
   validation?: KbValidationStatus;
   syncStatus?: KbSyncStatus;
   line?: string;
-  active?: 'active' | 'inactive' | 'all';
+  active?: 'active' | 'inactive' | 'annulled' | 'all';
 }
 
 export interface CreateVariantPayload {
@@ -140,6 +154,7 @@ export type UpdateVariantPayload = Partial<CreateVariantPayload> & {
   metaMappingLocked?: boolean;
   contificoId?: string | null;
   contificoSku?: string | null;
+  contificoMappingLocked?: boolean;
 };
 
 export type ExternalSource = 'meta' | 'contifico';
@@ -246,6 +261,8 @@ export interface CreateProductPayload {
   line?: string;
   category?: string;
   subcategory?: string;
+  categoryId?: number;
+  subcategoryId?: number;
   description?: string;
   commercialDescription?: string;
   keywords?: string[];

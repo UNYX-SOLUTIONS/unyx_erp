@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/utils';
 import { updateVariant } from '../api/products.api';
 import type { UpdateVariantPayload } from '../types/product.types';
+import { markProductsListStale, mergeVariantIntoProductCache } from './product-cache';
 
 interface UpdateMetaMappingVariables {
   variantId: string;
@@ -17,10 +18,13 @@ export function useUpdateVariantMetaMapping(productId: string) {
   return useMutation({
     mutationFn: ({ variantId, payload }: UpdateMetaMappingVariables) =>
       updateVariant(productId, variantId, payload),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['product', productId] });
-      void queryClient.invalidateQueries({ queryKey: ['products'] });
-      void queryClient.invalidateQueries({ queryKey: ['external-pending'] });
+    onSuccess: (response) => {
+      mergeVariantIntoProductCache(queryClient, productId, response.data);
+      markProductsListStale(queryClient);
+      void queryClient.invalidateQueries({
+        queryKey: ['external-pending'],
+        refetchType: 'none',
+      });
     },
     onError: (error) => {
       toast.error(

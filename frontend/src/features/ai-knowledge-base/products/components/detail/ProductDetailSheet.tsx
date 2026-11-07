@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,6 +29,28 @@ import { ProductDetailFooter } from './ProductDetailFooter';
 import { ProductDetailHeader } from './ProductDetailHeader';
 import { ProductDetailTabs, type DetailTab } from './ProductDetailTabs';
 import { ContificoProductSearch } from './ContificoProductSearch';
+import type { VariantDto } from '../../types/product.types';
+import type { VariantsFormValues } from '../../schemas/product-schema';
+
+function variantHasChanges(
+  original: VariantDto | undefined,
+  variant: VariantsFormValues['variants'][number]
+): boolean {
+  if (!original) {
+    return true;
+  }
+  return (
+    (variant.name ?? '') !== (original.name ?? '') ||
+    (variant.sku ?? '') !== (original.sku ?? '') ||
+    (variant.colorLabel ?? '') !== (original.color ?? '') ||
+    Number(variant.price ?? 0) !== Number(original.price ?? 0) ||
+    (variant.description ?? '') !== (original.description ?? '') ||
+    (variant.imageUrl ?? '') !== (original.imageUrl ?? '') ||
+    Boolean(variant.isActive) !== Boolean(original.isActive) ||
+    (variant.kommoTemplateId ?? null) !== (original.kommoTemplateId ?? null) ||
+    (variant.garantiaId ?? null) !== (original.garantiaId ?? null)
+  );
+}
 
 export function ProductDetailSheet() {
   const isOpen = useProductDetailStore((state) => state.isOpen);
@@ -38,6 +61,7 @@ export function ProductDetailSheet() {
   const close = useProductDetailStore((state) => state.close);
   const openProduct = useProductDetailStore((state) => state.open);
   const isCreate = mode === 'create';
+  const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<DetailTab>('general');
   const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
@@ -53,7 +77,8 @@ export function ProductDetailSheet() {
 
   const { generalForm, variantsForm, variantsArray, isDirty, resetAll } = useProductDetail(
     product,
-    isCreate
+    isCreate,
+    isOpen
   );
 
   useEffect(() => {
@@ -75,18 +100,29 @@ export function ProductDetailSheet() {
       ? updateVariantMutation.isPending || addVariantMutation.isPending
       : updateProduct.isPending;
 
+  const closeWithRefresh = () => {
+    close();
+    const listIsStale = queryClient
+      .getQueryCache()
+      .findAll({ queryKey: ['products'] })
+      .some((query) => query.state.isInvalidated);
+    if (listIsStale) {
+      void queryClient.invalidateQueries({ queryKey: ['products'] });
+    }
+  };
+
   const requestClose = () => {
     if (isDirty) {
       setConfirmDiscardOpen(true);
       return;
     }
-    close();
+    closeWithRefresh();
   };
 
   const handleDiscard = () => {
     resetAll();
     setConfirmDiscardOpen(false);
-    close();
+    closeWithRefresh();
   };
 
   const handleCreate = generalForm.handleSubmit((values) => {
@@ -97,6 +133,8 @@ export function ProductDetailSheet() {
         line: values.line,
         category: values.category,
         subcategory: values.subcategory,
+        categoryId: values.categoryId,
+        subcategoryId: values.subcategoryId,
         commercialDescription: values.commercialDescription,
         keywords: values.keywords,
         isActive: values.isActive,
@@ -121,13 +159,16 @@ export function ProductDetailSheet() {
         line: values.line,
         category: values.category,
         subcategory: values.subcategory,
+        categoryId: values.categoryId,
+        subcategoryId: values.subcategoryId,
         commercialDescription: values.commercialDescription,
         keywords: values.keywords,
         isActive: values.isActive,
       },
       {
         onSuccess: () => {
-          close();
+          generalForm.reset(values);
+          closeWithRefresh();
         },
       }
     );
@@ -137,8 +178,24 @@ export function ProductDetailSheet() {
     if (!productId) {
       return;
     }
+
+    const updates = values.variants
+      .map((variant, index) => ({ variant, index }))
+      .filter(({ variant }) => {
+        if (!variant.id) {
+          return true;
+        }
+        const original = product?.variants.find((item) => item.id === variant.id);
+        return variantHasChanges(original, variant);
+      });
+
+    if (updates.length === 0) {
+      toast.info('No hay cambios en las variantes');
+      return;
+    }
+
     const results = await Promise.allSettled(
-      values.variants.map((variant) => {
+      updates.map(async ({ variant, index }) => {
         const payload = {
           name: variant.name,
           sku: variant.sku,
@@ -147,23 +204,48 @@ export function ProductDetailSheet() {
           price: variant.price,
           description: variant.description || undefined,
           imageUrl: variant.imageUrl ?? '',
+          isActive: variant.isActive,
           kommoTemplateId: variant.kommoTemplateId ?? null,
           garantiaId: variant.garantiaId ?? null,
         };
 
         if (!variant.id) {
-          return addVariantMutation.mutateAsync(payload);
+          const response = await addVariantMutation.mutateAsync(payload);
+          return { index, id: response.data.id };
         }
 
-        return updateVariantMutation.mutateAsync({
+        const response = await updateVariantMutation.mutateAsync({
           variantId: variant.id,
           payload,
         });
+        return { index, id: response.data.id };
       })
     );
+
+    let nextVariants = values.variants;
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        const { index, id } = result.value;
+        if (nextVariants[index] && nextVariants[index].id !== id) {
+          nextVariants = nextVariants.map((item, itemIndex) =>
+            itemIndex === index ? { ...item, id } : item
+          );
+        }
+      }
+    }
+
     const hasFailures = results.some((result) => result.status === 'rejected');
     if (!hasFailures) {
+      variantsForm.reset({ variants: nextVariants });
       toast.success('Cambios guardados');
+    } else {
+      // Conserva los IDs de las variantes nuevas que sí se crearon para que
+      // reintentar el guardado no las duplique.
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          variantsForm.setValue(`variants.${result.value.index}.id`, result.value.id);
+        }
+      }
     }
   });
 
@@ -234,7 +316,9 @@ export function ProductDetailSheet() {
                 variantCount={variantsArray.fields.length}
               />
               <div className="flex-1 overflow-y-auto bg-white dark:bg-slate-900 px-6 py-6">
-                {activeTab === 'general' && <GeneralTab form={generalForm} />}
+                {activeTab === 'general' && (
+                  <GeneralTab form={generalForm} />
+                )}
                 {activeTab === 'variants' && (
                   <VariantsTab
                     product={product}

@@ -1,5 +1,9 @@
 # Integración Contifico ↔ Altosa ↔ ERP Unyx
 
+> Actualizado 2026-11-06. El catálogo de Contifico se lista/busca/sincroniza
+> con **API v2** porque v1 devolvía solo 784 productos (incompleto); v2 devuelve
+> ~1.371 (1.367 únicos). v1 queda para categorías y para leer/actualizar por ID.
+
 ## Decisión de arquitectura
 
 Desde la migración de integraciones, **Altosa es la única dueña del cliente y
@@ -9,7 +13,7 @@ credenciales en su propio proyecto y el `.env` del ERP no acumula tokens de
 terceros.
 
 ```
-Contifico API v1
+Contifico API v1/v2
    ▲  sync nativo + write-through (token solo en Altosa)
    │
 Altosa API + PostgreSQL
@@ -40,8 +44,14 @@ CONTIFICO_API_KEY=<api key de Contifico>
 ```
 
 - `CONTIFICO_API_KEY` se envía en `Authorization` tal cual (sin `Bearer`).
-- `CONTIFICO_API_URL` debe quedar en `v1`. El listado/búsqueda de v2 devuelve
-  otro formato e IDs y no filtra por `filtro`.
+- `CONTIFICO_API_URL` se mantiene en **v1**. El código deriva la URL v2 para:
+  - listar productos (`/producto/?page=N`, respuesta `{ count, next, results }`),
+  - buscar por nombre (`/producto/?search=...`),
+  - leer el catálogo completo para sync y para el fallback por SKU/código de barra.
+- v1 se usa para categorías y para leer/actualizar un producto por ID. El item
+  por ID responde tanto en v1 como en v2.
+- **No volver a usar v1 para listar/buscar productos**: devuelve un catálogo
+  incompleto (784 vs ~1.371) y no encuentra productos que solo existen en v2.
 - El token de Contifico nunca debe copiarse al `.env` del ERP ni al frontend.
 - Reinicia `altosa-api` después de cambiarlo (`sudo bash update.sh --api-only`).
 
@@ -95,6 +105,9 @@ el backend ya no las lee. En Docker/VPS las variables salen de
 
 `POST /api/v1/contifico/sync` o `scripts/contifico-sync.sh`:
 
+- Descarga el catálogo **v2** completo (activos e inactivos) en paralelo; tarda
+  ~20 s y queda cacheado 30 s. v2 devuelve ~1.367 productos únicos, no los 784
+  incompletos de v1.
 - Actualiza variantes existentes por `contifico_id`, `contifico_sku`, `sku` o,
   con `matchByName`, por nombre plano (producto + color).
 - Conserva nombre/color/descripción/imagen de variantes **activas** (contenido
@@ -103,6 +116,9 @@ el backend ya no las lee. En Docker/VPS las variables salen de
   en Altosa se cuentan como `ignored` y no se crean.
 - `createMissing=true`: crea producto padre + variante **inactivos**, guardando
   `contifico_id`/`contifico_sku`.
+- Al cambiar de v1 a v2 aparecieron ~583 productos que estaban fuera del listado
+  anterior. Revisar dry-run y decidir su importación:
+  `--create-missing` o la bandeja de pendientes del ERP.
 - `prune=true`: desactiva variantes mapeadas a Contifico que ya no aparecen en
   el catálogo; no borra filas. No se combina con `onlySku`.
 - `dryRun=true`: solo cuenta, no escribe.
@@ -113,9 +129,15 @@ Formato:
 ```bash
 bash scripts/contifico-sync.sh --dry-run --match-by-name
 bash scripts/contifico-sync.sh --apply --match-by-name
-bash scripts/contifico-sync.sh --apply --create-missing   # no recomendado masivo
+bash scripts/contifico-sync.sh --dry-run --create-missing --match-by-name
+bash scripts/contifico-sync.sh --apply --create-missing --match-by-name
 bash scripts/contifico-sync.sh --apply --prune            # reconciliación manual
 ```
+
+La búsqueda del selector de mapeo usa v2:
+- Nombre: `search` de v2, rápido.
+- SKU/código de barra: descarga el catálogo completo cacheado (~20 s la primera
+  vez) y filtra localmente; después responde desde caché 30 s.
 
 La respuesta incluye `products.{fetched,created,updated,ignored,skipped,pruned}`
 y `variants.{created,updated,skipped,deactivated}`.
@@ -173,13 +195,21 @@ correcto.
    producto plano en Contifico y guarda `contifico_id`/`contifico_sku`.
 2. **Editar producto** → Altosa actualiza sus filas y, si la variante tiene
    `contifico_id`, actualiza nombre/descripción/precio/estado en Contifico.
-3. **Editar variante** → Altosa actualiza Contifico antes de persistir el cambio.
+3. **Editar variante** → Altosa guarda el cambio local y luego intenta
+   actualizar `nombre`, `descripcion`, `pvp1` y `estado` en Contifico
+   (best-effort; si falla, el cambio local se conserva y queda en logs).
    El SKU de una variante mapeada está bloqueado; se cambia en Contifico o se
    quita el mapeo.
-4. **Agregar variante** → Altosa crea el producto plano en Contifico.
-5. **Eliminar** → no hay `DELETE`: Altosa desactiva el producto plano
-   (`estado = I`) y la variante/producto en su DB. El listado del ERP filtra
-   activos.
+   Editar una variante **no** vuelve a crear mapeos quitados. Al quitar el
+   mapeo se guarda `contifico_mapping_locked=true`; el sync no la reenlaza por
+   SKU/nombre hasta que se use **Restaurar sync automático**.
+
+4. **Agregar variante** → Altosa crea el producto plano en Contifico e intenta
+   guardar `contifico_id`/`contifico_sku`.
+5. **Eliminar en el ERP = anular** (estado 3): no hay borrado físico. Altosa
+   desactiva la variante/producto (`estado = I` en Contifico, `out of stock` en
+   Meta) y el ERP lo muestra en **Actividad → Anulados**. Nada se borra en
+   Altosa/Meta/Contifico.
 
 ## Mapeo de campos
 

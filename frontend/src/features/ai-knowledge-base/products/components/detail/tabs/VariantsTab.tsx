@@ -72,7 +72,18 @@ export function VariantsTab({
       variantsArray.remove(index);
       return;
     }
-    deleteVariant.mutate(current.id);
+    deleteVariant.mutate(current.id, {
+      onSuccess: (response) => {
+        form.setValue(`variants.${index}.isActive`, response.data.isActive, {
+          shouldDirty: false,
+        });
+        form.setValue(
+          `variants.${index}.estadoId`,
+          response.data.estadoId ?? 3,
+          { shouldDirty: false }
+        );
+      },
+    });
   };
 
   const handleToggleActive = (index: number) => {
@@ -83,10 +94,15 @@ export function VariantsTab({
       });
       return;
     }
-    updateVariant.mutate({
-      variantId: current.id,
-      payload: { isActive: !current.isActive },
+    const nextActive = !current.isActive;
+    form.setValue(`variants.${index}.isActive`, nextActive, {
+      shouldDirty: true,
     });
+    form.setValue(
+      `variants.${index}.estadoId`,
+      nextActive ? 1 : current.estadoId === 3 ? 3 : 2,
+      { shouldDirty: true }
+    );
   };
 
   return (
@@ -146,6 +162,9 @@ export function VariantsTab({
               initialMetaMappingLocked={product.variants[index]?.metaMappingLocked ?? false}
               initialContificoId={product.variants[index]?.contificoId ?? null}
               initialContificoSku={product.variants[index]?.contificoSku ?? null}
+              initialContificoMappingLocked={
+                product.variants[index]?.contificoMappingLocked ?? false
+              }
               isFocused={focusVariantId != null && product.variants[index]?.id === focusVariantId}
               defaultOpen={autoOpenIndex === index ? true : undefined}
               onDuplicate={handleDuplicate}

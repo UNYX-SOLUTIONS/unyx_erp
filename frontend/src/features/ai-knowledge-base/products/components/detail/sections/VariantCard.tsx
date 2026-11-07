@@ -14,12 +14,21 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { useUploadVariantImage } from '../../../hooks/useUploadVariantImage';
@@ -45,6 +54,7 @@ interface VariantCardProps {
   initialMetaMappingLocked?: boolean;
   initialContificoId?: string | null;
   initialContificoSku?: string | null;
+  initialContificoMappingLocked?: boolean;
   isFocused?: boolean;
   defaultOpen?: boolean;
   onDuplicate: (index: number) => void;
@@ -62,6 +72,7 @@ export function VariantCard({
   initialMetaMappingLocked = false,
   initialContificoId = null,
   initialContificoSku = null,
+  initialContificoMappingLocked = false,
   isFocused = false,
   defaultOpen,
   onDuplicate,
@@ -72,6 +83,15 @@ export function VariantCard({
   const variant = watch(`variants.${index}`);
   const errors = formState.errors.variants?.[index];
   const variantNumber = String(index + 1).padStart(2, '0');
+  const [confirmInactivateOpen, setConfirmInactivateOpen] = useState(false);
+
+  const requestToggleActive = () => {
+    if (variant?.isActive) {
+      setConfirmInactivateOpen(true);
+      return;
+    }
+    onToggleActive(index);
+  };
 
   const cardRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -80,6 +100,8 @@ export function VariantCard({
 
   // Estado local para manejar el acordeón (abierto/cerrado)
   const [isOpen, setIsOpen] = useState(defaultOpen ?? (index === 0 || isFocused));
+  const isAnnulledVariant = variant?.estadoId === 3;
+  const isInactiveVariant = variant?.isActive === false && !isAnnulledVariant;
 
   useEffect(() => {
     if (!isFocused) return;
@@ -114,6 +136,10 @@ export function VariantCard({
         isOpen 
           ? 'border-blue-300 bg-white shadow-sm dark:border-blue-700 dark:bg-slate-900' 
           : 'border-gray-200 bg-gray-50/50 hover:bg-gray-50 dark:border-slate-800 dark:bg-slate-900/50 dark:hover:bg-slate-800/50',
+        isAnnulledVariant
+          ? 'border-rose-200 bg-rose-50/40 dark:border-rose-900/50 dark:bg-rose-950/10'
+          : isInactiveVariant &&
+              'border-slate-300 bg-slate-50/80 dark:border-slate-700 dark:bg-slate-900/60',
         isFocused && 'ring-2 ring-blue-500/30 border-blue-400 dark:border-blue-600'
       )}
     >
@@ -149,14 +175,38 @@ export function VariantCard({
           <div className="ml-auto flex items-center gap-2">
             <span className={cn(
               "flex items-center gap-1.5 text-xs font-medium",
-              variant?.isActive ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-slate-400'
+              variant?.estadoId === 3
+                ? 'text-rose-600 dark:text-rose-400'
+                : variant?.isActive
+                  ? 'text-green-600 dark:text-green-400'
+                  : 'text-gray-500 dark:text-slate-400'
             )}>
               <span className={cn(
                 "h-2 w-2 rounded-full",
-                variant?.isActive ? 'bg-green-500' : 'bg-gray-300 dark:bg-slate-600'
+                variant?.estadoId === 3
+                  ? 'bg-rose-500'
+                  : variant?.isActive
+                    ? 'bg-green-500'
+                    : 'bg-gray-300 dark:bg-slate-600'
               )} />
-              {variant?.isActive ? 'Activa' : 'Inactiva'}
+              {variant?.estadoId === 3
+                ? 'Anulada'
+                : variant?.isActive
+                  ? 'Activa'
+                  : 'Inactiva'}
             </span>
+            <Switch
+              checked={Boolean(variant?.isActive)}
+              onCheckedChange={(value) => {
+                if (!value) {
+                  setConfirmInactivateOpen(true);
+                  return;
+                }
+                onToggleActive(index);
+              }}
+              disabled={isBusy}
+              aria-label="Activar o inactivar variante"
+            />
           </div>
         </div>
 
@@ -179,17 +229,57 @@ export function VariantCard({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => onDuplicate(index)}>Duplicar</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onToggleActive(index)}>
+              <DropdownMenuItem onClick={requestToggleActive}>
                 {variant?.isActive ? 'Marcar inactiva' : 'Marcar activa'}
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onRemove(index)} className="text-red-600 focus:text-red-600">
-                Eliminar
-              </DropdownMenuItem>
+              {variant?.estadoId !== 3 ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => onRemove(index)}
+                    className="text-red-600 focus:text-red-600"
+                  >
+                    Anular
+                  </DropdownMenuItem>
+                </>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
+
+      <Dialog
+        open={confirmInactivateOpen}
+        onOpenChange={setConfirmInactivateOpen}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Inactivar variante</DialogTitle>
+            <DialogDescription>
+              ¿Seguro que quieres inactivar esta variante? Solo se desactivará
+              esta variante; las demás no se modifican.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmInactivateOpen(false)}
+              className="border-gray-300 text-gray-700 dark:text-slate-300"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                setConfirmInactivateOpen(false);
+                onToggleActive(index);
+              }}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              Inactivar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* CONTENIDO EXPANDIDO */}
       {isOpen && (
@@ -355,6 +445,7 @@ export function VariantCard({
                     variantName={variant.name}
                     initialContificoId={initialContificoId}
                     initialContificoSku={initialContificoSku}
+                    initialContificoMappingLocked={initialContificoMappingLocked}
                     isBusy={isBusy}
                   />
                 </>

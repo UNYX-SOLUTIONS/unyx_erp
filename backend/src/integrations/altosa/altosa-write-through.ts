@@ -182,6 +182,7 @@ export async function createProduct(input: AltosaCreateProductBody): Promise<unk
       subcategory: input.subcategory,
       description: input.usoRecomendado,
       commercialDescription: input.descripcion,
+      keywords: input.keywords ?? [],
       isActive: true,
       ...(variants ? { variants } : {}),
     },
@@ -202,10 +203,15 @@ export async function createProduct(input: AltosaCreateProductBody): Promise<unk
     throw new Error(`Altosa no devolvió el producto creado para el SKU ${lookupSku}.`);
   }
 
-  if (input.kommoTemplateId) {
-    await altosaService.updateProduct(productId, {
-      kommoTemplateId: input.kommoTemplateId,
-    });
+  const altosaPostCreateUpdate: {
+    keywords?: string[];
+    kommoTemplateId?: string;
+  } = {
+    ...(input.keywords !== undefined ? { keywords: input.keywords } : {}),
+    ...(input.kommoTemplateId ? { kommoTemplateId: input.kommoTemplateId } : {}),
+  };
+  if (Object.keys(altosaPostCreateUpdate).length > 0) {
+    await altosaService.updateProduct(productId, altosaPostCreateUpdate);
   }
 
   const { data } = await altosaService.getProductById(productId);
@@ -252,6 +258,7 @@ export async function updateProduct(
     ...(input.descripcion !== undefined
       ? { commercialDescription: input.descripcion ?? undefined }
       : {}),
+    ...(input.keywords !== undefined ? { keywords: input.keywords } : {}),
     ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
   });
 
@@ -263,6 +270,7 @@ export async function updateProduct(
     input.descripcion !== undefined ||
     input.usoRecomendado !== undefined ||
     input.subcategoryId !== undefined ||
+    input.keywords !== undefined ||
     input.estadoId !== undefined ||
     input.kommoTemplateId !== undefined ||
     input.isActive !== undefined
@@ -274,6 +282,7 @@ export async function updateProduct(
         ...(input.usoRecomendado !== undefined
           ? { usoRecomendado: input.usoRecomendado }
           : {}),
+        ...(input.keywords !== undefined ? { keywords: input.keywords } : {}),
         ...(input.subcategoryId !== undefined ? { subcategoryId: input.subcategoryId } : {}),
         ...(input.estadoId !== undefined ? { estadoId: input.estadoId } : {}),
         ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
@@ -296,16 +305,12 @@ export async function deleteProduct(altosaId: number): Promise<unknown> {
   const sku = primarySku(current);
   const local = sku ? await findLocalProductBySku(sku) : null;
 
-  if (!local) {
-    const { data } = await altosaService.deleteProduct(altosaId);
-    return data;
+  if (local) {
+    await productsService.updateProduct(local.id, { isActive: false });
   }
 
-  await productsService.deleteProduct(local.id);
-
-  // Altosa es la dueña del borrado lógico y del write-through a Contifico.
-  // Si falla, se propaga para que la UI reintente; el staging local ya quedó
-  // marcado como eliminado, pero la fuente de verdad sigue siendo Altosa.
+  // Altosa anula (estado 3) y desactiva Meta/Contifico. No se borra
+  // definitivamente: los ítems externos se conservan desactivados.
   const { data } = await altosaService.deleteProduct(altosaId);
   return data;
 }

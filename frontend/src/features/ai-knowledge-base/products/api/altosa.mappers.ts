@@ -66,6 +66,7 @@ export interface AltosaVariantDto {
   metaMappingLocked?: boolean;
   contificoId?: string | null;
   contificoSku?: string | null;
+  contificoMappingLocked?: boolean;
   updatedAt: string;
 }
 
@@ -74,6 +75,7 @@ export interface AltosaProductDto {
   nombre: string;
   descripcion: string | null;
   usoRecomendado: string | null;
+  keywords?: string[] | null;
   categoria: { id: number; nombre: string };
   subcategoria: { id: number; nombre: string };
   estado: AltosaEstadoDto;
@@ -175,6 +177,7 @@ export function mapAltosaVariant(
     imageUrl: variante.imagenUrl,
     description: variante.descripcion,
     isActive: variante.isActive,
+    estadoId: variante.estado?.id ?? (variante.isActive ? 1 : 2),
     sortOrder: index,
     kommoTemplateId: variante.kommoTemplateId ?? null,
     kommoTemplate: variante.kommoTemplate ?? null,
@@ -182,6 +185,7 @@ export function mapAltosaVariant(
     metaMappingLocked: variante.metaMappingLocked ?? false,
     contificoId: variante.contificoId ?? null,
     contificoSku: variante.contificoSku ?? null,
+    contificoMappingLocked: variante.contificoMappingLocked ?? false,
     garantiaId: variante.garantia?.id ?? null,
     createdAt: updatedAt,
     updatedAt,
@@ -208,9 +212,11 @@ export function mapAltosaProduct(product: AltosaProductDto): ProductDto {
     line: product.categoria.nombre,
     category: product.categoria.nombre,
     subcategory: product.subcategoria.nombre,
+    categoryId: product.categoria.id,
+    subcategoryId: product.subcategoria.id,
     description: product.usoRecomendado,
     commercialDescription: product.descripcion,
-    keywords: buildKeywords(product),
+    keywords: product.keywords ?? buildKeywords(product),
     thumbnailUrl:
       variantes.find((variante) => Boolean(variante.imagenUrl?.trim()))
         ?.imagenUrl ?? null,
@@ -221,6 +227,7 @@ export function mapAltosaProduct(product: AltosaProductDto): ProductDto {
     ]),
     syncStatus: allExternallyMapped ? 'SINCRONIZADO' : 'SIN_SINCRONIZAR',
     isActive: product.isActive,
+    estadoId: product.estado?.id ?? (product.isActive ? 1 : 2),
     variantCount: variantes.length,
     price: precios.length > 0 ? Math.min(...precios) : null,
     priceFrom: pricingVariants.length > 1,

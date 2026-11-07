@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/utils';
 import { updateVariant } from '../api/products.api';
 import type { UpdateVariantPayload } from '../types/product.types';
+import { markProductsListStale, mergeVariantIntoProductCache } from './product-cache';
 
 interface UpdateVariantVariables {
   variantId: string;
@@ -17,9 +18,9 @@ export function useUpdateVariant(productId: string) {
   return useMutation({
     mutationFn: ({ variantId, payload }: UpdateVariantVariables) =>
       updateVariant(productId, variantId, payload),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['product', productId] });
-      void queryClient.invalidateQueries({ queryKey: ['products'] });
+    onSuccess: (response) => {
+      mergeVariantIntoProductCache(queryClient, productId, response.data);
+      markProductsListStale(queryClient);
     },
     onError: (error) => {
       toast.error(getApiErrorMessage(error, 'No se pudo actualizar la variante'));

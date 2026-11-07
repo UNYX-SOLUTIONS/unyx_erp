@@ -67,6 +67,7 @@ export const altosaWarrantyUpdateBodySchema =
 export const altosaVariantBodySchema = z.object({
   sku: z.string().trim().max(80).optional(),
   nombre: z.string().trim().min(1).max(300).optional(),
+  isActive: z.boolean().optional(),
   color: z.string().trim().max(80).optional(),
   descripcion: z.string().trim().max(2000).optional(),
   precioUsd: z.coerce.number().min(0).max(1_000_000).optional(),
@@ -98,6 +99,7 @@ export const altosaVariantBodySchema = z.object({
   metaMappingLocked: z.boolean().optional(),
   contificoId: z.string().trim().max(100).nullable().optional(),
   contificoSku: z.string().trim().max(120).nullable().optional(),
+  contificoMappingLocked: z.boolean().optional(),
   writeThroughMeta: z.boolean().optional(),
   writeThroughContifico: z.boolean().optional(),
 });
@@ -125,6 +127,8 @@ export const altosaCreateProductBodySchema = z.object({
   line: z.string().trim().max(120).optional(),
   category: z.string().trim().max(120).optional(),
   subcategory: z.string().trim().max(160).optional(),
+  categoryId: z.coerce.number().int().positive().optional(),
+  keywords: z.array(z.string().trim().min(1).max(120)).max(100).optional(),
   descripcion: z.string().trim().max(2000).optional(),
   usoRecomendado: z.string().trim().max(500).optional(),
   subcategoryId: z.coerce.number().int().positive().optional(),
@@ -139,6 +143,8 @@ export const altosaUpdateProductBodySchema = z.object({
   line: z.string().trim().max(120).optional(),
   category: z.string().trim().max(120).optional(),
   subcategory: z.string().trim().max(160).optional(),
+  categoryId: z.coerce.number().int().positive().optional(),
+  keywords: z.array(z.string().trim().min(1).max(120)).max(100).optional(),
   descripcion: z.string().trim().max(2000).nullable().optional(),
   usoRecomendado: z.string().trim().max(500).nullable().optional(),
   subcategoryId: z.coerce.number().int().positive().optional(),
